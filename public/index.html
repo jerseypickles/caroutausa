@@ -137,7 +137,6 @@ async function generate() {
   const btn = document.getElementById('genBtn');
   const hint = document.getElementById('genHint');
   btn.disabled = true;
-  hint.innerHTML = `<span class="spinner"></span>Generando ${selected.size} ángulo(s)… puede tardar varios minutos.`;
   try {
     const body = {
       imageUrl,
@@ -149,15 +148,20 @@ async function generate() {
     const r = await fetch('/api/ad-angles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Error generando');
-    let msg = `Listo: ${data.results.length} generada(s).`;
-    if (data.errors?.length) msg += ` ${data.errors.length} fallaron.`;
-    hint.textContent = msg;
-    setFilter('generated');
+    hint.textContent = `Encolados ${data.queued.length} ángulo(s). Generando en segundo plano (~2 min c/u)…`;
+    setFilter('generated'); // dispara loadQueue + polling
   } catch (e) {
     hint.textContent = 'Error: ' + e.message;
   } finally {
     btn.disabled = false;
   }
+}
+
+let pollTimer = null;
+
+function tilePlaceholder(text, withSpinner) {
+  return `<div style="aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;padding:0 10px">
+    ${withSpinner ? '<span class="spinner" style="border-color:#ffffff30;border-top-color:var(--accent)"></span>' : ''}${text}</div>`;
 }
 
 async function loadQueue() {
@@ -166,16 +170,23 @@ async function loadQueue() {
   const grid = document.getElementById('grid');
   const empty = document.getElementById('empty');
   empty.style.display = creatives.length ? 'none' : 'block';
+
   grid.innerHTML = creatives.map(c => {
-    const hasImg = c.qcStatus !== 'rejected';
+    let visual;
+    if (c.genStatus === 'generating') visual = tilePlaceholder('Generando…', true);
+    else if (c.genStatus === 'failed') visual = tilePlaceholder('⚠ Falló: ' + (c.genError || 'error'), false);
+    else if (c.qcStatus === 'rejected') visual = tilePlaceholder('sin imagen', false);
+    else visual = `<img src="/api/creatives/${c._id}/image" loading="lazy" />`;
+
+    const canQc = c.genStatus === 'ready' && c.qcStatus === 'generated';
     return `<div class="tile">
-      ${hasImg ? `<img src="/api/creatives/${c._id}/image" loading="lazy" />` : `<div style="aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px">sin imagen</div>`}
+      ${visual}
       <div class="meta">
         <div class="a">${c.angle} <span class="badge ${c.qcStatus}">${c.qcStatus}</span></div>
         <div class="b">${[c.product, c.wash, c.drop].filter(Boolean).join(' · ') || '—'}</div>
         ${c.qcNotes ? `<div class="b">📝 ${c.qcNotes}</div>` : ''}
       </div>
-      ${c.qcStatus === 'generated' ? `
+      ${canQc ? `
         <input class="note" id="note-${c._id}" placeholder="Nota (tell detectado…)" />
         <div class="acts">
           <button class="ok" onclick="qc('${c._id}','approved')">Aprobar</button>
@@ -183,6 +194,12 @@ async function loadQueue() {
         </div>` : ''}
     </div>`;
   }).join('');
+
+  // Polling: si hay algo generandose, recargar en 5s.
+  clearTimeout(pollTimer);
+  if (creatives.some(c => c.genStatus === 'generating')) {
+    pollTimer = setTimeout(loadQueue, 5000);
+  }
 }
 
 async function qc(id, qcStatus) {

@@ -222,38 +222,51 @@ Con un drop esto es ruido. Tras **4–5 drops** empiezan a verse patrones reales
 - **IA:** OpenAI `openai` SDK (`images.edit`, gpt-image-2).
 - **Deploy:** **Render** (web service).
 
-### Superficie de API (mínima para arrancar)
+### Superficie de API (implementada)
+
+gpt-image-2 tarda ~2 min/imagen → la generación es **async**: el POST responde
+al instante (202) y genera en background; el panel hace polling de `/creatives`.
 
 ```
 POST /api/ad-angles
-  body: { imageUrl, angles?: string[], n?: number, drop?, wash?, product? }
-  → genera variantes (1 por ángulo), guarda Creative(s) con qcStatus="generated",
-    devuelve { results: [{id, angle, b64}], errors: [{angle, error}] }.
-    Fallo parcial: si un ángulo falla, los demás siguen; 502 solo si fallan todos.
+  body: { imageUrl, angles?: string[], drop?, wash?, product?, hook? }
+  → crea Creative(s) con genStatus="generating", responde 202 { queued: [{id,angle}] }
+    y dispara la generación en background (cada doc pasa a genStatus
+    "ready" | "failed" al terminar).
 
 GET  /api/creatives?drop=&wash=&qcStatus=
-  → lista creatives para el panel de QC.
+  → lista creatives para el panel de QC (sin imageData).
+
+GET  /api/creatives/:id/image
+  → sirve el PNG del preview (imageData base64) mientras espera QC.
 
 PATCH /api/creatives/:id/qc
   body: { qcStatus: "approved" | "rejected", qcNotes? }
-  → marca el resultado del QC humano.
+  → marca el resultado del QC humano. Al rechazar limpia imageData.
 ```
+
+Estados por creative: `genStatus` (generating → ready | failed) para la
+generación, y `qcStatus` (generated → approved | rejected) para el QC humano.
 
 (La integración con la Meta Marketing API para jalar métricas es una fase
 posterior — ver roadmap.)
 
-## 11. Deploy a Render
+## 11. Deploy a Render (EN VIVO)
 
-- **Tipo:** Web Service.
+- **URL:** https://carota-ad-engine.onrender.com (backend + panel de QC en un
+  solo Web Service: Express sirve `public/` → sin CORS, un solo deploy).
+- **Service:** `srv-d8itaokvikkc73c7lbeg` · plan **starter** · región virginia.
+- **Auto-deploy:** cada push a `main` de `github.com/jerseypickles/caroutausa`.
 - **Build command:** `npm install`
-- **Start command:** `node src/server.js` (o el entrypoint del backend).
-- **Env vars:**
+- **Start command:** `node src/server.js`
+- **Env vars (cargadas en Render, NO en el repo):**
   - `OPENAI_API_KEY` — key de OpenAI.
-  - `MONGODB_URI` — conexión Mongo.
-  - `PORT` — Render lo inyecta; el server debe leer `process.env.PORT`.
-- Las imágenes generadas no se guardan en el filesystem efímero de Render para
-  persistencia — guardar en object storage (S3/R2/Cloudinary) o en la DB como
-  referencia. Para preview inmediato basta devolver base64 en la respuesta.
+  - `MONGODB_URI` — Mongo Atlas (cluster0, db `metaads`).
+  - `IMAGE_MODEL` — `gpt-image-2`.
+  - `PORT` — Render lo inyecta; el server lee `process.env.PORT`.
+- **Persistencia de imágenes:** hoy el preview vive en Mongo (`imageData`,
+  base64) hasta el QC; se limpia al rechazar. Migrar a object storage (R2) al
+  aprobar es el siguiente paso para no inflar la DB con volumen.
 
 ## 12. Roadmap de construcción
 

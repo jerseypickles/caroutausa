@@ -21,6 +21,15 @@ const creativeSchema = new Schema(
     // los listados. Migrar a R2 (outputImageRef) cuando se apruebe. Se limpia al rechazar.
     imageData: { type: String, default: null, select: false },
 
+    // --- estado de generacion (async) ---
+    genStatus: {
+      type: String,
+      enum: ['generating', 'ready', 'failed'],
+      default: 'ready',
+      index: true,
+    },
+    genError: { type: String, default: null }, // mensaje si la generacion fallo
+
     // --- QC humano ---
     qcStatus: {
       type: String,
