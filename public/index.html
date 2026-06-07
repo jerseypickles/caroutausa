@@ -50,7 +50,14 @@
   .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
   .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-  .tile img { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; background: var(--panel2); }
+  .tile img { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; background: var(--panel2); cursor: zoom-in; }
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 100;
+    display: none; align-items: center; justify-content: center; cursor: zoom-out; padding: 24px;
+  }
+  .lightbox.on { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; box-shadow: 0 10px 60px rgba(0,0,0,.6); }
+  .lightbox .close { position: absolute; top: 18px; right: 24px; color: #fff; font-size: 30px; line-height: 1; cursor: pointer; }
   .tile .meta { padding: 12px 13px; }
   .tile .meta .a { font-size: 13px; font-weight: 700; }
   .tile .meta .b { font-size: 11px; color: var(--muted); margin-top: 3px; }
@@ -105,6 +112,12 @@
   </section>
 
 </main>
+
+<div class="lightbox" id="lightbox" onclick="closeZoom()">
+  <span class="close">&times;</span>
+  <img id="lightboxImg" src="" alt="" />
+</div>
+
 <script>
 const ANGLES = [
   { id: 'realista', label: 'Fitpic natural' },
@@ -126,6 +139,7 @@ function toggleAngle(id) {
 }
 function setFilter(f) {
   filter = f;
+  lastSig = null; // fuerza re-render al cambiar de filtro
   document.querySelectorAll('#filters button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
   loadQueue();
 }
@@ -158,15 +172,38 @@ async function generate() {
 }
 
 let pollTimer = null;
+let lastSig = null; // firma del estado renderizado; evita re-render innecesario (parpadeo)
 
 function tilePlaceholder(text, withSpinner) {
   return `<div style="aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;padding:0 10px">
     ${withSpinner ? '<span class="spinner" style="border-color:#ffffff30;border-top-color:var(--accent)"></span>' : ''}${text}</div>`;
 }
 
+function openZoom(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('on');
+}
+function closeZoom() {
+  document.getElementById('lightbox').classList.remove('on');
+  document.getElementById('lightboxImg').src = '';
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeZoom(); });
+
 async function loadQueue() {
   const r = await fetch('/api/creatives' + (filter ? `?qcStatus=${filter}` : ''));
   const { creatives } = await r.json();
+
+  // Reprograma el polling si hay algo generandose (siempre, aunque no re-renderice).
+  clearTimeout(pollTimer);
+  if (creatives.some(c => c.genStatus === 'generating')) {
+    pollTimer = setTimeout(loadQueue, 5000);
+  }
+
+  // Solo re-renderiza si cambio el set o algun estado -> nada de parpadeo en cada poll.
+  const sig = creatives.map(c => `${c._id}:${c.genStatus}:${c.qcStatus}:${c.qcNotes || ''}`).join('|');
+  if (sig === lastSig) return;
+  lastSig = sig;
+
   const grid = document.getElementById('grid');
   const empty = document.getElementById('empty');
   empty.style.display = creatives.length ? 'none' : 'block';
@@ -176,7 +213,7 @@ async function loadQueue() {
     if (c.genStatus === 'generating') visual = tilePlaceholder('Generando…', true);
     else if (c.genStatus === 'failed') visual = tilePlaceholder('⚠ Falló: ' + (c.genError || 'error'), false);
     else if (c.qcStatus === 'rejected') visual = tilePlaceholder('sin imagen', false);
-    else visual = `<img src="/api/creatives/${c._id}/image" loading="lazy" />`;
+    else visual = `<img src="/api/creatives/${c._id}/image" loading="lazy" onclick="openZoom('/api/creatives/${c._id}/image')" />`;
 
     const canQc = c.genStatus === 'ready' && c.qcStatus === 'generated';
     return `<div class="tile">
@@ -194,12 +231,6 @@ async function loadQueue() {
         </div>` : ''}
     </div>`;
   }).join('');
-
-  // Polling: si hay algo generandose, recargar en 5s.
-  clearTimeout(pollTimer);
-  if (creatives.some(c => c.genStatus === 'generating')) {
-    pollTimer = setTimeout(loadQueue, 5000);
-  }
 }
 
 async function qc(id, qcStatus) {

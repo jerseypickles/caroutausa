@@ -24,7 +24,9 @@ creativesRouter.get('/creatives/:id/image', async (req, res) => {
   }
   const buffer = Buffer.from(doc.imageData, 'base64');
   res.set('Content-Type', 'image/png');
-  res.set('Cache-Control', 'no-store');
+  // La imagen de un creative no cambia una vez generada -> cacheable e inmutable.
+  // Evita que el polling del panel la re-descargue y parpadee.
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
   res.send(buffer);
 });
 
