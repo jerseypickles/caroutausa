@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CAROTA · Ad Creative Engine</title>
+<style>
+  :root {
+    --bg: #0a0a0b; --panel: #141416; --panel2: #1c1c20; --line: #2a2a30;
+    --txt: #f2f2f2; --muted: #8a8a92; --accent: #e8ff3a; --ok: #3ad17a; --bad: #ff5468;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--txt);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    padding: 20px 28px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 14px; position: sticky; top: 0;
+    background: rgba(10,10,11,.85); backdrop-filter: blur(8px); z-index: 10;
+  }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: 2px; font-weight: 800; }
+  header .tag { color: var(--muted); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  main { max-width: 1100px; margin: 0 auto; padding: 28px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; margin-bottom: 26px; }
+  .card h2 { margin: 0 0 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; text-transform: uppercase; letter-spacing: .5px; }
+  input[type=text] {
+    width: 100%; background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
+    padding: 11px 13px; border-radius: 9px; font-size: 14px; margin-bottom: 14px;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 160px; }
+  .angles { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .angle-chip {
+    border: 1px solid var(--line); background: var(--panel2); padding: 9px 13px; border-radius: 999px;
+    font-size: 13px; cursor: pointer; user-select: none; transition: .12s;
+  }
+  .angle-chip.on { border-color: var(--accent); background: rgba(232,255,58,.1); color: var(--accent); }
+  button {
+    background: var(--accent); color: #0a0a0b; border: none; padding: 12px 22px; border-radius: 9px;
+    font-weight: 700; font-size: 14px; cursor: pointer; letter-spacing: .3px;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.ghost { background: transparent; color: var(--txt); border: 1px solid var(--line); }
+  button.ok { background: var(--ok); }
+  button.bad { background: var(--bad); color: #fff; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .tile img { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; background: var(--panel2); }
+  .tile .meta { padding: 12px 13px; }
+  .tile .meta .a { font-size: 13px; font-weight: 700; }
+  .tile .meta .b { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .tile .acts { display: flex; gap: 8px; padding: 0 13px 13px; }
+  .tile .acts button { flex: 1; padding: 9px; font-size: 12px; }
+  .tile input.note { width: calc(100% - 26px); margin: 0 13px 12px; padding: 8px 10px; font-size: 12px;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; color: var(--txt); }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: .5px; }
+  .badge.generated { background: rgba(232,255,58,.15); color: var(--accent); }
+  .badge.approved { background: rgba(58,209,122,.15); color: var(--ok); }
+  .badge.rejected { background: rgba(255,84,104,.15); color: var(--bad); }
+  .filters { display: flex; gap: 10px; margin-bottom: 18px; }
+  .filters button { background: var(--panel2); color: var(--muted); border: 1px solid var(--line); padding: 8px 14px; font-size: 12px; }
+  .filters button.on { background: var(--accent); color: #0a0a0b; border-color: var(--accent); }
+  .empty { color: var(--muted); font-size: 14px; padding: 30px 0; text-align: center; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #0a0a0b40; border-top-color: #0a0a0b; border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>CAROTA</h1>
+  <span class="tag">Ad Creative Engine · QC</span>
+</header>
+<main>
+
+  <section class="card">
+    <h2>Generar variantes</h2>
+    <label>URL de la foto del producto</label>
+    <input type="text" id="imageUrl" placeholder="https://carotaus.com/cdn/shop/files/...png" />
+    <div class="row">
+      <div><label>Drop</label><input type="text" id="drop" placeholder="SS26" /></div>
+      <div><label>Wash</label><input type="text" id="wash" placeholder="onyx" /></div>
+      <div><label>Producto</label><input type="text" id="product" placeholder="Onyx Wash Denim Short" /></div>
+    </div>
+    <label>Ángulos</label>
+    <div class="angles" id="angles"></div>
+    <button id="genBtn" onclick="generate()">Generar</button>
+    <div class="hint" id="genHint">gpt-image-2 tarda ~2 min por imagen. Se generan en paralelo.</div>
+  </section>
+
+  <section class="card">
+    <h2>Cola de QC</h2>
+    <div class="filters" id="filters">
+      <button data-f="generated" class="on" onclick="setFilter('generated')">Pendientes</button>
+      <button data-f="approved" onclick="setFilter('approved')">Aprobados</button>
+      <button data-f="rejected" onclick="setFilter('rejected')">Rechazados</button>
+      <button data-f="" onclick="setFilter('')">Todos</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none">Nada por acá todavía.</div>
+  </section>
+
+</main>
+<script>
+const ANGLES = [
+  { id: 'realista', label: 'Fitpic natural' },
+  { id: 'realismo_completo', label: 'Máximo realismo' },
+  { id: 'gancho_click', label: 'Hero / gancho' },
+  { id: 'llamada_atencion', label: 'Llamada de atención' },
+];
+let selected = new Set(['realista']);
+let filter = 'generated';
+
+function renderAngles() {
+  document.getElementById('angles').innerHTML = ANGLES.map(a =>
+    `<span class="angle-chip ${selected.has(a.id) ? 'on' : ''}" onclick="toggleAngle('${a.id}')">${a.label}</span>`
+  ).join('');
+}
+function toggleAngle(id) {
+  if (selected.has(id)) selected.delete(id); else selected.add(id);
+  renderAngles();
+}
+function setFilter(f) {
+  filter = f;
+  document.querySelectorAll('#filters button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
+  loadQueue();
+}
+
+async function generate() {
+  const imageUrl = document.getElementById('imageUrl').value.trim();
+  if (!imageUrl) return alert('Pegá la URL de la foto del producto.');
+  if (!selected.size) return alert('Elegí al menos un ángulo.');
+  const btn = document.getElementById('genBtn');
+  const hint = document.getElementById('genHint');
+  btn.disabled = true;
+  hint.innerHTML = `<span class="spinner"></span>Generando ${selected.size} ángulo(s)… puede tardar varios minutos.`;
+  try {
+    const body = {
+      imageUrl,
+      angles: [...selected],
+      drop: document.getElementById('drop').value.trim() || undefined,
+      wash: document.getElementById('wash').value.trim() || undefined,
+      product: document.getElementById('product').value.trim() || undefined,
+    };
+    const r = await fetch('/api/ad-angles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Error generando');
+    let msg = `Listo: ${data.results.length} generada(s).`;
+    if (data.errors?.length) msg += ` ${data.errors.length} fallaron.`;
+    hint.textContent = msg;
+    setFilter('generated');
+  } catch (e) {
+    hint.textContent = 'Error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadQueue() {
+  const r = await fetch('/api/creatives' + (filter ? `?qcStatus=${filter}` : ''));
+  const { creatives } = await r.json();
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+  empty.style.display = creatives.length ? 'none' : 'block';
+  grid.innerHTML = creatives.map(c => {
+    const hasImg = c.qcStatus !== 'rejected';
+    return `<div class="tile">
+      ${hasImg ? `<img src="/api/creatives/${c._id}/image" loading="lazy" />` : `<div style="aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px">sin imagen</div>`}
+      <div class="meta">
+        <div class="a">${c.angle} <span class="badge ${c.qcStatus}">${c.qcStatus}</span></div>
+        <div class="b">${[c.product, c.wash, c.drop].filter(Boolean).join(' · ') || '—'}</div>
+        ${c.qcNotes ? `<div class="b">📝 ${c.qcNotes}</div>` : ''}
+      </div>
+      ${c.qcStatus === 'generated' ? `
+        <input class="note" id="note-${c._id}" placeholder="Nota (tell detectado…)" />
+        <div class="acts">
+          <button class="ok" onclick="qc('${c._id}','approved')">Aprobar</button>
+          <button class="bad" onclick="qc('${c._id}','rejected')">Rechazar</button>
+        </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function qc(id, qcStatus) {
+  const noteEl = document.getElementById('note-' + id);
+  const qcNotes = noteEl ? noteEl.value.trim() : '';
+  await fetch(`/api/creatives/${id}/qc`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ qcStatus, qcNotes: qcNotes || undefined }),
+  });
+  loadQueue();
+}
+
+renderAngles();
+loadQueue();
+</script>
+</body>
+</html>
