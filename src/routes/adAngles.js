@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Creative } from '../models/creative.js';
 import { generateVariant } from '../openai.js';
+import { judgeFidelity } from '../judge.js';
 import { ANGLES, DEFAULT_ANGLE } from '../angles.js';
 
 export const adAnglesRouter = Router();
@@ -8,8 +9,9 @@ export const adAnglesRouter = Router();
 // Genera en background y actualiza el doc cuando termina. Fire-and-forget:
 // gpt-image-2 tarda ~2 min, no bloqueamos el request HTTP.
 async function generateInBackground(creativeId, imageUrl, angleId) {
+  let b64;
   try {
-    const { b64 } = await generateVariant({ imageUrl, angleId });
+    ({ b64 } = await generateVariant({ imageUrl, angleId }));
     await Creative.findByIdAndUpdate(creativeId, {
       imageData: b64,
       genStatus: 'ready',
@@ -20,6 +22,27 @@ async function generateInBackground(creativeId, imageUrl, angleId) {
     await Creative.findByIdAndUpdate(creativeId, {
       genStatus: 'failed',
       genError: err.message,
+      fidelityStatus: 'failed',
+    });
+    return;
+  }
+
+  // Imagen lista -> el juez de fidelidad evalua si preservo el diseno del jean.
+  try {
+    const v = await judgeFidelity({ sourceImageUrl: imageUrl, b64 });
+    await Creative.findByIdAndUpdate(creativeId, {
+      fidelityStatus: 'done',
+      fidelityScore: v.score,
+      fidelityVerdict: v.verdict,
+      fidelityIssues: v.issues,
+      fidelitySummary: v.summary,
+      fidelityError: null,
+    });
+  } catch (err) {
+    console.error(`[ad-angles] juez fallo (${creativeId}):`, err.message);
+    await Creative.findByIdAndUpdate(creativeId, {
+      fidelityStatus: 'failed',
+      fidelityError: err.message,
     });
   }
 }

@@ -30,6 +30,19 @@ const creativeSchema = new Schema(
     },
     genError: { type: String, default: null }, // mensaje si la generacion fallo
 
+    // --- juez de fidelidad (vision: compara generada vs jean original) ---
+    fidelityStatus: {
+      type: String,
+      enum: ['pending', 'done', 'failed'],
+      default: 'pending',
+      index: true,
+    },
+    fidelityScore: { type: Number, default: null },   // 0-100 (100 = garment identico)
+    fidelityVerdict: { type: String, default: null }, // 'pass' | 'fail'
+    fidelityIssues: { type: [String], default: [] },  // que detalles se perdieron
+    fidelitySummary: { type: String, default: null }, // una frase
+    fidelityError: { type: String, default: null },
+
     // --- QC humano ---
     qcStatus: {
       type: String,

@@ -234,6 +234,11 @@ POST /api/ad-angles
     y dispara la generación en background (cada doc pasa a genStatus
     "ready" | "failed" al terminar).
 
+GET  /api/products
+  → catalogo completo del Shopify de CAROTA (products.json, cacheado 5 min):
+    [{ id, title, handle, wash, image, images[] }]. El panel lo muestra como
+    galeria; al elegir un producto rellena imageUrl/product/wash.
+
 GET  /api/creatives?drop=&wash=&qcStatus=
   → lista creatives para el panel de QC (sin imageData).
 
@@ -247,6 +252,16 @@ PATCH /api/creatives/:id/qc
 
 Estados por creative: `genStatus` (generating → ready | failed) para la
 generación, y `qcStatus` (generated → approved | rejected) para el QC humano.
+
+### Juez de fidelidad (pre-QC automático)
+
+Apenas la imagen está `ready`, un modelo de visión (`JUDGE_MODEL`, default
+`gpt-5.1`) compara la generada contra el jean original y puntúa si preservó el
+diseño: `fidelityScore` (0-100), `fidelityVerdict` (pass/fail, umbral
+`FIDELITY_PASS`=85), `fidelityIssues[]` (qué detalle se perdió: wash, rips,
+hardware, hem, etc.) y `fidelitySummary`. Es un **filtro automático antes del QC
+humano** — ataca el problema de que a veces la IA pierde un concepto del jean.
+El humano sigue teniendo la última palabra; el juez prioriza qué revisar.
 
 (La integración con la Meta Marketing API para jalar métricas es una fase
 posterior — ver roadmap.)

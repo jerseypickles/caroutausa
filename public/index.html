@@ -73,6 +73,22 @@
   .filters button { background: var(--panel2); color: var(--muted); border: 1px solid var(--line); padding: 8px 14px; font-size: 12px; }
   .filters button.on { background: var(--accent); color: #0a0a0b; border-color: var(--accent); }
   .empty { color: var(--muted); font-size: 14px; padding: 30px 0; text-align: center; }
+  /* catalogo */
+  .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; max-height: 360px; overflow-y: auto; padding-right: 4px; }
+  .pcard { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; cursor: pointer; background: var(--panel2); transition: .12s; }
+  .pcard:hover { border-color: var(--muted); }
+  .pcard.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .pcard img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--panel); }
+  .pcard .t { font-size: 11px; padding: 7px 8px; line-height: 1.3; }
+  .psearch { width: 100%; margin-bottom: 12px; }
+  /* fidelidad */
+  .fid { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11px; }
+  .fid .score { font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+  .fid .score.pass { background: rgba(58,209,122,.18); color: var(--ok); }
+  .fid .score.fail { background: rgba(255,84,104,.18); color: var(--bad); }
+  .fid .score.pend { background: var(--panel2); color: var(--muted); }
+  .fid-issues { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .fid-issues b { color: var(--bad); font-weight: 600; }
   .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #0a0a0b40; border-top-color: #0a0a0b; border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; margin-right: 8px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
@@ -85,8 +101,14 @@
 <main>
 
   <section class="card">
+    <h2>Catálogo <span id="pcount" style="color:var(--muted);font-weight:400"></span></h2>
+    <input type="text" id="psearch" class="psearch" placeholder="Buscar producto o wash…" oninput="renderProducts()" />
+    <div class="pgrid" id="pgrid"></div>
+  </section>
+
+  <section class="card">
     <h2>Generar variantes</h2>
-    <label>URL de la foto del producto</label>
+    <label>Foto del producto (elegí del catálogo o pegá una URL)</label>
     <input type="text" id="imageUrl" placeholder="https://carotaus.com/cdn/shop/files/...png" />
     <div class="row">
       <div><label>Drop</label><input type="text" id="drop" placeholder="SS26" /></div>
@@ -127,6 +149,43 @@ const ANGLES = [
 ];
 let selected = new Set(['realista']);
 let filter = 'generated';
+let products = [];
+let selectedProductId = null;
+
+async function loadProducts() {
+  try {
+    const r = await fetch('/api/products');
+    const data = await r.json();
+    products = data.products || [];
+    document.getElementById('pcount').textContent = `(${products.length})`;
+    renderProducts();
+  } catch (e) {
+    document.getElementById('pgrid').innerHTML = '<div class="empty">No se pudo cargar el catálogo.</div>';
+  }
+}
+
+function renderProducts() {
+  const q = document.getElementById('psearch').value.trim().toLowerCase();
+  const list = q
+    ? products.filter(p => (p.title + ' ' + (p.wash || '')).toLowerCase().includes(q))
+    : products;
+  document.getElementById('pgrid').innerHTML = list.map(p => `
+    <div class="pcard ${p.id === selectedProductId ? 'sel' : ''}" onclick="pickProduct(${p.id})" title="${p.title}">
+      <img src="${p.image}&width=240" loading="lazy" />
+      <div class="t">${p.title}</div>
+    </div>`).join('');
+}
+
+function pickProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  selectedProductId = id;
+  document.getElementById('imageUrl').value = p.image;
+  document.getElementById('product').value = p.title;
+  if (p.wash) document.getElementById('wash').value = p.wash;
+  renderProducts();
+  document.getElementById('imageUrl').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
 function renderAngles() {
   document.getElementById('angles').innerHTML = ANGLES.map(a =>
@@ -174,6 +233,25 @@ async function generate() {
 let pollTimer = null;
 let lastSig = null; // firma del estado renderizado; evita re-render innecesario (parpadeo)
 
+function fidelityHtml(c) {
+  if (c.genStatus !== 'ready') return '';
+  if (c.fidelityStatus === 'pending') {
+    return `<div class="fid"><span class="spinner" style="border-color:#ffffff20;border-top-color:var(--muted)"></span><span style="color:var(--muted)">Evaluando fidelidad…</span></div>`;
+  }
+  if (c.fidelityStatus === 'failed') {
+    return `<div class="fid"><span class="score pend">fidelidad ?</span><span style="color:var(--muted)">no evaluada</span></div>`;
+  }
+  if (c.fidelityStatus === 'done') {
+    const cls = c.fidelityVerdict === 'pass' ? 'pass' : 'fail';
+    const issues = (c.fidelityIssues && c.fidelityIssues.length)
+      ? `<div class="fid-issues"><b>Pierde:</b> ${c.fidelityIssues.join(' · ')}</div>`
+      : `<div class="fid-issues">Diseño preservado ✓</div>`;
+    return `<div class="fid"><span class="score ${cls}">${c.fidelityScore}/100</span>
+      <span style="color:var(--muted)">${c.fidelityVerdict === 'pass' ? 'fiel' : 'revisar'}</span></div>${issues}`;
+  }
+  return '';
+}
+
 function tilePlaceholder(text, withSpinner) {
   return `<div style="aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;padding:0 10px">
     ${withSpinner ? '<span class="spinner" style="border-color:#ffffff30;border-top-color:var(--accent)"></span>' : ''}${text}</div>`;
@@ -193,14 +271,15 @@ async function loadQueue() {
   const r = await fetch('/api/creatives' + (filter ? `?qcStatus=${filter}` : ''));
   const { creatives } = await r.json();
 
-  // Reprograma el polling si hay algo generandose (siempre, aunque no re-renderice).
+  // Reprograma el polling si hay algo generandose o evaluandose fidelidad.
   clearTimeout(pollTimer);
-  if (creatives.some(c => c.genStatus === 'generating')) {
+  const working = creatives.some(c => c.genStatus === 'generating' || (c.genStatus === 'ready' && c.fidelityStatus === 'pending'));
+  if (working) {
     pollTimer = setTimeout(loadQueue, 5000);
   }
 
   // Solo re-renderiza si cambio el set o algun estado -> nada de parpadeo en cada poll.
-  const sig = creatives.map(c => `${c._id}:${c.genStatus}:${c.qcStatus}:${c.qcNotes || ''}`).join('|');
+  const sig = creatives.map(c => `${c._id}:${c.genStatus}:${c.qcStatus}:${c.qcNotes || ''}:${c.fidelityStatus}:${c.fidelityScore}`).join('|');
   if (sig === lastSig) return;
   lastSig = sig;
 
@@ -221,6 +300,7 @@ async function loadQueue() {
       <div class="meta">
         <div class="a">${c.angle} <span class="badge ${c.qcStatus}">${c.qcStatus}</span></div>
         <div class="b">${[c.product, c.wash, c.drop].filter(Boolean).join(' · ') || '—'}</div>
+        ${fidelityHtml(c)}
         ${c.qcNotes ? `<div class="b">📝 ${c.qcNotes}</div>` : ''}
       </div>
       ${canQc ? `
@@ -244,6 +324,7 @@ async function qc(id, qcStatus) {
 }
 
 renderAngles();
+loadProducts();
 loadQueue();
 </script>
 </body>
