@@ -4,3 +4,6 @@ node_modules/
 *.log
 .DS_Store
 test-output.png
+neural-panel-top.png
+neural-panel-full.png
+.playwright-mcp/

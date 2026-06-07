@@ -3,126 +3,241 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CAROTA · Ad Creative Engine</title>
+<title>CAROTA · Neural Atelier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #0a0a0b; --panel: #141416; --panel2: #1c1c20; --line: #2a2a30;
-    --txt: #f2f2f2; --muted: #8a8a92; --accent: #e8ff3a; --ok: #3ad17a; --bad: #ff5468;
+    --obsidian: #050608; --obsidian2: #0a0c11; --panel: rgba(13,15,21,.62);
+    --gold: #d4af37; --gold-bright: #f3d98a; --gold-dim: #8a7223;
+    --line: rgba(212,175,55,.22); --line-soft: rgba(212,175,55,.10);
+    --txt: #ece9df; --muted: #94907e;
+    --ok: #5bbf97; --bad: #d05a4a;
+    --z-bg: 0; --z-sacred: 1; --z-content: 10; --z-header: 30; --z-modal: 100;
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    margin: 0; background: var(--bg); color: var(--txt);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
+    margin: 0; background: radial-gradient(1200px 800px at 50% -10%, #0d1018 0%, var(--obsidian) 60%);
+    color: var(--txt); font-family: 'JetBrains Mono', ui-monospace, monospace;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden; min-height: 100vh;
   }
+  canvas#bg { position: fixed; inset: 0; z-index: var(--z-bg); display: block; }
+  /* geometria sagrada */
+  .sacred {
+    position: fixed; top: 50%; left: 50%; width: 760px; height: 760px;
+    transform: translate(-50%,-50%); z-index: var(--z-sacred); pointer-events: none;
+    opacity: .5; mix-blend-mode: screen;
+    animation: spin 140s linear infinite;
+  }
+  .sacred.slow { animation-duration: 220s; animation-direction: reverse; opacity: .28; width: 1100px; height: 1100px; }
+  @keyframes spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+  .vignette { position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    background: radial-gradient(120% 90% at 50% 30%, transparent 40%, rgba(0,0,0,.55) 100%); }
+
+  /* HEADER */
   header {
-    padding: 20px 28px; border-bottom: 1px solid var(--line);
-    display: flex; align-items: baseline; gap: 14px; position: sticky; top: 0;
-    background: rgba(10,10,11,.85); backdrop-filter: blur(8px); z-index: 10;
+    position: sticky; top: 0; z-index: var(--z-header);
+    display: flex; align-items: center; gap: 18px; padding: 18px 32px;
+    background: linear-gradient(180deg, rgba(5,6,8,.86), rgba(5,6,8,.2));
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--line-soft);
   }
-  header h1 { margin: 0; font-size: 18px; letter-spacing: 2px; font-weight: 800; }
-  header .tag { color: var(--muted); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
-  main { max-width: 1100px; margin: 0 auto; padding: 28px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; margin-bottom: 26px; }
-  .card h2 { margin: 0 0 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
-  label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; text-transform: uppercase; letter-spacing: .5px; }
+  .glyph { width: 40px; height: 40px; flex: none; filter: drop-shadow(0 0 8px rgba(212,175,55,.5)); }
+  .brand { display: flex; flex-direction: column; gap: 2px; }
+  .brand h1 { margin: 0; font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700;
+    letter-spacing: 7px; color: var(--gold-bright); }
+  .brand .sub { font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--muted); }
+  header .spacer { flex: 1; }
+  header .sigil { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 3px; color: var(--gold-dim); }
+
+  main { position: relative; z-index: var(--z-content); max-width: 1180px; margin: 0 auto; padding: 40px 28px 80px; }
+
+  /* PANEL ritual */
+  .panel {
+    position: relative; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 4px; padding: 28px; margin-bottom: 34px;
+    backdrop-filter: blur(14px) saturate(1.1);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 30px 80px -40px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .panel::before, .panel::after {
+    content: ''; position: absolute; width: 16px; height: 16px; border: 1px solid var(--gold); opacity: .7;
+  }
+  .panel::before { top: 7px; left: 7px; border-right: none; border-bottom: none; }
+  .panel::after { bottom: 7px; right: 7px; border-left: none; border-top: none; }
+  .panel > h2 {
+    margin: 0 0 22px; font-family: 'Cinzel', serif; font-size: 15px; font-weight: 600;
+    letter-spacing: 5px; text-transform: uppercase; color: var(--gold);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .panel > h2::after { content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--line), transparent); }
+  .panel > h2 .ct { font-family: 'JetBrains Mono'; font-size: 11px; letter-spacing: 1px; color: var(--muted); font-weight: 400; }
+
+  label { display: block; font-size: 10px; color: var(--muted); margin: 0 0 7px;
+    text-transform: uppercase; letter-spacing: 2px; }
   input[type=text] {
-    width: 100%; background: var(--panel2); border: 1px solid var(--line); color: var(--txt);
-    padding: 11px 13px; border-radius: 9px; font-size: 14px; margin-bottom: 14px;
+    width: 100%; background: rgba(0,0,0,.35); border: 1px solid var(--line-soft); color: var(--txt);
+    padding: 12px 14px; border-radius: 3px; font-family: 'JetBrains Mono'; font-size: 13px; margin-bottom: 16px;
+    transition: border-color .2s, box-shadow .2s;
   }
-  input:focus { outline: none; border-color: var(--accent); }
+  input[type=text]:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim), 0 0 18px -4px var(--gold-dim); }
   .row { display: flex; gap: 14px; flex-wrap: wrap; }
-  .row > div { flex: 1; min-width: 160px; }
-  .angles { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .row > div { flex: 1; min-width: 150px; }
+
+  /* angulos = sigilos */
+  .angles { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
   .angle-chip {
-    border: 1px solid var(--line); background: var(--panel2); padding: 9px 13px; border-radius: 999px;
-    font-size: 13px; cursor: pointer; user-select: none; transition: .12s;
+    border: 1px solid var(--line-soft); background: rgba(0,0,0,.3); padding: 10px 16px; border-radius: 2px;
+    font-size: 12px; letter-spacing: 1px; cursor: pointer; user-select: none; transition: .18s; color: var(--muted);
   }
-  .angle-chip.on { border-color: var(--accent); background: rgba(232,255,58,.1); color: var(--accent); }
+  .angle-chip:hover { border-color: var(--line); color: var(--txt); }
+  .angle-chip.on { border-color: var(--gold); background: rgba(212,175,55,.08); color: var(--gold-bright);
+    box-shadow: 0 0 16px -6px var(--gold); }
+
   button {
-    background: var(--accent); color: #0a0a0b; border: none; padding: 12px 22px; border-radius: 9px;
-    font-weight: 700; font-size: 14px; cursor: pointer; letter-spacing: .3px;
+    font-family: 'Cinzel', serif; letter-spacing: 3px; text-transform: uppercase;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: #1a1206; border: none;
+    padding: 14px 28px; border-radius: 3px; font-weight: 700; font-size: 13px; cursor: pointer;
+    transition: filter .2s, box-shadow .2s; box-shadow: 0 0 24px -8px var(--gold);
   }
-  button:disabled { opacity: .5; cursor: not-allowed; }
-  button.ghost { background: transparent; color: var(--txt); border: 1px solid var(--line); }
-  button.ok { background: var(--ok); }
-  button.bad { background: var(--bad); color: #fff; }
-  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
-  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-  .tile img { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; background: var(--panel2); cursor: zoom-in; }
-  .lightbox {
-    position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 100;
-    display: none; align-items: center; justify-content: center; cursor: zoom-out; padding: 24px;
-  }
-  .lightbox.on { display: flex; }
-  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; box-shadow: 0 10px 60px rgba(0,0,0,.6); }
-  .lightbox .close { position: absolute; top: 18px; right: 24px; color: #fff; font-size: 30px; line-height: 1; cursor: pointer; }
-  .tile .meta { padding: 12px 13px; }
-  .tile .meta .a { font-size: 13px; font-weight: 700; }
-  .tile .meta .b { font-size: 11px; color: var(--muted); margin-top: 3px; }
-  .tile .acts { display: flex; gap: 8px; padding: 0 13px 13px; }
-  .tile .acts button { flex: 1; padding: 9px; font-size: 12px; }
-  .tile input.note { width: calc(100% - 26px); margin: 0 13px 12px; padding: 8px 10px; font-size: 12px;
-    background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; color: var(--txt); }
-  .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: .5px; }
-  .badge.generated { background: rgba(232,255,58,.15); color: var(--accent); }
-  .badge.approved { background: rgba(58,209,122,.15); color: var(--ok); }
-  .badge.rejected { background: rgba(255,84,104,.15); color: var(--bad); }
-  .filters { display: flex; gap: 10px; margin-bottom: 18px; }
-  .filters button { background: var(--panel2); color: var(--muted); border: 1px solid var(--line); padding: 8px 14px; font-size: 12px; }
-  .filters button.on { background: var(--accent); color: #0a0a0b; border-color: var(--accent); }
-  .empty { color: var(--muted); font-size: 14px; padding: 30px 0; text-align: center; }
-  /* catalogo */
-  .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; max-height: 360px; overflow-y: auto; padding-right: 4px; }
-  .pcard { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; cursor: pointer; background: var(--panel2); transition: .12s; }
-  .pcard:hover { border-color: var(--muted); }
-  .pcard.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-  .pcard img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--panel); }
-  .pcard .t { font-size: 11px; padding: 7px 8px; line-height: 1.3; }
-  .psearch { width: 100%; margin-bottom: 12px; }
+  button:hover:not(:disabled) { filter: brightness(1.12); box-shadow: 0 0 30px -6px var(--gold); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.ghost { background: transparent; color: var(--txt); border: 1px solid var(--line); box-shadow: none; }
+  button.ok { background: linear-gradient(180deg,#7fd9b4,var(--ok)); color: #07140d; }
+  button.bad { background: linear-gradient(180deg,#e8806f,var(--bad)); color: #1a0706; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 14px; letter-spacing: .5px; }
+
+  /* CATALOGO */
+  .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 14px;
+    max-height: 380px; overflow-y: auto; padding: 4px; scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
+  .pcard { position: relative; border: 1px solid var(--line-soft); border-radius: 3px; overflow: hidden;
+    cursor: pointer; background: rgba(0,0,0,.3); transition: .2s; }
+  .pcard:hover { border-color: var(--line); transform: translateY(-2px); }
+  .pcard.sel { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 24px -8px var(--gold); }
+  .pcard img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--obsidian2); }
+  .pcard .t { font-size: 10px; padding: 8px; line-height: 1.4; letter-spacing: .5px; color: var(--muted); }
+  .pcard.sel .t { color: var(--gold-bright); }
+
+  /* FILTROS */
+  .filters { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
+  .filters button { font-family: 'JetBrains Mono'; text-transform: none; letter-spacing: 1px;
+    background: rgba(0,0,0,.3); color: var(--muted); border: 1px solid var(--line-soft); padding: 9px 16px;
+    font-size: 11px; font-weight: 500; box-shadow: none; }
+  .filters button.on { background: rgba(212,175,55,.1); color: var(--gold-bright); border-color: var(--gold); }
+
+  /* QC GRID */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+  .tile { position: relative; background: rgba(0,0,0,.35); border: 1px solid var(--line-soft); border-radius: 3px;
+    overflow: hidden; transition: border-color .2s; }
+  .tile:hover { border-color: var(--line); }
+  .tile img { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; background: var(--obsidian2); cursor: zoom-in; }
+  .tile .meta { padding: 14px; }
+  .tile .meta .a { font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 1px; color: var(--gold); display: flex; align-items: center; gap: 8px; }
+  .tile .meta .b { font-size: 11px; color: var(--muted); margin-top: 5px; letter-spacing: .5px; }
+  .tile .acts { display: flex; gap: 9px; padding: 0 14px 14px; }
+  .tile .acts button { flex: 1; padding: 10px; font-size: 11px; letter-spacing: 1px; }
+  .tile input.note { width: calc(100% - 28px); margin: 0 14px 12px; padding: 9px 11px; font-size: 11px;
+    font-family: 'JetBrains Mono'; background: rgba(0,0,0,.4); border: 1px solid var(--line-soft); border-radius: 3px; color: var(--txt); }
+
+  .badge { font-family: 'JetBrains Mono'; font-size: 9px; padding: 3px 8px; border-radius: 2px;
+    text-transform: uppercase; letter-spacing: 1.5px; border: 1px solid; }
+  .badge.generated { color: var(--gold); border-color: var(--gold-dim); }
+  .badge.approved { color: var(--ok); border-color: rgba(91,191,151,.4); }
+  .badge.rejected { color: var(--bad); border-color: rgba(208,90,74,.4); }
+
   /* fidelidad */
-  .fid { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11px; }
-  .fid .score { font-weight: 800; padding: 2px 8px; border-radius: 999px; }
-  .fid .score.pass { background: rgba(58,209,122,.18); color: var(--ok); }
-  .fid .score.fail { background: rgba(255,84,104,.18); color: var(--bad); }
-  .fid .score.pend { background: var(--panel2); color: var(--muted); }
-  .fid-issues { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
-  .fid-issues b { color: var(--bad); font-weight: 600; }
-  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #0a0a0b40; border-top-color: #0a0a0b; border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; margin-right: 8px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .fid { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 11px; }
+  .fid .score { font-family: 'Cinzel', serif; font-weight: 700; font-size: 13px; padding: 3px 10px; border-radius: 2px; letter-spacing: 1px; border: 1px solid; }
+  .fid .score.pass { color: var(--ok); border-color: rgba(91,191,151,.5); background: rgba(91,191,151,.07); }
+  .fid .score.fail { color: var(--bad); border-color: rgba(208,90,74,.5); background: rgba(208,90,74,.07); }
+  .fid .score.pend { color: var(--muted); border-color: var(--line-soft); }
+  .fid .lbl { letter-spacing: 2px; text-transform: uppercase; font-size: 9px; color: var(--muted); }
+  .fid-issues { font-size: 10px; color: var(--muted); margin-top: 8px; line-height: 1.5; letter-spacing: .3px; }
+  .fid-issues b { color: var(--bad); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 9px; }
+
+  .empty { color: var(--muted); font-size: 13px; padding: 40px 0; text-align: center; letter-spacing: 1px; }
+
+  /* spinner ritual */
+  .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--line-soft);
+    border-top-color: var(--gold); border-radius: 50%; animation: rot 1s linear infinite; vertical-align: -2px; margin-right: 8px; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+
+  /* LIGHTBOX */
+  .lightbox { position: fixed; inset: 0; background: rgba(3,4,6,.94); z-index: var(--z-modal);
+    display: none; align-items: center; justify-content: center; cursor: zoom-out; padding: 28px; backdrop-filter: blur(6px); }
+  .lightbox.on { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 4px; border: 1px solid var(--line);
+    box-shadow: 0 0 60px -10px rgba(212,175,55,.4); }
+  .lightbox .close { position: absolute; top: 20px; right: 28px; color: var(--gold); font-size: 32px; line-height: 1;
+    cursor: pointer; font-family: 'Cinzel', serif; }
+
+  .reveal { will-change: transform, opacity; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sacred { animation: none; }
+    .spinner { animation-duration: 2s; }
+    html { scroll-behavior: auto; }
+  }
+  @media (max-width: 640px) {
+    main { padding: 24px 16px 60px; }
+    .panel { padding: 20px; }
+    .brand h1 { font-size: 16px; letter-spacing: 4px; }
+    header { padding: 14px 18px; }
+  }
 </style>
 </head>
 <body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<svg class="sacred" id="sacred1" viewBox="0 0 600 600" aria-hidden="true"></svg>
+<svg class="sacred slow" id="sacred2" viewBox="0 0 600 600" aria-hidden="true"></svg>
+<div class="vignette" aria-hidden="true"></div>
+
 <header>
-  <h1>CAROTA</h1>
-  <span class="tag">Ad Creative Engine · QC</span>
+  <svg class="glyph" viewBox="0 0 64 64" aria-hidden="true">
+    <polygon points="32,6 58,54 6,54" fill="none" stroke="#d4af37" stroke-width="1.5"/>
+    <circle cx="32" cy="40" r="9" fill="none" stroke="#f3d98a" stroke-width="1.5"/>
+    <circle cx="32" cy="40" r="3.4" fill="#f3d98a"/>
+    <g stroke="#d4af37" stroke-width="1">
+      <line x1="32" y1="6" x2="32" y2="22"/><line x1="20" y1="14" x2="24" y2="24"/><line x1="44" y1="14" x2="40" y2="24"/>
+    </g>
+  </svg>
+  <div class="brand">
+    <h1>CAROTA</h1>
+    <span class="sub">Neural Atelier · Ad Creative Engine</span>
+  </div>
+  <span class="spacer"></span>
+  <span class="sigil">✦ ORDO · DENIM · LVX ✦</span>
 </header>
+
 <main>
 
-  <section class="card">
-    <h2>Catálogo <span id="pcount" style="color:var(--muted);font-weight:400"></span></h2>
-    <input type="text" id="psearch" class="psearch" placeholder="Buscar producto o wash…" oninput="renderProducts()" />
+  <section class="panel reveal">
+    <h2>Catálogo <span class="ct" id="pcount"></span></h2>
+    <input type="text" id="psearch" class="psearch" placeholder="Invocar producto o wash…" oninput="renderProducts()" aria-label="Buscar producto" />
     <div class="pgrid" id="pgrid"></div>
   </section>
 
-  <section class="card">
-    <h2>Generar variantes</h2>
-    <label>Foto del producto (elegí del catálogo o pegá una URL)</label>
+  <section class="panel reveal">
+    <h2>Invocación</h2>
+    <label for="imageUrl">Foto del producto — elegí del catálogo o pegá una URL</label>
     <input type="text" id="imageUrl" placeholder="https://carotaus.com/cdn/shop/files/...png" />
     <div class="row">
-      <div><label>Drop</label><input type="text" id="drop" placeholder="SS26" /></div>
-      <div><label>Wash</label><input type="text" id="wash" placeholder="onyx" /></div>
-      <div><label>Producto</label><input type="text" id="product" placeholder="Onyx Wash Denim Short" /></div>
+      <div><label for="drop">Drop</label><input type="text" id="drop" placeholder="SS26" /></div>
+      <div><label for="wash">Wash</label><input type="text" id="wash" placeholder="onyx" /></div>
+      <div><label for="product">Producto</label><input type="text" id="product" placeholder="Onyx Wash Denim Short" /></div>
     </div>
     <label>Ángulos</label>
     <div class="angles" id="angles"></div>
     <button id="genBtn" onclick="generate()">Generar</button>
-    <div class="hint" id="genHint">gpt-image-2 tarda ~2 min por imagen. Se generan en paralelo.</div>
+    <div class="hint" id="genHint">gpt-image-2 razona ~2 min por imagen. Se generan en paralelo y el juez evalúa la fidelidad del jean.</div>
   </section>
 
-  <section class="card">
-    <h2>Cola de QC</h2>
+  <section class="panel reveal">
+    <h2>Cámara de Juicio</h2>
     <div class="filters" id="filters">
       <button data-f="generated" class="on" onclick="setFilter('generated')">Pendientes</button>
       <button data-f="approved" onclick="setFilter('approved')">Aprobados</button>
@@ -130,16 +245,121 @@
       <button data-f="" onclick="setFilter('')">Todos</button>
     </div>
     <div class="grid" id="grid"></div>
-    <div class="empty" id="empty" style="display:none">Nada por acá todavía.</div>
+    <div class="empty" id="empty" style="display:none">El vacío aún no ha sido invocado.</div>
   </section>
 
 </main>
 
 <div class="lightbox" id="lightbox" onclick="closeZoom()">
-  <span class="close">&times;</span>
-  <img id="lightboxImg" src="" alt="" />
+  <span class="close" aria-label="Cerrar">&times;</span>
+  <img id="lightboxImg" src="" alt="Creative ampliado" />
 </div>
 
+<!-- Geometria sagrada (Flor de la Vida) -->
+<script>
+(function buildSacred(){
+  const NS = 'http://www.w3.org/2000/svg';
+  const cx = 300, cy = 300, r = 56;
+  const centers = [[0,0]];
+  for (let k=0;k<6;k++){ const a=k*Math.PI/3; centers.push([Math.cos(a)*r, Math.sin(a)*r]); }
+  for (let k=0;k<6;k++){
+    const a=k*Math.PI/3;
+    centers.push([Math.cos(a)*r*2, Math.sin(a)*r*2]);
+    const a2=a+Math.PI/6; centers.push([Math.cos(a2)*r*Math.sqrt(3), Math.sin(a2)*r*Math.sqrt(3)]);
+  }
+  ['sacred1','sacred2'].forEach((id) => {
+    const svg = document.getElementById(id);
+    if (!svg) return;
+    centers.forEach(([x,y]) => {
+      const c = document.createElementNS(NS,'circle');
+      c.setAttribute('cx', cx+x); c.setAttribute('cy', cy+y); c.setAttribute('r', r);
+      c.setAttribute('fill','none'); c.setAttribute('stroke','rgba(212,175,55,.55)'); c.setAttribute('stroke-width','.5');
+      svg.appendChild(c);
+    });
+    const big = document.createElementNS(NS,'circle');
+    big.setAttribute('cx',cx); big.setAttribute('cy',cy); big.setAttribute('r', r*3);
+    big.setAttribute('fill','none'); big.setAttribute('stroke','rgba(212,175,55,.4)'); big.setAttribute('stroke-width','.6');
+    svg.appendChild(big);
+  });
+})();
+</script>
+
+<!-- Three.js: red neuronal 3D -->
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const canvas = document.getElementById('bg');
+if (!reduce && canvas) {
+  try {
+    const THREE = await import('three');
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, 0.1, 100);
+    camera.position.z = 19;
+    const resize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); };
+    resize(); addEventListener('resize', resize);
+
+    const group = new THREE.Group(); scene.add(group);
+    const N = 160, nodes = [];
+    for (let i=0;i<N;i++){
+      const rad = 7 + Math.random()*7;
+      const t = Math.random()*Math.PI*2, p = Math.acos(2*Math.random()-1);
+      nodes.push(new THREE.Vector3(rad*Math.sin(p)*Math.cos(t), rad*Math.sin(p)*Math.sin(t), rad*Math.cos(p)));
+    }
+    const pts = new THREE.Points(
+      new THREE.BufferGeometry().setFromPoints(nodes),
+      new THREE.PointsMaterial({ color: 0xd4af37, size: 0.16, transparent: true, opacity: 0.92, sizeAttenuation: true })
+    );
+    group.add(pts);
+
+    const segs = [], maxd = 3.6;
+    for (let i=0;i<N;i++) for (let j=i+1;j<N;j++) if (nodes[i].distanceTo(nodes[j]) < maxd) segs.push(nodes[i], nodes[j]);
+    const lines = new THREE.LineSegments(
+      new THREE.BufferGeometry().setFromPoints(segs),
+      new THREE.LineBasicMaterial({ color: 0xc8a24a, transparent: true, opacity: 0.12 })
+    );
+    group.add(lines);
+
+    // polvo dorado lejano
+    const dust = [];
+    for (let i=0;i<240;i++) dust.push(new THREE.Vector3((Math.random()-.5)*70,(Math.random()-.5)*70,(Math.random()-.5)*70));
+    const dustPts = new THREE.Points(
+      new THREE.BufferGeometry().setFromPoints(dust),
+      new THREE.PointsMaterial({ color: 0x8a7223, size: 0.07, transparent: true, opacity: 0.5 })
+    );
+    scene.add(dustPts);
+
+    let mx = 0, my = 0;
+    addEventListener('pointermove', (e) => { mx = e.clientX/innerWidth - .5; my = e.clientY/innerHeight - .5; });
+
+    const clock = new THREE.Clock();
+    const tick = () => {
+      const t = clock.getElapsedTime();
+      group.rotation.y = t*0.05 + mx*0.6;
+      group.rotation.x = Math.sin(t*0.1)*0.12 + my*0.45;
+      dustPts.rotation.y = -t*0.01;
+      lines.material.opacity = 0.07 + Math.abs(Math.sin(t*0.5))*0.09;
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    };
+    tick();
+  } catch (e) { console.warn('WebGL no disponible:', e); }
+}
+</script>
+
+<!-- GSAP: entradas rituales -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+if (window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  gsap.from('header', { opacity: 0, y: -20, duration: 1, ease: 'power3.out' });
+  gsap.from('.reveal', { opacity: 0, y: 30, duration: 1, stagger: 0.15, ease: 'power3.out', delay: 0.25 });
+}
+</script>
+
+<!-- App logic -->
 <script>
 const ANGLES = [
   { id: 'realista', label: 'Fitpic natural' },
@@ -151,27 +371,27 @@ let selected = new Set(['realista']);
 let filter = 'generated';
 let products = [];
 let selectedProductId = null;
+let pollTimer = null;
+let lastSig = null;
 
 async function loadProducts() {
   try {
     const r = await fetch('/api/products');
     const data = await r.json();
     products = data.products || [];
-    document.getElementById('pcount').textContent = `(${products.length})`;
+    document.getElementById('pcount').textContent = `· ${products.length} reliquias`;
     renderProducts();
   } catch (e) {
-    document.getElementById('pgrid').innerHTML = '<div class="empty">No se pudo cargar el catálogo.</div>';
+    document.getElementById('pgrid').innerHTML = '<div class="empty">No se pudo invocar el catálogo.</div>';
   }
 }
 
 function renderProducts() {
   const q = document.getElementById('psearch').value.trim().toLowerCase();
-  const list = q
-    ? products.filter(p => (p.title + ' ' + (p.wash || '')).toLowerCase().includes(q))
-    : products;
+  const list = q ? products.filter(p => (p.title + ' ' + (p.wash || '')).toLowerCase().includes(q)) : products;
   document.getElementById('pgrid').innerHTML = list.map(p => `
     <div class="pcard ${p.id === selectedProductId ? 'sel' : ''}" onclick="pickProduct(${p.id})" title="${p.title}">
-      <img src="${p.image}&width=240" loading="lazy" />
+      <img src="${p.image}&width=240" loading="lazy" alt="${p.title}" />
       <div class="t">${p.title}</div>
     </div>`).join('');
 }
@@ -198,7 +418,7 @@ function toggleAngle(id) {
 }
 function setFilter(f) {
   filter = f;
-  lastSig = null; // fuerza re-render al cambiar de filtro
+  lastSig = null;
   document.querySelectorAll('#filters button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
   loadQueue();
 }
@@ -212,8 +432,7 @@ async function generate() {
   btn.disabled = true;
   try {
     const body = {
-      imageUrl,
-      angles: [...selected],
+      imageUrl, angles: [...selected],
       drop: document.getElementById('drop').value.trim() || undefined,
       wash: document.getElementById('wash').value.trim() || undefined,
       product: document.getElementById('product').value.trim() || undefined,
@@ -221,8 +440,8 @@ async function generate() {
     const r = await fetch('/api/ad-angles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Error generando');
-    hint.textContent = `Encolados ${data.queued.length} ángulo(s). Generando en segundo plano (~2 min c/u)…`;
-    setFilter('generated'); // dispara loadQueue + polling
+    hint.textContent = `Invocados ${data.queued.length} ángulo(s). Forjando en el plano astral (~2 min c/u)…`;
+    setFilter('generated');
   } catch (e) {
     hint.textContent = 'Error: ' + e.message;
   } finally {
@@ -230,31 +449,28 @@ async function generate() {
   }
 }
 
-let pollTimer = null;
-let lastSig = null; // firma del estado renderizado; evita re-render innecesario (parpadeo)
-
 function fidelityHtml(c) {
   if (c.genStatus !== 'ready') return '';
   if (c.fidelityStatus === 'pending') {
-    return `<div class="fid"><span class="spinner" style="border-color:#ffffff20;border-top-color:var(--muted)"></span><span style="color:var(--muted)">Evaluando fidelidad…</span></div>`;
+    return `<div class="fid"><span class="spinner"></span><span class="lbl">El juez observa…</span></div>`;
   }
   if (c.fidelityStatus === 'failed') {
-    return `<div class="fid"><span class="score pend">fidelidad ?</span><span style="color:var(--muted)">no evaluada</span></div>`;
+    return `<div class="fid"><span class="score pend">— / 100</span><span class="lbl">no evaluada</span></div>`;
   }
   if (c.fidelityStatus === 'done') {
     const cls = c.fidelityVerdict === 'pass' ? 'pass' : 'fail';
     const issues = (c.fidelityIssues && c.fidelityIssues.length)
       ? `<div class="fid-issues"><b>Pierde:</b> ${c.fidelityIssues.join(' · ')}</div>`
-      : `<div class="fid-issues">Diseño preservado ✓</div>`;
-    return `<div class="fid"><span class="score ${cls}">${c.fidelityScore}/100</span>
-      <span style="color:var(--muted)">${c.fidelityVerdict === 'pass' ? 'fiel' : 'revisar'}</span></div>${issues}`;
+      : `<div class="fid-issues">Diseño preservado íntegramente.</div>`;
+    return `<div class="fid"><span class="score ${cls}">${c.fidelityScore} / 100</span>
+      <span class="lbl">${c.fidelityVerdict === 'pass' ? 'fiel' : 'revisar'}</span></div>${issues}`;
   }
   return '';
 }
 
 function tilePlaceholder(text, withSpinner) {
-  return `<div style="aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;padding:0 10px">
-    ${withSpinner ? '<span class="spinner" style="border-color:#ffffff30;border-top-color:var(--accent)"></span>' : ''}${text}</div>`;
+  return `<div style="aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;text-align:center;padding:0 12px;letter-spacing:1px">
+    ${withSpinner ? '<span class="spinner"></span>' : ''}${text}</div>`;
 }
 
 function openZoom(src) {
@@ -271,14 +487,10 @@ async function loadQueue() {
   const r = await fetch('/api/creatives' + (filter ? `?qcStatus=${filter}` : ''));
   const { creatives } = await r.json();
 
-  // Reprograma el polling si hay algo generandose o evaluandose fidelidad.
   clearTimeout(pollTimer);
   const working = creatives.some(c => c.genStatus === 'generating' || (c.genStatus === 'ready' && c.fidelityStatus === 'pending'));
-  if (working) {
-    pollTimer = setTimeout(loadQueue, 5000);
-  }
+  if (working) pollTimer = setTimeout(loadQueue, 5000);
 
-  // Solo re-renderiza si cambio el set o algun estado -> nada de parpadeo en cada poll.
   const sig = creatives.map(c => `${c._id}:${c.genStatus}:${c.qcStatus}:${c.qcNotes || ''}:${c.fidelityStatus}:${c.fidelityScore}`).join('|');
   if (sig === lastSig) return;
   lastSig = sig;
@@ -289,10 +501,10 @@ async function loadQueue() {
 
   grid.innerHTML = creatives.map(c => {
     let visual;
-    if (c.genStatus === 'generating') visual = tilePlaceholder('Generando…', true);
-    else if (c.genStatus === 'failed') visual = tilePlaceholder('⚠ Falló: ' + (c.genError || 'error'), false);
+    if (c.genStatus === 'generating') visual = tilePlaceholder('Forjando…', true);
+    else if (c.genStatus === 'failed') visual = tilePlaceholder('✕ Falló: ' + (c.genError || 'error'), false);
     else if (c.qcStatus === 'rejected') visual = tilePlaceholder('sin imagen', false);
-    else visual = `<img src="/api/creatives/${c._id}/image" loading="lazy" onclick="openZoom('/api/creatives/${c._id}/image')" />`;
+    else visual = `<img src="/api/creatives/${c._id}/image" loading="lazy" onclick="openZoom('/api/creatives/${c._id}/image')" alt="${c.angle}" />`;
 
     const canQc = c.genStatus === 'ready' && c.qcStatus === 'generated';
     return `<div class="tile">
@@ -301,13 +513,13 @@ async function loadQueue() {
         <div class="a">${c.angle} <span class="badge ${c.qcStatus}">${c.qcStatus}</span></div>
         <div class="b">${[c.product, c.wash, c.drop].filter(Boolean).join(' · ') || '—'}</div>
         ${fidelityHtml(c)}
-        ${c.qcNotes ? `<div class="b">📝 ${c.qcNotes}</div>` : ''}
+        ${c.qcNotes ? `<div class="b">✎ ${c.qcNotes}</div>` : ''}
       </div>
       ${canQc ? `
-        <input class="note" id="note-${c._id}" placeholder="Nota (tell detectado…)" />
+        <input class="note" id="note-${c._id}" placeholder="Nota del juicio (tell detectado…)" />
         <div class="acts">
-          <button class="ok" onclick="qc('${c._id}','approved')">Aprobar</button>
-          <button class="bad" onclick="qc('${c._id}','rejected')">Rechazar</button>
+          <button class="ok" onclick="qc('${c._id}','approved')">Consagrar</button>
+          <button class="bad" onclick="qc('${c._id}','rejected')">Desterrar</button>
         </div>` : ''}
     </div>`;
   }).join('');
