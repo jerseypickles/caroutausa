@@ -1,92 +1,29 @@
 import { Router } from 'express';
-import { Creative } from '../models/creative.js';
-import { generateVariant } from '../openai.js';
-import { judgeFidelity } from '../judge.js';
+import { enqueueGeneration } from '../generation.js';
 import { ANGLES, DEFAULT_ANGLE } from '../angles.js';
 
 export const adAnglesRouter = Router();
 
-// Genera en background y actualiza el doc cuando termina. Fire-and-forget:
-// gpt-image-2 tarda ~2 min, no bloqueamos el request HTTP.
-async function generateInBackground(creativeId, imageUrl, angleId, referenceB64) {
-  let b64;
-  try {
-    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64 }));
-    await Creative.findByIdAndUpdate(creativeId, {
-      imageData: b64,
-      genStatus: 'ready',
-      genError: null,
-    });
-  } catch (err) {
-    console.error(`[ad-angles] fallo angulo ${angleId} (${creativeId}):`, err.message);
-    await Creative.findByIdAndUpdate(creativeId, {
-      genStatus: 'failed',
-      genError: err.message,
-      fidelityStatus: 'failed',
-    });
-    return;
-  }
-
-  // Imagen lista -> el juez de fidelidad evalua si preservo el diseno del jean.
-  try {
-    const v = await judgeFidelity({ sourceImageUrl: imageUrl, b64 });
-    await Creative.findByIdAndUpdate(creativeId, {
-      fidelityStatus: 'done',
-      fidelityScore: v.score,
-      fidelityVerdict: v.verdict,
-      fidelityIssues: v.issues,
-      fidelitySummary: v.summary,
-      fidelityError: null,
-    });
-  } catch (err) {
-    console.error(`[ad-angles] juez fallo (${creativeId}):`, err.message);
-    await Creative.findByIdAndUpdate(creativeId, {
-      fidelityStatus: 'failed',
-      fidelityError: err.message,
-    });
-  }
-}
-
-// POST /api/ad-angles
-// body: { imageUrl, angles?: string[], drop?, wash?, product?, hook? }
-// Crea los Creative(s) como genStatus="generating", responde AL INSTANTE con sus
-// ids, y dispara la generacion en background. El panel hace polling de /creatives.
+// POST /api/ad-angles  (generacion manual / one-off)
+// body: { imageUrl, angles?: string[], drop?, wash?, product?, hook?, referenceImageB64? }
+// Crea Creative(s) genStatus="generating", responde 202 y genera en background.
 adAnglesRouter.post('/ad-angles', async (req, res) => {
   const { imageUrl, angles, drop, wash, product, hook, referenceImageB64 } = req.body || {};
-
-  if (!imageUrl) {
-    return res.status(400).json({ error: 'Falta imageUrl' });
-  }
-  const referenceB64 = typeof referenceImageB64 === 'string' && referenceImageB64.length ? referenceImageB64 : null;
+  if (!imageUrl) return res.status(400).json({ error: 'Falta imageUrl' });
 
   const requested = Array.isArray(angles) && angles.length ? angles : [DEFAULT_ANGLE];
   const invalid = requested.filter((a) => !ANGLES[a]);
   if (invalid.length) {
-    return res.status(400).json({
-      error: `Angulos invalidos: ${invalid.join(', ')}`,
-      validos: Object.keys(ANGLES),
-    });
+    return res.status(400).json({ error: `Angulos invalidos: ${invalid.join(', ')}`, validos: Object.keys(ANGLES) });
   }
 
-  // Crea un doc por angulo en estado "generating".
-  const created = await Creative.create(
-    requested.map((angleId) => ({
-      drop, product, wash, angle: angleId, hook,
-      sourceImageUrl: imageUrl,
-      qcStatus: 'generated',
-      genStatus: 'generating',
-      hasReference: Boolean(referenceB64),
-      referenceImageData: referenceB64,
-    }))
-  );
-
-  // Dispara la generacion sin esperar (cada una se autoactualiza al terminar).
-  created.forEach((doc) => {
-    generateInBackground(doc._id, imageUrl, doc.angle, referenceB64);
+  const referenceB64 = typeof referenceImageB64 === 'string' && referenceImageB64.length ? referenceImageB64 : null;
+  const created = await enqueueGeneration({
+    imageUrl,
+    angles: requested,
+    references: referenceB64 ? [{ b64: referenceB64 }] : [],
+    meta: { drop, product, wash, hook },
   });
 
-  // 202 Accepted: trabajo encolado.
-  res.status(202).json({
-    queued: created.map((d) => ({ id: d._id, angle: d.angle, genStatus: 'generating' })),
-  });
+  res.status(202).json({ queued: created.map((d) => ({ id: d._id, angle: d.angle, genStatus: 'generating' })) });
 });

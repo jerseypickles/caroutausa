@@ -8,6 +8,7 @@ const creativeSchema = new Schema(
   {
     // --- identidad del drop ---
     drop: { type: String },          // ej. "SS26"
+    shopifyProductId: { type: Number, default: null, index: true },
     product: { type: String },       // ej. "Onyx Wash Denim Short"
     wash: { type: String },          // ej. "onyx" | "ice" | "fog"
     angle: { type: String, required: true }, // realista | realismo_completo | gancho_click | llamada_atencion

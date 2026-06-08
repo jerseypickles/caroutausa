@@ -6,6 +6,8 @@ import { connectDb } from './db.js';
 import { adAnglesRouter } from './routes/adAngles.js';
 import { creativesRouter } from './routes/creatives.js';
 import { productsRouter } from './routes/products.js';
+import { referencesRouter } from './routes/references.js';
+import { startProductCron } from './sync.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, '..', 'public');
@@ -17,12 +19,14 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api', adAnglesRouter);
 app.use('/api', creativesRouter);
 app.use('/api', productsRouter);
+app.use('/api', referencesRouter);
 
 // Panel de QC (frontend estatico) servido por el mismo servicio -> sin CORS, un solo deploy.
 app.use(express.static(publicDir));
 
 async function start() {
   await connectDb();
+  startProductCron(); // sincroniza Shopify al arranque y cada N min
   app.listen(config.port, () => {
     console.log(`[server] escuchando en :${config.port}`);
   });

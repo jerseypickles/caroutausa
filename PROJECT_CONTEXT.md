@@ -218,32 +218,52 @@ Con un drop esto es ruido. Tras **4–5 drops** empiezan a verse patrones reales
 
 - **Runtime:** Node.js (ESM, `"type": "module"`).
 - **Backend:** Express (se integra al backend existente de las marcas).
-- **DB:** MongoDB (modelo de datos arriba).
-- **IA:** OpenAI `openai` SDK (`images.edit`, gpt-image-2).
-- **Deploy:** **Render** (web service).
+- **DB:** MongoDB. Colecciones: `Creative` (variantes), `Product` (catálogo
+  Shopify sincronizado por cron), `Reference` (biblioteca de pins de estilo).
+- **IA:** OpenAI `openai` SDK (`images.edit`, gpt-image-2 · juez `gpt-5.1`).
+- **Cron:** in-process (`setInterval`) sincroniza Shopify cada `SYNC_INTERVAL_MIN`.
+- **Deploy:** **Render** (web service, plan starter — el cron necesita el server
+  siempre vivo, no free que se duerme).
+
+### Flujo (pipeline automático)
+
+El panel es un dashboard de 4 vistas: **Resumen · Productos · Referencias · Cola
+de QC** (no hay form manual de "Generar"). El flujo:
+
+1. **Cron** (cada `SYNC_INTERVAL_MIN`, default 10) lee Shopify (`products.json`) y
+   hace upsert en la colección `Product`. Los nuevos entran con `generatedCount=0`
+   → badge "nuevo". Acción = **solo listar**, no genera solo.
+2. En **Productos**, tocás "Generar" sobre un jean → receta **2 ángulos × 2
+   referencias activas = 4 variantes** (configurable: `RECIPE_ANGLES`, `RECIPE_REFS`).
+3. **Referencias**: biblioteca de pins (subir / activar / borrar). Las activas
+   alimentan la receta. Se pasan como 2da imagen a `images.edit`.
+4. Cada variante: genera async (~2 min) → juez de fidelidad → **Cola de QC**.
 
 ### Superficie de API (implementada)
 
-gpt-image-2 tarda ~2 min/imagen → la generación es **async**: el POST responde
-al instante (202) y genera en background; el panel hace polling de `/creatives`.
-
 ```
-POST /api/ad-angles
-  body: { imageUrl, angles?: string[], drop?, wash?, product?, hook?, referenceImageB64? }
-  → crea Creative(s) con genStatus="generating", responde 202 { queued: [{id,angle}] }
-    y dispara la generación en background (cada doc pasa a genStatus
-    "ready" | "failed" al terminar).
-    referenceImageB64: pin de estilo (base64). Si viene, se pasa como 2da imagen
-    a images.edit: el jean se mantiene (imagen 1) y el outfit/zapatillas/vibe se
-    copian de la referencia (imagen 2). NO copia el bottom ni la cara de la ref.
+GET   /api/products?sync=1
+  → productos sincronizados de Shopify (desde Mongo):
+    [{ id, title, wash, image, images[], generatedCount, isNew }]. sync=1 fuerza
+    re-sync. isNew = aún no se generaron variantes.
+
+POST  /api/products/:id/generate   body: { angles?: string[] }
+  → receta: recipeAngles × hasta recipeRefs referencias activas. Crea Creative(s)
+    genStatus="generating", responde 202, genera en background. Incrementa
+    generatedCount del producto.
+
+GET/POST/PATCH/DELETE /api/references[/:id][/image]
+  → biblioteca de pins de estilo. POST {imageB64,label}; PATCH {active,label};
+    /image sirve el pin. Las active alimentan la receta.
+
+POST /api/ad-angles   (manual / one-off, sigue disponible)
+  body: { imageUrl, angles?, drop?, wash?, product?, referenceImageB64? }
+  → mismo motor; referenceImageB64 = pin de estilo (2da imagen). El jean se
+    mantiene (imagen 1); outfit/zapatillas/vibe se copian de la ref (imagen 2).
+    NO copia el bottom ni la cara de la referencia.
 
 GET  /api/creatives/:id/reference
   → sirve el pin de referencia usado (si hubo).
-
-GET  /api/products
-  → catalogo completo del Shopify de CAROTA (products.json, cacheado 5 min):
-    [{ id, title, handle, wash, image, images[] }]. El panel lo muestra como
-    galeria; al elegir un producto rellena imageUrl/product/wash.
 
 GET  /api/creatives?drop=&wash=&qcStatus=
   → lista creatives para el panel de QC (sin imageData).
