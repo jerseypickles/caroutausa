@@ -3,6 +3,14 @@ import { Creative } from '../models/creative.js';
 
 export const creativesRouter = Router();
 
+// Detecta el formato real por magic bytes (las viejas son png, las nuevas webp).
+function detectMime(buf) {
+  if (buf[0] === 0x89 && buf[1] === 0x50) return 'image/png';
+  if (buf[0] === 0xff && buf[1] === 0xd8) return 'image/jpeg';
+  if (buf.subarray(0, 4).toString('ascii') === 'RIFF' && buf.subarray(8, 12).toString('ascii') === 'WEBP') return 'image/webp';
+  return 'image/png';
+}
+
 // GET /api/creatives?drop=&wash=&qcStatus=
 // Lista creatives para el panel de QC (sin imageData, va aparte por /image).
 creativesRouter.get('/creatives', async (req, res) => {
@@ -23,7 +31,7 @@ creativesRouter.get('/creatives/:id/image', async (req, res) => {
     return res.status(404).json({ error: 'Sin imagen para este creative' });
   }
   const buffer = Buffer.from(doc.imageData, 'base64');
-  res.set('Content-Type', 'image/png');
+  res.set('Content-Type', detectMime(buffer));
   // La imagen de un creative no cambia una vez generada -> cacheable e inmutable.
   // Evita que el polling del panel la re-descargue y parpadee.
   res.set('Cache-Control', 'public, max-age=31536000, immutable');
@@ -36,9 +44,10 @@ creativesRouter.get('/creatives/:id/reference', async (req, res) => {
   if (!doc || !doc.referenceImageData) {
     return res.status(404).json({ error: 'Sin referencia para este creative' });
   }
-  res.set('Content-Type', 'image/png');
+  const refBuf = Buffer.from(doc.referenceImageData, 'base64');
+  res.set('Content-Type', detectMime(refBuf));
   res.set('Cache-Control', 'public, max-age=31536000, immutable');
-  res.send(Buffer.from(doc.referenceImageData, 'base64'));
+  res.send(refBuf);
 });
 
 // PATCH /api/creatives/:id/qc  body: { qcStatus: "approved"|"rejected", qcNotes? }

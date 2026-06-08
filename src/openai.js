@@ -7,6 +7,9 @@ const client = new OpenAI({ apiKey: config.openaiApiKey });
 
 const SIZE = '1024x1536'; // vertical 2:3 para Reels/Stories/feed
 const QUALITY = 'high';
+// WebP comprimido: ~120KB vs ~3MB PNG (carga ~25x mas rapido en el panel).
+const OUTPUT_FORMAT = 'webp';
+const OUTPUT_COMPRESSION = 72;
 
 // gpt-image-2 hace alta fidelidad nativamente y (segun doc) NO toma input_fidelity.
 // gpt-image-1 / gpt-image-1-mini SI lo aceptan. En vez de afirmarlo estaticamente,
@@ -41,7 +44,10 @@ export async function generateVariant({ imageUrl, angleId, referenceB64 }) {
   }
   const prompt = buildPrompt(angleId, { withReference: Boolean(referenceB64) });
 
-  const params = { model, image, prompt, size: SIZE, quality: QUALITY, n: 1 };
+  const params = {
+    model, image, prompt, size: SIZE, quality: QUALITY, n: 1,
+    output_format: OUTPUT_FORMAT, output_compression: OUTPUT_COMPRESSION,
+  };
   if (acceptsInputFidelity(model)) {
     params.input_fidelity = 'high';
   }
@@ -50,9 +56,13 @@ export async function generateVariant({ imageUrl, angleId, referenceB64 }) {
   try {
     response = await client.images.edit(params);
   } catch (err) {
-    // Fallback: si rechaza input_fidelity, reintentar sin el.
-    if (params.input_fidelity && /input_fidelity/i.test(err?.message || '')) {
+    const msg = err?.message || '';
+    // Fallback: si rechaza algun parametro opcional, reintentar sin ellos.
+    if (/input_fidelity/i.test(msg) && params.input_fidelity) {
       delete params.input_fidelity;
+      response = await client.images.edit(params);
+    } else if (/output_(format|compression)/i.test(msg)) {
+      delete params.output_format; delete params.output_compression;
       response = await client.images.edit(params);
     } else {
       throw err;

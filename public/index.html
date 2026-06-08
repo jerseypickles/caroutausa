@@ -102,7 +102,9 @@
   .dropzone { border: 1px dashed var(--border2); border-radius: 12px; padding: 28px; text-align: center; color: var(--muted);
     cursor: pointer; transition: .15s; margin-bottom: 22px; }
   .dropzone:hover { border-color: var(--accent); color: var(--text); }
-  .dropzone svg { width: 26px; height: 26px; color: var(--accent2); margin-bottom: 8px; }
+  .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); color: var(--text); transform: scale(1.005); }
+  .dropzone svg { width: 26px; height: 26px; color: var(--accent2); margin-bottom: 8px; pointer-events: none; }
+  .dropzone * { pointer-events: none; }
 
   /* filtros + cola QC */
   .filters { display: flex; gap: 6px; background: var(--surface); border: 1px solid var(--border); padding: 4px; border-radius: 9px; }
@@ -112,7 +114,11 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
   .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color .15s; }
   .tile:hover { border-color: var(--border2); }
-  .tile img.main { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; background: var(--surface3); cursor: zoom-in; }
+  .tile img.main { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; cursor: zoom-in;
+    background: linear-gradient(110deg, var(--surface2) 28%, var(--surface3) 50%, var(--surface2) 72%);
+    background-size: 220% 100%; animation: shimmer 1.5s linear infinite; }
+  .tile img.main.loaded { animation: none; background: var(--surface3); }
+  @keyframes shimmer { to { background-position: -220% 0; } }
   .tile .meta { padding: 13px 14px 4px; }
   .tile .meta .a { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; text-transform: capitalize; flex-wrap: wrap; }
   .tile .meta .b { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
@@ -203,11 +209,11 @@
     <!-- REFERENCIAS -->
     <section class="view" id="view-referencias">
       <div class="secthead"><h2>Referencias de estilo</h2><span class="muted">Las activas se usan al generar. La receta toma las 2 más recientes.</span></div>
-      <input type="file" id="refInput" accept="image/*" hidden onchange="onRefSelected(event)" />
-      <div class="dropzone" onclick="document.getElementById('refInput').click()">
+      <input type="file" id="refInput" accept="image/*" hidden multiple onchange="onRefSelected(event)" />
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('refInput').click()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
-        <div style="font-weight:600;color:var(--text)">Subir un pin de Pinterest</div>
-        <div style="font-size:12px">El jean se mantiene; el outfit, zapatillas y vibe se copian de la referencia.</div>
+        <div style="font-weight:600;color:var(--text)">Arrastrá pins acá o hacé clic para subir</div>
+        <div style="font-size:12px">Podés soltar varias imágenes. El jean se mantiene; el outfit, zapatillas y vibe se copian de la referencia.</div>
       </div>
       <div class="refgrid" id="refgrid"></div>
     </section>
@@ -325,17 +331,39 @@ async function loadReferences() {
       </div>
     </div>`).join('') : '<div class="empty">Sin referencias todavía. Subí tu primer pin arriba.</div>';
 }
-function onRefSelected(e) {
-  const file = e.target.files[0]; if (!file) return;
-  if (file.size > 12 * 1024 * 1024) { alert('Imagen muy grande (máx 12MB).'); return; }
-  const reader = new FileReader();
-  reader.onload = async () => {
-    const b64 = String(reader.result).split(',')[1];
-    const label = (file.name || 'pin').replace(/\.[^.]+$/, '').slice(0, 40);
-    await fetch('/api/references', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageB64: b64, label }) });
-    e.target.value = ''; toast('Pin agregado'); loadReferences();
-  };
-  reader.readAsDataURL(file);
+function uploadRefFile(file) {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('image/')) { resolve(false); return; }
+    if (file.size > 12 * 1024 * 1024) { toast(`"${file.name}" supera 12MB, omitida`); resolve(false); return; }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const b64 = String(reader.result).split(',')[1];
+      const label = (file.name || 'pin').replace(/\.[^.]+$/, '').slice(0, 40);
+      await fetch('/api/references', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageB64: b64, label }) });
+      resolve(true);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function handleRefFiles(files) {
+  const list = [...files];
+  if (!list.length) return;
+  const ok = (await Promise.all(list.map(uploadRefFile))).filter(Boolean).length;
+  if (ok) toast(`${ok} pin(s) agregado(s)`);
+  loadReferences();
+}
+function onRefSelected(e) { handleRefFiles(e.target.files); e.target.value = ''; }
+
+// Drag & drop en el dropzone (se setea al cargar).
+function setupDropzone() {
+  const dz = document.getElementById('dropzone');
+  if (!dz) return;
+  ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave', 'dragend'].forEach(ev => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop', (e) => {
+    e.preventDefault(); dz.classList.remove('drag');
+    if (e.dataTransfer?.files?.length) handleRefFiles(e.dataTransfer.files);
+  });
 }
 async function toggleRef(id, active) {
   await fetch(`/api/references/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active }) });
@@ -403,7 +431,7 @@ function renderQueue() {
     if (c.genStatus === 'generating') visual = tilePlaceholder('Generando…', true);
     else if (c.genStatus === 'failed') visual = tilePlaceholder('Falló: ' + (c.genError || 'error'), false);
     else if (c.qcStatus === 'rejected') visual = tilePlaceholder('sin imagen', false);
-    else visual = `<img class="main" src="/api/creatives/${c._id}/image" loading="lazy" onclick="openZoom('/api/creatives/${c._id}/image')" alt="${c.angle}" />`;
+    else visual = `<img class="main" src="/api/creatives/${c._id}/image" loading="lazy" onload="this.classList.add('loaded')" onclick="openZoom('/api/creatives/${c._id}/image')" alt="${c.angle}" />`;
     const canQc = c.genStatus === 'ready' && c.qcStatus === 'generated';
     return `<div class="tile">${visual}
       <div class="meta">
@@ -439,6 +467,7 @@ async function qc(id, qcStatus) {
 }
 
 /* init */
+setupDropzone();
 loadProducts();
 loadReferences();
 loadQueue();
