@@ -45,6 +45,7 @@ const creativeSchema = new Schema(
     fidelityIssues: { type: [String], default: [] },  // que detalles se perdieron
     fidelitySummary: { type: String, default: null }, // una frase
     fidelityError: { type: String, default: null },
+    retries: { type: Number, default: 0 }, // reintentos automaticos por fidelidad baja
 
     // --- QC humano ---
     qcStatus: {

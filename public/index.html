@@ -196,7 +196,7 @@
       <div class="kpis">
         <div class="kpi"><div class="label">Productos nuevos</div><div class="val" id="kNew">0</div></div>
         <div class="kpi"><div class="label">Referencias activas</div><div class="val" id="kRefs">0</div></div>
-        <div class="kpi"><div class="label">Receta por producto</div><div class="val" style="font-size:16px" id="kRecipe">2 áng × 2 ref</div></div>
+        <div class="kpi"><div class="label">Receta por producto</div><div class="val" style="font-size:15px" id="kRecipe">fieles + vibe · auto-retry</div></div>
         <div class="kpi"><div class="label">Cron</div><div class="val" style="font-size:16px;color:var(--ok)">cada 10 min</div></div>
       </div>
     </section>
@@ -299,8 +299,7 @@ async function generateProduct(id, btn) {
     const r = await fetch(`/api/products/${id}/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Error');
-    const refMsg = data.referencesUsed ? `con ${data.referencesUsed} ref(s)` : 'sin referencia';
-    toast(`Generando ${data.queued.length} variantes ${refMsg}…`);
+    toast(`Generando ${data.queued.length} variantes (${data.faithful} fieles + ${data.vibe} con estilo)…`);
     loadProducts();
     showView('cola'); loadQueue();
   } catch (e) { toast('Error: ' + e.message); btn.disabled = false; btn.textContent = 'Generar'; }
@@ -437,7 +436,7 @@ function renderQueue() {
     const canQc = c.genStatus === 'ready' && c.qcStatus === 'generated';
     return `<div class="tile">${visual}
       <div class="meta">
-        <div class="a">${c.angle.replace(/_/g,' ')} <span class="badge ${c.qcStatus}">${c.qcStatus}</span>${c.hasReference ? '<span class="badge ref">ref</span>' : ''}</div>
+        <div class="a">${c.angle.replace(/_/g,' ')} <span class="badge ${c.qcStatus}">${c.qcStatus}</span>${c.hasReference ? '<span class="badge ref">vibe</span>' : '<span class="badge done">fiel</span>'}${c.retries ? `<span class="badge" style="background:var(--warn-soft);color:var(--warn)">↻${c.retries}</span>` : ''}</div>
         <div class="b">${[c.product, c.wash, c.drop].filter(Boolean).join(' · ') || '—'}</div>
         ${c.hasReference ? `<img class="refchip" src="/api/creatives/${c._id}/reference" onclick="openZoom('/api/creatives/${c._id}/reference')" alt="ref" title="Referencia usada" />` : ''}
       </div>

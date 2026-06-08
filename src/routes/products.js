@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Product } from '../models/product.js';
 import { Reference } from '../models/reference.js';
 import { syncProducts } from '../sync.js';
-import { enqueueGeneration } from '../generation.js';
+import { enqueueJobs } from '../generation.js';
 import { config } from '../config.js';
 
 export const productsRouter = Router();
@@ -43,15 +43,23 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
 
   const activeRefs = await Reference.find({ active: true })
     .sort({ createdAt: -1 })
-    .limit(config.recipeRefs)
     .select('+imageData')
     .lean();
-  const references = activeRefs.map((r) => ({ b64: r.imageData }));
 
-  const created = await enqueueGeneration({
+  // Receta mixta (el jean es prioridad): por cada angulo, 1 variante FIEL (sin
+  // referencia, fidelidad garantizada) + 1 VIBE (con referencia, gated por el juez).
+  const jobs = [];
+  angles.forEach((angleId, i) => {
+    jobs.push({ angleId, ref: null }); // fiel
+    if (activeRefs.length) {
+      const r = activeRefs[i % activeRefs.length]; // rota entre las refs activas
+      jobs.push({ angleId, ref: { b64: r.imageData } }); // vibe
+    }
+  });
+
+  const created = await enqueueJobs({
     imageUrl: product.image,
-    angles,
-    references,
+    jobs,
     productDescription: [product.title, product.description].filter(Boolean).join('. '),
     meta: {
       shopifyProductId: product.shopifyId,
@@ -67,7 +75,7 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
 
   res.status(202).json({
     queued: created.map((d) => ({ id: d._id, angle: d.angle })),
-    angles,
-    referencesUsed: references.length,
+    faithful: jobs.filter((j) => !j.ref).length,
+    vibe: jobs.filter((j) => j.ref).length,
   });
 });

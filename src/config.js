@@ -15,8 +15,10 @@ export const config = {
   imageModel: process.env.IMAGE_MODEL || 'gpt-image-2',
   judgeModel: process.env.JUDGE_MODEL || 'gpt-5.1',
   fidelityPass: Number(process.env.FIDELITY_PASS || 85), // umbral de aprobado
-  // receta de generacion por producto: 2 angulos x 2 referencias activas = 4 variantes
+  // receta mixta por producto: por cada angulo, 1 variante SIN referencia (jean
+  // garantizado) + 1 CON referencia (vibe, gated por el juez).
   recipeAngles: (process.env.RECIPE_ANGLES || 'realista,gancho_click').split(',').map((s) => s.trim()).filter(Boolean),
-  recipeRefs: Number(process.env.RECIPE_REFS || 2),
+  // reintentos automaticos cuando el juez marca fail (aprovecha la varianza de la ref)
+  fidelityRetries: Number(process.env.FIDELITY_RETRIES || 1),
   syncIntervalMin: Number(process.env.SYNC_INTERVAL_MIN || 10),
 };

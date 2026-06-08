@@ -1,11 +1,12 @@
 import { Creative } from './models/creative.js';
 import { generateVariant } from './openai.js';
 import { judgeFidelity } from './judge.js';
+import { config } from './config.js';
 
-// Genera en background y actualiza el doc cuando termina. Fire-and-forget:
-// gpt-image-2 tarda ~2 min, no bloqueamos el request HTTP. Tras la imagen,
-// corre el juez de fidelidad del jean.
-export async function generateInBackground(creativeId, imageUrl, angleId, referenceB64, productDescription) {
+// Genera en background y actualiza el doc cuando termina. Tras la imagen corre el
+// juez de fidelidad; si marca fail y quedan reintentos, regenera in-place (la
+// referencia tiene varianza alta, un re-roll suele caer mejor).
+export async function generateInBackground(creativeId, imageUrl, angleId, referenceB64, productDescription, attempt = 0) {
   let b64;
   try {
     ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64, productDescription }));
@@ -15,27 +16,30 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     await Creative.findByIdAndUpdate(creativeId, { genStatus: 'failed', genError: err.message, fidelityStatus: 'failed' });
     return;
   }
+
   try {
     const v = await judgeFidelity({ sourceImageUrl: imageUrl, b64 });
     await Creative.findByIdAndUpdate(creativeId, {
       fidelityStatus: 'done', fidelityScore: v.score, fidelityVerdict: v.verdict,
-      fidelityIssues: v.issues, fidelitySummary: v.summary, fidelityError: null,
+      fidelityIssues: v.issues, fidelitySummary: v.summary, fidelityError: null, retries: attempt,
     });
+
+    // Auto-regenerar si no paso la fidelidad y quedan reintentos.
+    if (v.verdict !== 'pass' && attempt < config.fidelityRetries) {
+      console.log(`[gen] fidelidad ${v.score} < umbral, regenerando (intento ${attempt + 1}) ${creativeId}`);
+      await Creative.findByIdAndUpdate(creativeId, { genStatus: 'generating', fidelityStatus: 'pending' });
+      return generateInBackground(creativeId, imageUrl, angleId, referenceB64, productDescription, attempt + 1);
+    }
   } catch (err) {
     console.error(`[gen] juez fallo (${creativeId}):`, err.message);
     await Creative.findByIdAndUpdate(creativeId, { fidelityStatus: 'failed', fidelityError: err.message });
   }
 }
 
-// Crea N creatives = angles × references (o angles solos si no hay refs) y los
-// dispara en background. Devuelve los docs creados.
-export async function enqueueGeneration({ imageUrl, angles, references = [], meta = {}, productDescription = '' }) {
-  const refs = references.length ? references : [null];
-  const combos = [];
-  for (const angleId of angles) for (const ref of refs) combos.push({ angleId, ref });
-
+// Crea y dispara N jobs explicitos. jobs: [{ angleId, ref: {b64}|null }].
+export async function enqueueJobs({ imageUrl, jobs, meta = {}, productDescription = '' }) {
   const created = await Creative.create(
-    combos.map(({ angleId, ref }) => ({
+    jobs.map(({ angleId, ref }) => ({
       ...meta,
       angle: angleId,
       sourceImageUrl: imageUrl,
@@ -45,7 +49,14 @@ export async function enqueueGeneration({ imageUrl, angles, references = [], met
       referenceImageData: ref?.b64 || null,
     }))
   );
-
-  created.forEach((doc, i) => generateInBackground(doc._id, imageUrl, doc.angle, combos[i].ref?.b64 || null, productDescription));
+  created.forEach((doc, i) => generateInBackground(doc._id, imageUrl, doc.angle, jobs[i].ref?.b64 || null, productDescription));
   return created;
+}
+
+// Wrapper: producto cartesiano angles × references (para el endpoint manual).
+export async function enqueueGeneration({ imageUrl, angles, references = [], meta = {}, productDescription = '' }) {
+  const refs = references.length ? references : [null];
+  const jobs = [];
+  for (const angleId of angles) for (const ref of refs) jobs.push({ angleId, ref });
+  return enqueueJobs({ imageUrl, jobs, meta, productDescription });
 }
