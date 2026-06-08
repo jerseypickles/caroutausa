@@ -12,7 +12,7 @@ export async function syncProducts() {
       { shopifyId: p.id },
       {
         $setOnInsert: { firstSeenAt: new Date(), generatedCount: 0, lastGeneratedAt: null },
-        $set: { title: p.title, handle: p.handle, wash: p.wash, image: p.image, images: p.images },
+        $set: { title: p.title, handle: p.handle, wash: p.wash, description: p.description, image: p.image, images: p.images },
       },
       { upsert: true }
     );

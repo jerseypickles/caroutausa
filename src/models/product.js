@@ -8,6 +8,7 @@ const productSchema = new mongoose.Schema(
     title: { type: String, required: true },
     handle: { type: String },
     wash: { type: String },
+    description: { type: String, default: '' },
     image: { type: String },
     images: { type: [String], default: [] },
     firstSeenAt: { type: Date, default: Date.now },

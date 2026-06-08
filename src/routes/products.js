@@ -19,6 +19,7 @@ productsRouter.get('/products', async (req, res) => {
     title: p.title,
     handle: p.handle,
     wash: p.wash,
+    description: p.description,
     image: p.image,
     images: p.images,
     generatedCount: p.generatedCount,
@@ -51,6 +52,7 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
     imageUrl: product.image,
     angles,
     references,
+    productDescription: [product.title, product.description].filter(Boolean).join('. '),
     meta: {
       shopifyProductId: product.shopifyId,
       product: product.title,

@@ -5,10 +5,10 @@ import { judgeFidelity } from './judge.js';
 // Genera en background y actualiza el doc cuando termina. Fire-and-forget:
 // gpt-image-2 tarda ~2 min, no bloqueamos el request HTTP. Tras la imagen,
 // corre el juez de fidelidad del jean.
-export async function generateInBackground(creativeId, imageUrl, angleId, referenceB64) {
+export async function generateInBackground(creativeId, imageUrl, angleId, referenceB64, productDescription) {
   let b64;
   try {
-    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64 }));
+    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64, productDescription }));
     await Creative.findByIdAndUpdate(creativeId, { imageData: b64, genStatus: 'ready', genError: null });
   } catch (err) {
     console.error(`[gen] fallo angulo ${angleId} (${creativeId}):`, err.message);
@@ -29,7 +29,7 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
 
 // Crea N creatives = angles × references (o angles solos si no hay refs) y los
 // dispara en background. Devuelve los docs creados.
-export async function enqueueGeneration({ imageUrl, angles, references = [], meta = {} }) {
+export async function enqueueGeneration({ imageUrl, angles, references = [], meta = {}, productDescription = '' }) {
   const refs = references.length ? references : [null];
   const combos = [];
   for (const angleId of angles) for (const ref of refs) combos.push({ angleId, ref });
@@ -46,6 +46,6 @@ export async function enqueueGeneration({ imageUrl, angles, references = [], met
     }))
   );
 
-  created.forEach((doc, i) => generateInBackground(doc._id, imageUrl, doc.angle, combos[i].ref?.b64 || null));
+  created.forEach((doc, i) => generateInBackground(doc._id, imageUrl, doc.angle, combos[i].ref?.b64 || null, productDescription));
   return created;
 }

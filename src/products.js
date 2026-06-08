@@ -11,6 +11,18 @@ function washFromTitle(title = '') {
   return m ? m[1].toLowerCase() : null;
 }
 
+// Limpia el body_html de Shopify a texto plano (para inyectar al prompt).
+function cleanDescription(html = '') {
+  return html
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/(p|li|div)>/gi, '. ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&[a-z]+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 480);
+}
+
 function normalize(p) {
   const images = (p.images || []).map((img) => img.src);
   return {
@@ -20,6 +32,7 @@ function normalize(p) {
     wash: washFromTitle(p.title),
     productType: p.product_type || null,
     price: p.variants?.[0]?.price || null,
+    description: cleanDescription(p.body_html),
     image: images[0] || null, // foto principal -> source para generar
     images,
   };

@@ -1,12 +1,16 @@
 // Los prompts viven SOLO en este archivo. La estructura importa mas que el
 // texto exacto: cada angulo = garment lock + escena/modelo/luz/mood.
 
-// Bloquea el producto: el modelo solo cambia escena, no rediseña el garment.
-export const GARMENT_LOCK = `Keep the exact garment from the source image unchanged:
-same denim wash, same distressing and rips, same stitching,
-same hardware and any chains, same cut and fit.
-Do not redesign the product. Only change the scene, model,
-styling, light and mood as described below.`;
+// Bloquea el producto. El jean del MAIN es lo que vendemos: prioridad absoluta.
+export const GARMENT_LOCK = `THE DENIM GARMENT IN THE FIRST IMAGE IS THE PRODUCT WE SELL.
+It is the #1 priority of this image — reproduce it with 100% fidelity.
+Keep EXACTLY, with zero changes: the precise denim wash and color tone, every
+fade and whiskering pattern, the exact placement, size and shape of every rip,
+tear and distressing, the stitching, the hardware, buttons and rivets, the raw
+cutoff frayed hem, the cut, the length and the fit.
+Do NOT clean up, restyle, lighten, darken, recolor, lengthen, shorten, smooth or
+"improve" the denim in any way. Render it as the exact real photographed product.
+If anything conflicts, the denim from the first image ALWAYS wins.`;
 
 // Anti-IA: se concatena a cada prompt para empujar realismo y matar tells.
 const ANTI_AI = `Photoreal, shot on a real camera, real available light with real shadows.
@@ -14,13 +18,15 @@ Natural skin with visible pores and slight grain, no waxy or plastic skin,
 no over-smoothing, no perfect symmetry, no uniform HDR glow.
 Slightly muted real white balance, not oversaturated. Real cluttered environment with texture.`;
 
-// Referencia de estilo (imagen 2): copiar outfit/zapatillas/vibe, NO el bottom ni la cara.
-const STYLE_REFERENCE = `Use the SECOND image only as a STYLING reference. Copy from it:
-the outfit pieces (top, jacket, footwear/sneakers), how the clothes are worn,
-the accessories, the overall fashion vibe, color mood and photographic style.
-Do NOT copy the pants/shorts from the second image — the bottoms must stay the
-EXACT garment from the first image. Do NOT copy the face or identity from the
-second image; use a different real model.`;
+// Referencia de estilo (imagen 2): SUBORDINADA al producto. Solo aporta el resto
+// del look y la escena; jamas toca el jean.
+const STYLE_REFERENCE = `The SECOND image is ONLY a styling moodboard and is SECONDARY
+to the product. Copy from it only: the top/jacket, the footwear/sneakers, the
+accessories, the pose, the location/scene, the lighting and the overall vibe.
+NEVER take the pants, shorts or bottoms from the second image — the bottoms are
+ALWAYS the exact denim garment from the FIRST image. The second image must NOT
+change the denim's wash, color, rips, distressing, hem or length in any way.
+Do NOT copy the face or identity from the second image; use a different real model.`;
 
 export const ANGLES = {
   realista: {
@@ -55,12 +61,16 @@ Striking and scroll-stopping while still looking like a real photograph.`,
 
 export const DEFAULT_ANGLE = 'realista';
 
-// Arma el prompt final para un angulo: garment lock + (referencia) + escena + anti-IA.
-export function buildPrompt(angleId, { withReference = false } = {}) {
+// Arma el prompt final: garment lock + descripcion real del producto + (referencia)
+// + escena + anti-IA. La descripcion (de Shopify) ancla que jean preservar.
+export function buildPrompt(angleId, { withReference = false, productDescription = '' } = {}) {
   const angle = ANGLES[angleId];
   if (!angle) {
     throw new Error(`Angulo desconocido: ${angleId}. Validos: ${Object.keys(ANGLES).join(', ')}`);
   }
+  const desc = productDescription
+    ? `\n\nThe exact product to preserve (keep faithful to this): ${productDescription}`
+    : '';
   const ref = withReference ? `\n\n${STYLE_REFERENCE}` : '';
-  return `${GARMENT_LOCK}${ref}\n\n${angle.prompt}\n\n${ANTI_AI}`;
+  return `${GARMENT_LOCK}${desc}${ref}\n\n${angle.prompt}\n\n${ANTI_AI}`;
 }
