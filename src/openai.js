@@ -27,11 +27,19 @@ async function fetchSourceImage(imageUrl) {
   return toFile(buffer, `source.${ext}`, { type: contentType });
 }
 
-// Genera UNA variante para un angulo. Devuelve { b64 } o lanza error.
-export async function generateVariant({ imageUrl, angleId }) {
-  const image = await fetchSourceImage(imageUrl);
-  const prompt = buildPrompt(angleId);
+// Genera UNA variante para un angulo. Si viene referenceB64, se pasa como 2da
+// imagen (referencia de estilo). Devuelve { b64 } o lanza error.
+export async function generateVariant({ imageUrl, angleId, referenceB64 }) {
+  const productImage = await fetchSourceImage(imageUrl);
   const model = config.imageModel;
+
+  // image puede ser una sola Uploadable o un array [producto, referencia].
+  let image = productImage;
+  if (referenceB64) {
+    const refFile = await toFile(Buffer.from(referenceB64, 'base64'), 'reference.png', { type: 'image/png' });
+    image = [productImage, refFile];
+  }
+  const prompt = buildPrompt(angleId, { withReference: Boolean(referenceB64) });
 
   const params = { model, image, prompt, size: SIZE, quality: QUALITY, n: 1 };
   if (acceptsInputFidelity(model)) {

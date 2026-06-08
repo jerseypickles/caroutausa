@@ -119,6 +119,17 @@
   .chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent2); }
   .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
 
+  /* referencia de estilo */
+  .refzone { margin-bottom: 14px; }
+  .refempty { border: 1px dashed var(--border2); border-radius: 8px; padding: 13px 14px; display: flex; gap: 11px;
+    align-items: center; color: var(--muted); font-size: 12px; cursor: pointer; transition: .15s; line-height: 1.4; }
+  .refempty:hover { border-color: var(--accent); color: var(--text); }
+  .refempty svg { width: 22px; height: 22px; flex: none; color: var(--accent2); }
+  .refpreview { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--border2); border-radius: 8px; background: var(--surface2); }
+  .refpreview img { width: 50px; height: 50px; object-fit: cover; border-radius: 7px; border: 1px solid var(--border2); flex: none; }
+  .badge.ref { background: var(--warn-soft); color: var(--warn); }
+  .refchip { width: 34px; height: 34px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border2); cursor: zoom-in; margin-top: 8px; }
+
   /* catalogo */
   .toolbar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; }
   .toolbar input { margin: 0; flex: 1; }
@@ -250,6 +261,23 @@
             <div><label for="wash">Wash</label><input type="text" id="wash" placeholder="onyx" /></div>
             <div><label for="product">Producto</label><input type="text" id="product" placeholder="Onyx Wash Short" /></div>
           </div>
+          <label>Referencia de estilo <span style="color:var(--faint)">· opcional (pin de Pinterest)</span></label>
+          <div class="refzone">
+            <input type="file" id="refInput" accept="image/*" hidden onchange="onRefSelected(event)" />
+            <div class="refempty" id="refEmpty" onclick="document.getElementById('refInput').click()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+              Subí un pin — el jean se mantiene; el outfit, zapatillas y vibe se copian de tu referencia.
+            </div>
+            <div class="refpreview" id="refPreview" style="display:none">
+              <img id="refThumb" alt="referencia de estilo" />
+              <div>
+                <div style="font-size:12px;font-weight:600">Referencia cargada</div>
+                <div style="font-size:11px;color:var(--muted)">Se usa en todos los ángulos de esta generación.</div>
+              </div>
+              <span style="flex:1"></span>
+              <button type="button" class="btn ghost sm" onclick="clearRef()">Quitar</button>
+            </div>
+          </div>
           <label>Ángulos</label>
           <div class="angles" id="angles"></div>
           <button class="btn" id="genBtn" onclick="generate()">
@@ -314,6 +342,27 @@ let products = [];
 let selectedProductId = null;
 let pollTimer = null;
 let lastSig = null;
+let referenceB64 = null;
+
+function onRefSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 12 * 1024 * 1024) { alert('La imagen es muy grande (máx 12MB).'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    referenceB64 = String(reader.result).split(',')[1];
+    document.getElementById('refThumb').src = reader.result;
+    document.getElementById('refEmpty').style.display = 'none';
+    document.getElementById('refPreview').style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+function clearRef() {
+  referenceB64 = null;
+  document.getElementById('refInput').value = '';
+  document.getElementById('refEmpty').style.display = 'flex';
+  document.getElementById('refPreview').style.display = 'none';
+}
 
 function toggleCard(headerEl) { headerEl.parentElement.classList.toggle('collapsed'); }
 
@@ -385,6 +434,7 @@ async function generate() {
       drop: document.getElementById('drop').value.trim() || undefined,
       wash: document.getElementById('wash').value.trim() || undefined,
       product: document.getElementById('product').value.trim() || undefined,
+      referenceImageB64: referenceB64 || undefined,
     };
     const r = await fetch('/api/ad-angles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await r.json();
@@ -454,8 +504,9 @@ function renderQueue() {
     return `<div class="tile">
       ${visual}
       <div class="meta">
-        <div class="a">${c.angle.replace(/_/g,' ')} <span class="badge ${c.qcStatus}">${c.qcStatus}</span></div>
+        <div class="a">${c.angle.replace(/_/g,' ')} <span class="badge ${c.qcStatus}">${c.qcStatus}</span>${c.hasReference ? ' <span class="badge ref">ref</span>' : ''}</div>
         <div class="b">${[c.product, c.wash, c.drop].filter(Boolean).join(' · ') || '—'}</div>
+        ${c.hasReference ? `<img class="refchip" src="/api/creatives/${c._id}/reference" onclick="openZoom('/api/creatives/${c._id}/reference')" alt="referencia de estilo" title="Referencia de estilo usada" />` : ''}
       </div>
       ${fidelityHtml(c)}
       ${c.qcNotes ? `<div class="fid-issues">✎ ${c.qcNotes}</div>` : ''}

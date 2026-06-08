@@ -14,6 +14,14 @@ Natural skin with visible pores and slight grain, no waxy or plastic skin,
 no over-smoothing, no perfect symmetry, no uniform HDR glow.
 Slightly muted real white balance, not oversaturated. Real cluttered environment with texture.`;
 
+// Referencia de estilo (imagen 2): copiar outfit/zapatillas/vibe, NO el bottom ni la cara.
+const STYLE_REFERENCE = `Use the SECOND image only as a STYLING reference. Copy from it:
+the outfit pieces (top, jacket, footwear/sneakers), how the clothes are worn,
+the accessories, the overall fashion vibe, color mood and photographic style.
+Do NOT copy the pants/shorts from the second image — the bottoms must stay the
+EXACT garment from the first image. Do NOT copy the face or identity from the
+second image; use a different real model.`;
+
 export const ANGLES = {
   realista: {
     id: 'realista',
@@ -47,11 +55,12 @@ Striking and scroll-stopping while still looking like a real photograph.`,
 
 export const DEFAULT_ANGLE = 'realista';
 
-// Arma el prompt final para un angulo: garment lock + escena + anti-IA.
-export function buildPrompt(angleId) {
+// Arma el prompt final para un angulo: garment lock + (referencia) + escena + anti-IA.
+export function buildPrompt(angleId, { withReference = false } = {}) {
   const angle = ANGLES[angleId];
   if (!angle) {
     throw new Error(`Angulo desconocido: ${angleId}. Validos: ${Object.keys(ANGLES).join(', ')}`);
   }
-  return `${GARMENT_LOCK}\n\n${angle.prompt}\n\n${ANTI_AI}`;
+  const ref = withReference ? `\n\n${STYLE_REFERENCE}` : '';
+  return `${GARMENT_LOCK}${ref}\n\n${angle.prompt}\n\n${ANTI_AI}`;
 }

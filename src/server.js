@@ -11,7 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, '..', 'public');
 
 const app = express();
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '25mb' })); // base64 de imagenes (producto + referencia)
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api', adAnglesRouter);

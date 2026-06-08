@@ -30,6 +30,17 @@ creativesRouter.get('/creatives/:id/image', async (req, res) => {
   res.send(buffer);
 });
 
+// GET /api/creatives/:id/reference -> sirve el pin de referencia usado (si hubo).
+creativesRouter.get('/creatives/:id/reference', async (req, res) => {
+  const doc = await Creative.findById(req.params.id).select('+referenceImageData').lean();
+  if (!doc || !doc.referenceImageData) {
+    return res.status(404).json({ error: 'Sin referencia para este creative' });
+  }
+  res.set('Content-Type', 'image/png');
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.send(Buffer.from(doc.referenceImageData, 'base64'));
+});
+
 // PATCH /api/creatives/:id/qc  body: { qcStatus: "approved"|"rejected", qcNotes? }
 // Marca el resultado del QC humano. Al rechazar, limpia imageData (no guardamos
 // storage de lo que se descarta). Al aprobar, se conserva hasta migrar a R2.

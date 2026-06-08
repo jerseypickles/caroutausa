@@ -229,10 +229,16 @@ al instante (202) y genera en background; el panel hace polling de `/creatives`.
 
 ```
 POST /api/ad-angles
-  body: { imageUrl, angles?: string[], drop?, wash?, product?, hook? }
+  body: { imageUrl, angles?: string[], drop?, wash?, product?, hook?, referenceImageB64? }
   → crea Creative(s) con genStatus="generating", responde 202 { queued: [{id,angle}] }
     y dispara la generación en background (cada doc pasa a genStatus
     "ready" | "failed" al terminar).
+    referenceImageB64: pin de estilo (base64). Si viene, se pasa como 2da imagen
+    a images.edit: el jean se mantiene (imagen 1) y el outfit/zapatillas/vibe se
+    copian de la referencia (imagen 2). NO copia el bottom ni la cara de la ref.
+
+GET  /api/creatives/:id/reference
+  → sirve el pin de referencia usado (si hubo).
 
 GET  /api/products
   → catalogo completo del Shopify de CAROTA (products.json, cacheado 5 min):
@@ -289,9 +295,11 @@ posterior — ver roadmap.)
    - `images.edit` con garment lock + los 4 ángulos.
    - Endpoint de generación + guardado en Mongo (`qcStatus="generated"`).
    - Panel/endpoint de QC para aprobar/rechazar.
-2. **Fase 2 — Referencia de modelo:**
-   - Soportar segunda imagen (cara/cuerpo de referencia) para fijar el look y
-     subir realismo en shots con cara.
+2. **Fase 2 — Referencia (✔ parcial: styling):**
+   - ✔ Segunda imagen como **referencia de estilo** (pin de Pinterest): el modelo
+     mantiene el jean y copia outfit/zapatillas/vibe. Sube realismo porque ancla
+     en algo real en vez de inventar.
+   - Pendiente: referencia de **cara/modelo** para fijar identidad en shots con cara.
 3. **Fase 3 — Loop con Meta:**
    - Integrar Meta Marketing API para jalar métricas por creative y llenar el
      modelo de datos automáticamente.

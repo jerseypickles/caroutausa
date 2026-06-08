@@ -16,6 +16,8 @@ const creativeSchema = new Schema(
     // --- imagenes ---
     sourceImageUrl: { type: String, required: true },
     referenceImageRef: { type: String, default: null }, // Fase 2: cara/modelo de referencia
+    hasReference: { type: Boolean, default: false },     // se genero con referencia de estilo
+    referenceImageData: { type: String, default: null, select: false }, // pin base64 (preview)
     outputImageRef: { type: String, default: null },    // path/URL en object storage (Fase: R2)
     // Preview base64 hasta la decision de QC. select:false para no arrastrarlo en
     // los listados. Migrar a R2 (outputImageRef) cuando se apruebe. Se limpia al rechazar.
