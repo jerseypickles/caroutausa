@@ -114,10 +114,12 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
   .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color .15s; }
   .tile:hover { border-color: var(--border2); }
-  .tile img.main { width: 100%; display: block; aspect-ratio: 2/3; object-fit: cover; cursor: zoom-in;
+  /* aspect-ratio en el CONTENEDOR (no en el <img>) -> evita bug de Safari */
+  .tile .imgbox { position: relative; aspect-ratio: 2/3; overflow: hidden; display: block;
     background: linear-gradient(110deg, var(--surface2) 28%, var(--surface3) 50%, var(--surface2) 72%);
     background-size: 220% 100%; animation: shimmer 1.5s linear infinite; }
-  .tile img.main.loaded { animation: none; background: var(--surface3); }
+  .tile .imgbox.loaded { animation: none; background: var(--surface3); }
+  .tile .imgbox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
   @keyframes shimmer { to { background-position: -220% 0; } }
   .tile .meta { padding: 13px 14px 4px; }
   .tile .meta .a { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; text-transform: capitalize; flex-wrap: wrap; }
@@ -431,7 +433,7 @@ function renderQueue() {
     if (c.genStatus === 'generating') visual = tilePlaceholder('Generando…', true);
     else if (c.genStatus === 'failed') visual = tilePlaceholder('Falló: ' + (c.genError || 'error'), false);
     else if (c.qcStatus === 'rejected') visual = tilePlaceholder('sin imagen', false);
-    else visual = `<img class="main" src="/api/creatives/${c._id}/image" loading="lazy" onload="this.classList.add('loaded')" onclick="openZoom('/api/creatives/${c._id}/image')" alt="${c.angle}" />`;
+    else visual = `<div class="imgbox"><img src="/api/creatives/${c._id}/image" loading="lazy" onload="this.parentElement.classList.add('loaded')" onclick="openZoom('/api/creatives/${c._id}/image')" alt="${c.angle}" /></div>`;
     const canQc = c.genStatus === 'ready' && c.qcStatus === 'generated';
     return `<div class="tile">${visual}
       <div class="meta">
