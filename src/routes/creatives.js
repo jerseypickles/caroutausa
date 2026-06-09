@@ -50,6 +50,17 @@ creativesRouter.get('/creatives/:id/reference', async (req, res) => {
   res.send(refBuf);
 });
 
+// PATCH /api/creatives/:id/copy  body: { primaryText?, headline? } -> guarda copy editado
+creativesRouter.patch('/creatives/:id/copy', async (req, res) => {
+  const { primaryText, headline } = req.body || {};
+  const update = { 'copy.edited': true };
+  if (typeof primaryText === 'string') update['copy.primaryText'] = primaryText;
+  if (typeof headline === 'string') update['copy.headline'] = headline;
+  const doc = await Creative.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
+  if (!doc) return res.status(404).json({ error: 'Creative no encontrado' });
+  res.json({ copy: doc.copy });
+});
+
 // PATCH /api/creatives/:id/qc  body: { qcStatus: "approved"|"rejected", qcNotes? }
 // Marca el resultado del QC humano. Al rechazar, limpia imageData (no guardamos
 // storage de lo que se descarta). Al aprobar, se conserva hasta migrar a R2.

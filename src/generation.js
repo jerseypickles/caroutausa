@@ -1,6 +1,7 @@
 import { Creative } from './models/creative.js';
 import { generateVariant } from './openai.js';
 import { judgeFidelity } from './judge.js';
+import { generateCopy } from './copy.js';
 import { config } from './config.js';
 
 // Genera en background y actualiza el doc cuando termina. Tras la imagen corre el
@@ -15,6 +16,17 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     console.error(`[gen] fallo angulo ${angleId} (${creativeId}):`, err.message);
     await Creative.findByIdAndUpdate(creativeId, { genStatus: 'failed', genError: err.message, fidelityStatus: 'failed' });
     return;
+  }
+
+  // Copy nativo del ad (solo en el primer intento, no pisa ediciones del humano).
+  if (attempt === 0) {
+    try {
+      const doc = await Creative.findById(creativeId).lean();
+      if (!doc?.copy?.edited) {
+        const copy = await generateCopy({ product: doc.product, wash: doc.wash, angle: angleId, description: productDescription });
+        await Creative.findByIdAndUpdate(creativeId, { copy: { ...copy, edited: false } });
+      }
+    } catch (err) { console.error(`[gen] copy fallo (${creativeId}):`, err.message); }
   }
 
   try {

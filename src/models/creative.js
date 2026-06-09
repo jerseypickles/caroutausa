@@ -47,6 +47,13 @@ const creativeSchema = new Schema(
     fidelityError: { type: String, default: null },
     retries: { type: Number, default: 0 }, // reintentos automaticos por fidelidad baja
 
+    // --- copy del ad (generado, editable en QC) ---
+    copy: {
+      primaryText: { type: String, default: '' },
+      headline: { type: String, default: '' },
+      edited: { type: Boolean, default: false }, // el humano lo edito
+    },
+
     // --- QC humano ---
     qcStatus: {
       type: String,

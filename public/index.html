@@ -143,6 +143,13 @@
   .fid .ftxt .v.pass { color: var(--ok); } .fid .ftxt .v.fail { color: var(--bad); } .fid .ftxt .m { color: var(--muted); }
   .fid.pending { color: var(--muted); font-size: 12px; padding: 12px 14px 0; }
   .fid-issues { font-size: 11px; color: var(--muted); padding: 8px 14px 0; line-height: 1.45; } .fid-issues b { color: var(--bad); }
+  .copybox { padding: 10px 14px 0; }
+  .copylabel { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 5px; }
+  .copytext, .copyhead { width: 100%; background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+    border-radius: 7px; font-family: inherit; font-size: 12px; padding: 7px 9px; resize: vertical; }
+  .copytext { margin-bottom: 6px; line-height: 1.4; }
+  .copyhead { font-weight: 600; }
+  .copytext:focus, .copyhead:focus { outline: none; border-color: var(--accent); }
 
   /* ad manager */
   .egrid { display: grid; grid-template-columns: repeat(auto-fill, 116px); gap: 12px; margin-bottom: 16px; }
@@ -478,6 +485,12 @@ function renderQueue() {
         <div class="b">${[c.product, c.wash, c.drop].filter(Boolean).join(' · ') || '—'}</div>
       </div>
       ${fidelityHtml(c)}
+      ${c.genStatus === 'ready' && c.copy && (c.copy.primaryText || c.copy.headline) ? `
+        <div class="copybox">
+          <div class="copylabel">Copy${c.copy.edited ? ' · editado' : ''}</div>
+          <textarea class="copytext" rows="2" onblur="saveCopy('${c._id}','primaryText',this.value)" placeholder="Texto del ad…">${esc(c.copy.primaryText)}</textarea>
+          <input class="copyhead" value="${escAttr(c.copy.headline)}" onblur="saveCopy('${c._id}','headline',this.value)" placeholder="Headline" />
+        </div>` : ''}
       ${canQc ? `<div class="acts"><button class="btn ok sm" onclick="qc('${c._id}','approved')">Aprobar</button>
         <button class="btn bad sm" onclick="qc('${c._id}','rejected')">Rechazar</button></div>` : ''}
     </div>`;
@@ -490,7 +503,7 @@ async function loadQueue() {
   clearTimeout(pollTimer);
   const working = creatives.some(c => c.genStatus === 'generating' || (c.genStatus === 'ready' && c.fidelityStatus === 'pending'));
   if (working) pollTimer = setTimeout(loadQueue, 5000);
-  const sig = creatives.map(c => `${c._id}:${c.genStatus}:${c.qcStatus}:${c.qcNotes || ''}:${c.fidelityStatus}:${c.fidelityScore}`).join('|');
+  const sig = creatives.map(c => `${c._id}:${c.genStatus}:${c.qcStatus}:${c.qcNotes || ''}:${c.fidelityStatus}:${c.fidelityScore}:${c.copy?.primaryText ? 1 : 0}`).join('|');
   if (sig === lastSig) return;
   lastSig = sig;
   renderKpis(); renderQueue();
@@ -498,6 +511,12 @@ async function loadQueue() {
 async function qc(id, qcStatus) {
   await fetch(`/api/creatives/${id}/qc`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ qcStatus }) });
   lastSig = null; loadQueue();
+}
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
+async function saveCopy(id, field, value) {
+  await fetch(`/api/creatives/${id}/copy`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) });
+  toast('Copy guardado');
 }
 
 /* ===== AD MANAGER (visualizador de campañas de la cuenta) ===== */
