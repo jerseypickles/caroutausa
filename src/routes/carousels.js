@@ -78,6 +78,16 @@ carouselsRouter.get('/carousels/:id/cards/:idx/image', async (req, res) => {
   res.send(buf);
 });
 
+// GET /api/carousels/:id/reference -> sirve la referencia de estilo usada
+carouselsRouter.get('/carousels/:id/reference', async (req, res) => {
+  const doc = await Carousel.findById(req.params.id).select('+referenceImageData').lean();
+  if (!doc?.referenceImageData) return res.status(404).json({ error: 'Sin referencia' });
+  const buf = Buffer.from(doc.referenceImageData, 'base64');
+  res.set('Content-Type', detectMime(buf));
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+  res.send(buf);
+});
+
 // PATCH /api/carousels/:id/qc
 carouselsRouter.patch('/carousels/:id/qc', async (req, res) => {
   const { qcStatus, qcNotes } = req.body || {};

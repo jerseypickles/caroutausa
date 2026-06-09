@@ -23,6 +23,16 @@ no glossy studio polish.
 Natural skin with visible pores and fine grain, no waxy or plastic skin, no
 over-smoothing, no perfect symmetry. Real lived-in environment with everyday texture.`;
 
+// Look de campaña: shoot de marca pulido (alternativa al ANTI_AI organico). Se usa
+// en styleMode 'campaign'. Aspiracional y editorial, pero piel real (no plastico IA).
+const CAMPAIGN_LOOK = `Shoot this as a polished, aspirational BRAND CAMPAIGN photo (think a real fashion
+ad): clean professional-grade lighting, beautiful directional or golden-hour light,
+crisp natural color grading, sharp focus, an elevated composed pose, premium editorial
+mood. It should look expensive and intentional — a campaign, not a phone selfie.
+Keep it PHOTOREAL: real human skin with natural texture and pores, real fabric, real
+depth of field — never waxy, plastic, over-smoothed or obviously AI. A real model on a
+real elevated location.`;
+
 // Referencia de estilo (imagen 2): SUBORDINADA al producto. Solo aporta el resto
 // del look y la escena; jamas toca el jean.
 const STYLE_REFERENCE = `The SECOND image is ONLY a styling reference and is SECONDARY
@@ -92,7 +102,7 @@ export function fitLock(fitSpec = '') {
   return `\n\nEXACT FIT & SILHOUETTE (reproduce precisely — do NOT make the shorts slimmer, wider, longer or shorter than this): ${fitSpec}`;
 }
 
-export function buildPrompt(angleId, { withReference = false, productDescription = '', creativeDirection = '', fitSpec = '' } = {}) {
+export function buildPrompt(angleId, { withReference = false, productDescription = '', creativeDirection = '', fitSpec = '', styleMode = 'organic' } = {}) {
   const angle = ANGLES[angleId];
   if (!angle && !creativeDirection) {
     throw new Error(`Angulo desconocido: ${angleId}. Validos: ${Object.keys(ANGLES).join(', ')}`);
@@ -103,5 +113,7 @@ export function buildPrompt(angleId, { withReference = false, productDescription
   const ref = withReference ? `\n\n${STYLE_REFERENCE}` : '';
   // El director (Claude) reemplaza la escena fija del angulo; si no hay, cae al fijo.
   const scene = creativeDirection || angle.prompt;
-  return `${GARMENT_LOCK}${fitLock(fitSpec)}${desc}${ref}\n\n${scene}\n\n${ANTI_AI}`;
+  // El riel de produccion depende del modo: organico (iPhone) vs campaña (pulido).
+  const look = styleMode === 'campaign' ? CAMPAIGN_LOOK : ANTI_AI;
+  return `${GARMENT_LOCK}${fitLock(fitSpec)}${desc}${ref}\n\n${scene}\n\n${look}`;
 }

@@ -72,8 +72,10 @@ export async function generateCarouselInBackground(carouselId) {
   if (!doc) return;
 
   let cards;
+  let fitSpec = '';
   try {
     const prod = doc.shopifyProductId ? await Product.findOne({ shopifyId: doc.shopifyProductId }).lean() : null;
+    fitSpec = prod?.fitSpec || '';
     const productDescription = [doc.product, prod?.description].filter(Boolean).join('. ');
     cards = await generateCarousel({
       imageUrl: doc.sourceImageUrl,
@@ -98,7 +100,7 @@ export async function generateCarouselInBackground(carouselId) {
   // Juez de fidelidad por card (el jean debe preservarse en todas). Overall = el peor.
   try {
     const verdicts = await Promise.all(cards.map((c) =>
-      judgeFidelity({ sourceImageUrl: doc.sourceImageUrl, b64: c.b64 }).catch(() => null)));
+      judgeFidelity({ sourceImageUrl: doc.sourceImageUrl, b64: c.b64, fitSpec }).catch(() => null)));
     const scores = verdicts.filter(Boolean).map((v) => v.score);
     const overall = scores.length ? Math.min(...scores) : null;
     const fresh = await Carousel.findById(carouselId);

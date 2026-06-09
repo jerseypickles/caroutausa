@@ -16,17 +16,18 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     // key o falla, generateVariant cae al prompt fijo del angulo. En reintentos se
     // re-dirige (nueva escena) para aprovechar la varianza.
     const doc = await Creative.findById(creativeId).lean();
+    const styleMode = doc?.styleMode || 'organic';
     const creativeDirection = await directCreative({
       product: doc?.product, wash: doc?.wash, angle: angleId,
-      withReference: Boolean(referenceB64),
+      withReference: Boolean(referenceB64), styleMode,
       seed: attempt > 0 ? `retry ${attempt}: try a completely different setting and energy` : '',
     });
     // 9:16 (story/reels) = placement principal
-    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64, productDescription, creativeDirection, fitSpec, size: STORY_SIZE }));
+    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64, productDescription, creativeDirection, fitSpec, styleMode, size: STORY_SIZE }));
     // 4:5 (feed) = la MISMA foto reframed (usa el 9:16 como referencia)
     let feedB64 = null;
     try {
-      const feed = await generateVariant({ imageUrl, referenceB64: b64, productDescription, fitSpec, prompt: buildFeedReframePrompt(productDescription), size: FEED_SIZE });
+      const feed = await generateVariant({ imageUrl, referenceB64: b64, productDescription, fitSpec, styleMode, prompt: buildFeedReframePrompt(productDescription), size: FEED_SIZE });
       feedB64 = feed.b64;
     } catch (e) { console.error(`[gen] feed 4:5 fallo (${creativeId}):`, e.message); }
     await Creative.findByIdAndUpdate(creativeId, { imageData: b64, feedImageData: feedB64, genStatus: 'ready', genError: null });
@@ -48,10 +49,11 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
   }
 
   try {
-    const v = await judgeFidelity({ sourceImageUrl: imageUrl, b64 });
+    const v = await judgeFidelity({ sourceImageUrl: imageUrl, b64, fitSpec });
     await Creative.findByIdAndUpdate(creativeId, {
       fidelityStatus: 'done', fidelityScore: v.score, fidelityVerdict: v.verdict,
       fidelityIssues: v.issues, fidelitySummary: v.summary, fidelityError: null, retries: attempt,
+      fitScore: v.fitScore, fitIssues: v.fitIssues,
     });
 
     // Auto-regenerar si no paso la fidelidad y quedan reintentos.
@@ -69,9 +71,10 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
 // Crea y dispara N jobs explicitos. jobs: [{ angleId, ref: {b64}|null }].
 export async function enqueueJobs({ imageUrl, jobs, meta = {}, productDescription = '', fitSpec = '' }) {
   const created = await Creative.create(
-    jobs.map(({ angleId, ref }) => ({
+    jobs.map(({ angleId, ref, styleMode = 'organic' }) => ({
       ...meta,
       angle: angleId,
+      styleMode,
       sourceImageUrl: imageUrl,
       qcStatus: 'generated',
       genStatus: 'generating',

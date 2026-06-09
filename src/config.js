@@ -18,7 +18,8 @@ export const config = {
   // Las imagenes las sigue haciendo gpt-image. Opcional: sin key, cae al prompt fijo.
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   directorModel: process.env.DIRECTOR_MODEL || 'claude-fable-5',
-  fidelityPass: Number(process.env.FIDELITY_PASS || 85), // umbral de aprobado
+  fidelityPass: Number(process.env.FIDELITY_PASS || 85), // umbral de aprobado (diseño)
+  fitPass: Number(process.env.FIT_PASS || 75), // umbral de aprobado (silueta/fit)
   // receta mixta por producto: por cada angulo, 1 variante SIN referencia (jean
   // garantizado) + 1 CON referencia (vibe, gated por el juez).
   recipeAngles: (process.env.RECIPE_ANGLES || 'realista,gancho_click').split(',').map((s) => s.trim()).filter(Boolean),

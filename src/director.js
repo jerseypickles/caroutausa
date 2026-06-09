@@ -12,8 +12,12 @@ export function directorEnabled() {
   return Boolean(client);
 }
 
-const SYSTEM = `You are the creative director for CAROTA, a US streetwear brand whose product is denim shorts.
-Your job: invent ONE fresh, specific creative direction for a SINGLE candid organic iPhone fitpic that will be a paid-social ad (Meta Reels/Feed) for a young US streetwear audience. CAROTA's edge is ORGANIC realism — it must look like a real fitpic a real person would post, NOT a studio ad.
+const SYSTEM = `You are the creative director for CAROTA, a US streetwear brand whose product is denim shorts. Think at the level of a real brand campaign (à la Lorenzo, Represent, Fear of God Essentials).
+Your job: invent ONE fresh, specific creative direction for a SINGLE paid-social ad (Meta Reels/Feed) for a young US streetwear audience.
+
+ELEVATED STYLING IS THE POINT — the model must be EXQUISITELY DRESSED, never random:
+- Build ONE cohesive, aspirational, on-trend fit around the shorts: considered layering (e.g. a clean zip hoodie over a tee, a boxy knit, a light jacket), a tonal/neutral or well-judged palette, ONE statement element, fresh STATEMENT sneakers, and subtle jewelry (a silver chain, rings). It should look styled by a brand, not thrown on.
+- Quality over quirk: cream/bone/stone/charcoal tones read premium; avoid clashing, cheap or costumey looks.
 
 THE DENIM SHORTS ARE THE PRODUCT AND ARE SACRED. A separate system keeps them pixel-identical to a real photographed garment — that is what CAROTA sells, so fidelity to them is the #1 priority and your direction must protect it:
 - NEVER describe, characterize, restyle, recolor or reshape the shorts in any way. Do NOT use words like baggy, oversized, ripped, distressed, faded, cropped, cuffed, long, short, light, dark — say NOTHING about the bottoms. Just leave clean room for them.
@@ -22,10 +26,16 @@ THE DENIM SHORTS ARE THE PRODUCT AND ARE SACRED. A separate system keeps them pi
 
 OTHER RULES:
 - Never describe a face/identity in detail.
-- Stay achievable for a real iPhone photo: real locations, real available light, candid framing. No studio, no fantasy, no text overlays, no props that look staged.
-- Be CONCRETE and varied: pick a specific location, time of day, pose/action, mood and (when asked) outfit styling for the TOP and footwear. Avoid generic "young man in an urban setting" and avoid defaulting to laundromats — make it feel like a real, fresh moment.
+- No fantasy, no text overlays, no costumey props. Keep it a real, fresh moment with great taste.
+- Be CONCRETE and varied: specific location, time of day, pose, mood, and the elevated outfit styling for the TOP, footwear and accessories. Avoid generic "young man in an urban setting" and avoid laundromats.
 
 OUTPUT: ONLY 2-3 sentences of vivid art direction. No preamble, no labels, no quotes.`;
+
+// Produccion segun el modo: organico (fitpic iPhone elevado) o campaña (shoot pulido).
+const MODE_BRIEF = {
+  organic: 'STYLE: organic but elevated — looks like a real, candid iPhone fitpic a stylish person posted (not an ad), but with a genuinely great outfit. Real aspirational-everyday location (clean apartment, nice rooftop, cool café, city street with character), real available light, slightly casual framing.',
+  campaign: 'STYLE: polished brand campaign — aspirational and editorial. A scenic, elevated location (marina/harbor, rooftop at golden hour, clean modern architecture, coastal terrace), composed confident pose, beautiful directional light, premium mood. Think a real fashion ad — refined, not a phone selfie.',
+};
 
 const ANGLE_INTENT = {
   realista: 'a low-key candid fitpic that reads as organic social content, relaxed everyday energy',
@@ -37,19 +47,21 @@ const ANGLE_INTENT = {
 // Devuelve una direccion creativa (string) o null si no hay key / falla (cae al fijo).
 // mode 'carouselHero' = escena mas simple y encuadre frontal claro (el hero define
 // todo el set; si driftea el jean, arrastra a las cards encadenadas).
-export async function directCreative({ product, wash, angle, withReference, seed = '', mode = 'single' }) {
+export async function directCreative({ product, wash, angle, withReference, seed = '', mode = 'single', styleMode = 'organic' }) {
   if (!client) return null;
   const intent = ANGLE_INTENT[angle] || ANGLE_INTENT.realista;
+  const modeBrief = MODE_BRIEF[styleMode] || MODE_BRIEF.organic;
   const styling = withReference
-    ? 'A Pinterest STYLE REFERENCE will supply the outfit, footwear and overall vibe — so focus on the SCENE, pose, light, mood and framing, and keep the outfit open for the reference (mention at most a loose silhouette for the TOP only).'
-    : 'There is NO style reference, so YOU also choose the styling of the TOP and footwear/accessories (never the bottoms), worn naturally.';
+    ? 'A Pinterest STYLE REFERENCE supplies the outfit, footwear and vibe — keep its outfit but ELEVATE it to a cohesive premium fit; focus your direction on the SCENE, pose, light, mood and framing.'
+    : 'There is NO style reference, so YOU design the full elevated outfit yourself — the TOP and layering, the statement footwear, and accessories (never the bottoms).';
   const heroNote = mode === 'carouselHero'
-    ? '\nThis is the HERO of a carousel and sets the look for the whole set, so keep the composition SIMPLE and clean: a fairly frontal, full-body standing pose in calm even light, the full lower body unobstructed and clearly in frame. No motion blur, no busy foreground, no crop at the legs — clarity over drama.'
+    ? '\nThis is the HERO of a carousel and sets the look for the whole set, so keep the composition SIMPLE and clean: a fairly frontal, full-body standing pose in calm even light, the full lower body unobstructed and clearly in frame. No motion blur, no busy foreground, no crop at the legs.'
     : '';
   const user = `Product: ${product || 'denim shorts'}${wash ? ` (wash: ${wash})` : ''}.
 Angle to hit: ${intent}.
+${modeBrief}
 ${styling}${heroNote}
-Invent a fresh direction that feels different from generic streetwear stock — vary the location, time of day, pose and energy.${seed ? ` Creative seed to push somewhere new: ${seed}.` : ''}
+Invent a fresh, well-styled direction that feels like a real brand campaign — vary the location, time of day, pose and energy.${seed ? ` Creative seed to push somewhere new: ${seed}.` : ''}
 Remember: say NOTHING about the shorts and keep the lower body clearly visible.`;
 
   try {

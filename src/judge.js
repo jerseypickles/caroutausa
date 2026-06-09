@@ -8,24 +8,32 @@ const SYSTEM = `You are a denim QC fidelity inspector for a streetwear brand.
 You receive TWO images:
   - Image 1: the ORIGINAL product (the exact jean/short that MUST be preserved).
   - Image 2: an AI-generated ad photo of a model wearing what should be the SAME product.
-Judge how faithfully Image 2 preserves the ORIGINAL garment's design.
-Focus ONLY on the garment, checking: denim wash/color, fade pattern, distressing
-and rips (placement + amount), stitching, hardware/buttons/rivets/any chains,
-cut/fit, length, and hem finish (raw/cutoff/clean).
+Judge how faithfully Image 2 preserves the ORIGINAL garment, on TWO separate axes:
+  A) DESIGN: denim wash/color, fade pattern, distressing/rips (placement + amount),
+     stitching, hardware/buttons/rivets, and hem finish (raw/cutoff/clean).
+  B) FIT / SILHOUETTE: how WIDE vs SLIM the short is through the hip and thigh, the
+     leg width/opening (wide-straight vs tapered/slim), the LENGTH (where the hem
+     hits the leg), and the rise. This is about shape and proportions, not wash.
 IGNORE scene, background, model, pose and lighting — those are supposed to change.
-Be strict: if a design element is missing, moved, restyled or recolored, call it out.`;
+Be strict on BOTH axes: a short rendered slimmer, baggier, longer or shorter than the
+original is a FIT failure even if the wash is perfect.`;
 
-const INSTRUCTION = `Return ONLY a JSON object with this exact shape:
+function instruction(fitSpec) {
+  return `Return ONLY a JSON object with this exact shape:
 {
-  "score": <integer 0-100, where 100 = garment is identical in design>,
+  "score": <integer 0-100, DESIGN fidelity, 100 = identical design>,
+  "fitScore": <integer 0-100, FIT/SILHOUETTE fidelity, 100 = exact same width/length/cut>,
   "verdict": "pass" | "fail",
-  "issues": [<short strings naming each design difference; empty if none>],
-  "summary": "<one concise sentence>"
+  "issues": [<short strings naming each DESIGN difference; empty if none>],
+  "fitIssues": [<short strings naming each FIT/SILHOUETTE difference, e.g. "rendered slimmer", "too long", "tapered leg"; empty if none>],
+  "summary": "<one concise sentence covering both>"
 }
-Set "verdict" to "pass" only if score >= ${config.fidelityPass}.`;
+${fitSpec ? `The product's TRUE fit/silhouette (from the brand size guide) is: "${fitSpec}". Judge Image 2's shorts against BOTH Image 1 and this fit.\n` : ''}Set "verdict" to "pass" only if score >= ${config.fidelityPass} AND fitScore >= ${config.fitPass}.`;
+}
 
-// Compara la imagen original (URL) contra la generada (base64) y devuelve el veredicto.
-export async function judgeFidelity({ sourceImageUrl, b64 }) {
+// Compara la imagen original (URL) contra la generada (base64) y devuelve el veredicto
+// en dos ejes: diseño (score) y fit/silueta (fitScore). fitSpec ancla el fit real.
+export async function judgeFidelity({ sourceImageUrl, b64, fitSpec = '' }) {
   const dataUrl = toDataUrl(b64);
 
   const completion = await client.chat.completions.create({
@@ -36,7 +44,7 @@ export async function judgeFidelity({ sourceImageUrl, b64 }) {
       {
         role: 'user',
         content: [
-          { type: 'text', text: INSTRUCTION },
+          { type: 'text', text: instruction(fitSpec) },
           { type: 'text', text: 'Image 1 — ORIGINAL product:' },
           { type: 'image_url', image_url: { url: sourceImageUrl } },
           { type: 'text', text: 'Image 2 — AI-generated:' },
@@ -54,12 +62,16 @@ export async function judgeFidelity({ sourceImageUrl, b64 }) {
     throw new Error('El juez no devolvio JSON valido');
   }
 
-  const score = Math.max(0, Math.min(100, Math.round(Number(parsed.score) || 0)));
-  const verdict = parsed.verdict === 'pass' || score >= config.fidelityPass ? 'pass' : 'fail';
+  const clamp = (n) => Math.max(0, Math.min(100, Math.round(Number(n) || 0)));
+  const score = clamp(parsed.score);
+  const fitScore = parsed.fitScore != null ? clamp(parsed.fitScore) : score;
+  const verdict = score >= config.fidelityPass && fitScore >= config.fitPass ? 'pass' : 'fail';
   return {
     score,
+    fitScore,
     verdict,
     issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 12).map(String) : [],
+    fitIssues: Array.isArray(parsed.fitIssues) ? parsed.fitIssues.slice(0, 8).map(String) : [],
     summary: typeof parsed.summary === 'string' ? parsed.summary : '',
   };
 }

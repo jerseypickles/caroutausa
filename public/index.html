@@ -265,6 +265,14 @@
   .afb b { font-size: 11.5px; } .afb span { color: var(--muted); }
   .afb.ok { border-left-color: var(--ok); } .afb.warn { border-left-color: var(--warn); } .afb.bad { border-left-color: var(--bad); }
   .ctrnote { font-size: 11px; color: var(--faint); margin-top: 10px; font-style: italic; }
+  .stylebadge { font-size: 10px; padding: 2px 8px; border-radius: 6px; margin-left: 8px; font-weight: 600; vertical-align: middle; }
+  .stylebadge.camp { color: #e8c07a; background: rgba(232,192,122,.14); }
+  .stylebadge.org { color: var(--accent2); background: var(--accent-soft); }
+  .inputs { display: flex; gap: 8px; margin: 8px 0 2px; }
+  .inputcard { flex: 1; min-width: 0; text-align: center; }
+  .inputcard img { width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); cursor: zoom-in; display: block; }
+  .inputcard .none { aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--border2); border-radius: 8px; color: var(--faint); font-size: 10px; line-height: 1.3; }
+  .inputcard span { display: block; font-size: 10px; color: var(--muted); margin-top: 4px; }
   .heatwrap { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 10px; }
   .heatimg { position: relative; width: 190px; flex: none; border-radius: 10px; overflow: hidden; background: #000; }
   .heatimg img { width: 100%; display: block; filter: brightness(.42) saturate(.85); }
@@ -768,13 +776,15 @@ function renderInspector() {
       <div class="icol">
         <div class="ihead">${typeBadge(it)}<span class="sid">${shortId(it._id)}</span></div>
         ${preview}
-        <div class="iprod">${it.product || '—'}<span class="muted"> · ${it.wash || ''}</span></div>
+        <div class="iprod">${it.product || '—'}<span class="muted"> · ${it.wash || ''}</span>${styleBadge(it)}</div>
+        ${inputsPanel(it)}
         ${it.copy && (it.copy.primaryText || it.copy.headline) ? copyBox(it, saveFn) : ''}
       </div>
       <div class="icol">
         <div class="isec">Análisis del jean</div>
         <div class="ascore">${bigRing(it.fidelityScore, it.fidelityVerdict)}<div><div class="asv ${it.fidelityVerdict === 'pass' ? 'okt' : 'badt'}">${it.fidelityStatus === 'done' ? (it.fidelityVerdict === 'pass' ? 'Fiel al diseño' : 'Revisar') : '—'}</div><div class="muted" style="font-size:12px">fidelidad del jean</div></div></div>
         ${fb}
+        ${fitLine(it)}
         <div class="isec" style="margin-top:16px">Performance IA</div>
         ${analyzed ? analyzerMetrics(a) : (ready ? '<div class="ianalyzer"><span class="spinner"></span>Analizando con IA…</div>' : '<div class="ianalyzer">Disponible cuando esté listo.</div>')}
       </div>
@@ -791,6 +801,31 @@ function renderInspector() {
     ${analyzed ? `<div class="ibottom">${heatmapPanel(it)}${feedbackPanel(a)}</div>` : ''}`;
   renderFlow(it);
   if (ready && !analyzed) analyzeItem(it._type, it._id);
+}
+function styleBadge(it) {
+  if (!it.styleMode) return '';
+  const camp = it.styleMode === 'campaign';
+  return `<span class="stylebadge ${camp ? 'camp' : 'org'}">${camp ? '✦ Campaña' : '○ Orgánico'}</span>`;
+}
+function inputsPanel(it) {
+  if (it._type === 'carousel') {
+    const refUrl = it.hasReference ? `/api/carousels/${it._id}/reference` : '';
+    return `<div class="isec" style="margin-top:12px">Inputs</div><div class="inputs">
+      <div class="inputcard">${it.sourceImageUrl ? `<img src="${esc(it.sourceImageUrl)}" alt="">` : '<div class="none">—</div>'}<span>Producto</span></div>
+      ${refUrl ? `<div class="inputcard"><img src="${refUrl}" alt=""><span>Referencia</span></div>` : '<div class="inputcard"><div class="none">director<br>arma el outfit</div><span>Sin ref</span></div>'}
+    </div>`;
+  }
+  const refUrl = it.hasReference ? `/api/creatives/${it._id}/reference` : '';
+  return `<div class="isec" style="margin-top:12px">Inputs</div><div class="inputs">
+    <div class="inputcard">${it.sourceImageUrl ? `<img src="${esc(it.sourceImageUrl)}" onclick="openZoom(this.src)" alt="">` : '<div class="none">—</div>'}<span>Producto</span></div>
+    ${refUrl ? `<div class="inputcard"><img src="${refUrl}" onclick="openZoom(this.src)" alt=""><span>Referencia</span></div>` : '<div class="inputcard"><div class="none">director<br>arma el outfit</div><span>Sin ref</span></div>'}
+  </div>`;
+}
+function fitLine(it) {
+  if (it.fitScore == null && !it.fitSpec) return '';
+  const cls = it.fitScore == null ? '' : it.fitScore >= 80 ? 'ok' : it.fitScore >= 70 ? 'warn' : 'bad';
+  const issues = (it.fitIssues && it.fitIssues.length) ? it.fitIssues.join(' · ') : '';
+  return `<div class="fbitem ${cls || 'muted'}"><b>Fit / silueta ${it.fitScore != null ? '· ' + it.fitScore : ''}</b><span>${esc(issues || it.fitSpec || 'Silueta preservada ✓')}</span></div>`;
 }
 function analyzerMetrics(a) {
   return `<div class="ahead"><span class="estbadge">estimación IA · confianza ${a.confidence}</span></div>

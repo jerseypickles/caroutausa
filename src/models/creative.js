@@ -11,7 +11,9 @@ const creativeSchema = new Schema(
     shopifyProductId: { type: Number, default: null, index: true },
     product: { type: String },       // ej. "Onyx Wash Denim Short"
     wash: { type: String },          // ej. "onyx" | "ice" | "fog"
+    fitSpec: { type: String, default: '' }, // silueta objetivo (del size finder) para mostrar en QC
     angle: { type: String, required: true }, // realista | realismo_completo | gancho_click | llamada_atencion
+    styleMode: { type: String, enum: ['organic', 'campaign'], default: 'organic' }, // look organico vs campaña
     hook: { type: String },          // descripcion del primer frame
 
     // --- imagenes ---
@@ -41,9 +43,11 @@ const creativeSchema = new Schema(
       default: 'pending',
       index: true,
     },
-    fidelityScore: { type: Number, default: null },   // 0-100 (100 = garment identico)
-    fidelityVerdict: { type: String, default: null }, // 'pass' | 'fail'
-    fidelityIssues: { type: [String], default: [] },  // que detalles se perdieron
+    fidelityScore: { type: Number, default: null },   // 0-100 diseño (wash/rips/hardware)
+    fidelityVerdict: { type: String, default: null }, // 'pass' | 'fail' (diseño Y fit)
+    fidelityIssues: { type: [String], default: [] },  // que detalles de diseño se perdieron
+    fitScore: { type: Number, default: null },        // 0-100 silueta/fit (ancho/largo/cut)
+    fitIssues: { type: [String], default: [] },       // diferencias de silueta detectadas
     fidelitySummary: { type: String, default: null }, // una frase
     fidelityError: { type: String, default: null },
     retries: { type: Number, default: 0 }, // reintentos automaticos por fidelidad baja

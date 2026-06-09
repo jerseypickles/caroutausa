@@ -22,6 +22,9 @@ productsRouter.get('/products', async (req, res) => {
     description: p.description,
     image: p.image,
     images: p.images,
+    fitSpec: p.fitSpec || '',
+    fitCut: p.fitCut || '',
+    fitLength: p.fitLength || '',
     generatedCount: p.generatedCount,
     lastGeneratedAt: p.lastGeneratedAt,
     isNew: p.generatedCount === 0,
@@ -49,14 +52,20 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
     [activeRefs[k], activeRefs[j]] = [activeRefs[j], activeRefs[k]];
   }
 
-  // Receta mixta (el jean es prioridad): por cada angulo, 1 variante FIEL (sin
-  // referencia, fidelidad garantizada) + 1 VIBE (con referencia random del pool).
+  // Receta mixta: por cada angulo testeamos AMBOS estilos ->
+  //  - ORGANICO con referencia (vibe, fitpic iPhone elevado)
+  //  - CAMPAÑA sin referencia (shoot pulido, director arma el outfit; fit garantizado)
+  // El usuario eligio "mezclar ambos estilos" para A/B en Meta. El styleMode opcional
+  // en el body fuerza un solo estilo.
+  const onlyStyle = ['organic', 'campaign'].includes(req.body?.styleMode) ? req.body.styleMode : null;
   const jobs = [];
   angles.forEach((angleId, i) => {
-    jobs.push({ angleId, ref: null }); // fiel
-    if (activeRefs.length) {
-      const r = activeRefs[i % activeRefs.length]; // del pool barajado
-      jobs.push({ angleId, ref: { b64: r.imageData } }); // vibe
+    const r = activeRefs.length ? activeRefs[i % activeRefs.length] : null;
+    if (!onlyStyle || onlyStyle === 'organic') {
+      jobs.push({ angleId, ref: r ? { b64: r.imageData } : null, styleMode: 'organic' });
+    }
+    if (!onlyStyle || onlyStyle === 'campaign') {
+      jobs.push({ angleId, ref: null, styleMode: 'campaign' });
     }
   });
 
@@ -69,6 +78,7 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
       shopifyProductId: product.shopifyId,
       product: product.title,
       wash: product.wash,
+      fitSpec: product.fitSpec || '',
     },
   });
 
@@ -78,8 +88,8 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
   );
 
   res.status(202).json({
-    queued: created.map((d) => ({ id: d._id, angle: d.angle })),
-    faithful: jobs.filter((j) => !j.ref).length,
-    vibe: jobs.filter((j) => j.ref).length,
+    queued: created.map((d) => ({ id: d._id, angle: d.angle, styleMode: d.styleMode })),
+    organic: jobs.filter((j) => j.styleMode === 'organic').length,
+    campaign: jobs.filter((j) => j.styleMode === 'campaign').length,
   });
 });
