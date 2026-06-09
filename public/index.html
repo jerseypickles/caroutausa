@@ -785,7 +785,6 @@ function renderInspector() {
         <div class="iacts">
           ${canQc ? `<button class="btn ok" onclick="${apprFn}('${it._id}','approved')">✓ Aprobar</button>
           <button class="btn bad" onclick="${apprFn}('${it._id}','rejected')">✕ Rechazar</button>` : `<span class="badge ${it.qcStatus}">${it.qcStatus}</span>`}
-          <button class="btn ghost" disabled title="Próximamente (loop con Meta)">⚗ Enviar a test</button>
         </div>
       </div>
     </div>
