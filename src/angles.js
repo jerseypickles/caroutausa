@@ -23,15 +23,30 @@ no glossy studio polish.
 Natural skin with visible pores and fine grain, no waxy or plastic skin, no
 over-smoothing, no perfect symmetry. Real lived-in environment with everyday texture.`;
 
-// Look de campaña: shoot de marca pulido (alternativa al ANTI_AI organico). Se usa
-// en styleMode 'campaign'. Aspiracional y editorial, pero piel real (no plastico IA).
-const CAMPAIGN_LOOK = `Shoot this as a polished, aspirational BRAND CAMPAIGN photo (think a real fashion
-ad): clean professional-grade lighting, beautiful directional or golden-hour light,
-crisp natural color grading, sharp focus, an elevated composed pose, premium editorial
-mood. It should look expensive and intentional — a campaign, not a phone selfie.
-Keep it PHOTOREAL: real human skin with natural texture and pores, real fabric, real
-depth of field — never waxy, plastic, over-smoothed or obviously AI. A real model on a
-real elevated location.`;
+// Look de campaña: shoot de marca REAL fotografiado con cámara pro (no render IA).
+// Brief fotográfico profundo basado en analizar campañas reales (Lorenzo/Represent).
+const CAMPAIGN_LOOK = `Shoot this like a REAL high-end menswear brand campaign captured on a professional
+camera — the actual editorial look of brands like Lorenzo Worldwide, Represent or Fear of
+God Essentials. It must read as a genuine PHOTOGRAPH, never an AI render.
+
+PHOTOGRAPHY: real full-frame or medium-format camera with a 50–85mm prime lens; natural,
+slightly shallow depth of field with true optical falloff (no fake plastic bokeh); a faint
+fine film grain; natural dynamic range where highlights keep detail and shadows stay soft
+and real; true-to-life color that is restrained and slightly cool — NEVER HDR, oversaturated,
+over-sharpened, hazy-glossy or digitally "clean".
+
+LIGHT: real natural daylight with ONE clear sun direction, soft believable shadows and real
+specular highlights on fabric; a subtle lens flare or gentle bloom is welcome.
+
+THE PERSON MUST READ 100% REAL: natural skin with visible pores, fine texture and tiny
+imperfections; real individual strands of hair; a genuine, relaxed-confident expression and
+natural facial asymmetry. ABSOLUTELY NOT waxy, plastic, airbrushed, over-smoothed,
+over-symmetric or "AI-pretty" — a real human being, photographed.
+
+MATERIALS — show real texture and detail: the nap of the fleece/knit on top, the weave and
+fades of the denim, the leather/mesh and stitching of the SNEAKERS, the glint of any chain —
+all sharp, tactile and believable, with real weight, folds and wear. Expensive, intentional
+and editorial, yet unmistakably a real photo.`;
 
 // Referencia de estilo (imagen 2): SUBORDINADA al producto. Solo aporta el resto
 // del look y la escena; jamas toca el jean.

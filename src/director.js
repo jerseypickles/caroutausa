@@ -29,12 +29,16 @@ OTHER RULES:
 - No fantasy, no text overlays, no costumey props. Keep it a real, fresh moment with great taste.
 - Be CONCRETE and varied: specific location, time of day, pose, mood, and the elevated outfit styling for the TOP, footwear and accessories. Avoid generic "young man in an urban setting" and avoid laundromats.
 
-OUTPUT: ONLY 2-3 sentences of vivid art direction. No preamble, no labels, no quotes.`;
+OUTPUT: 2-5 sentences of vivid, specific art direction (richer and more detailed for campaign looks; describe the outfit head-to-toe). No preamble, no labels, no quotes.`;
 
 // Produccion segun el modo: organico (fitpic iPhone elevado) o campaña (shoot pulido).
 const MODE_BRIEF = {
   organic: 'STYLE: organic but elevated — looks like a real, candid iPhone fitpic a stylish person posted (not an ad), but with a genuinely great outfit. Real aspirational-everyday location (clean apartment, nice rooftop, cool café, city street with character), real available light, slightly casual framing.',
-  campaign: 'STYLE: polished brand campaign — aspirational and editorial. A scenic, elevated location (marina/harbor, rooftop at golden hour, clean modern architecture, coastal terrace), composed confident pose, beautiful directional light, premium mood. Think a real fashion ad — refined, not a phone selfie.',
+  campaign: `STYLE: a REAL high-end brand campaign at the caliber of Lorenzo Worldwide — editorial, aspirational, photographed (not a render). Describe the look HEAD TO TOE with SPECIFIC, real, nameable pieces and materials so it renders with true detail:
+- the exact TOP and layering: garment type, cut, fabric and how it sits (e.g. "an open boxy cream heavyweight zip-hoodie with drawcords over a tonal-print tee");
+- the accessories: a specific chain (e.g. silver Cuban link), rings, any hair detail;
+- and especially the SNEAKERS: a specific silhouette + colorway and material (e.g. "cream chunky leather low-tops").
+Place it in a scenic, aspirational location (a Mediterranean stone balustrade over a yacht harbor, a rooftop in clean daylight, modern architecture, a coastal terrace), full-body frontal composition, a confident relaxed pose, and beautiful real natural light. Specify the light direction and mood like a photographer would.`,
 };
 
 const ANGLE_INTENT = {
@@ -67,7 +71,7 @@ Remember: say NOTHING about the shorts and keep the lower body clearly visible.`
   try {
     const msg = await client.messages.create({
       model: config.directorModel,
-      max_tokens: 400,
+      max_tokens: styleMode === 'campaign' ? 600 : 400,
       system: SYSTEM,
       messages: [{ role: 'user', content: user }],
     });
