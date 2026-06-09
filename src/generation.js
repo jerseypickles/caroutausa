@@ -1,5 +1,6 @@
 import { Creative } from './models/creative.js';
-import { generateVariant } from './openai.js';
+import { generateVariant, STORY_SIZE, FEED_SIZE } from './openai.js';
+import { buildFeedReframePrompt } from './angles.js';
 import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
 import { config } from './config.js';
@@ -10,8 +11,15 @@ import { config } from './config.js';
 export async function generateInBackground(creativeId, imageUrl, angleId, referenceB64, productDescription, attempt = 0) {
   let b64;
   try {
-    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64, productDescription }));
-    await Creative.findByIdAndUpdate(creativeId, { imageData: b64, genStatus: 'ready', genError: null });
+    // 9:16 (story/reels) = placement principal
+    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64, productDescription, size: STORY_SIZE }));
+    // 4:5 (feed) = la MISMA foto reframed (usa el 9:16 como referencia)
+    let feedB64 = null;
+    try {
+      const feed = await generateVariant({ imageUrl, referenceB64: b64, productDescription, prompt: buildFeedReframePrompt(productDescription), size: FEED_SIZE });
+      feedB64 = feed.b64;
+    } catch (e) { console.error(`[gen] feed 4:5 fallo (${creativeId}):`, e.message); }
+    await Creative.findByIdAndUpdate(creativeId, { imageData: b64, feedImageData: feedB64, genStatus: 'ready', genError: null });
   } catch (err) {
     console.error(`[gen] fallo angulo ${angleId} (${creativeId}):`, err.message);
     await Creative.findByIdAndUpdate(creativeId, { genStatus: 'failed', genError: err.message, fidelityStatus: 'failed' });

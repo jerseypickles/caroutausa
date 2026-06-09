@@ -122,6 +122,11 @@
     background-size: 220% 100%; animation: shimmer 1.5s linear infinite; }
   .tile .imgbox.loaded { animation: none; background: var(--surface3); }
   .tile .imgbox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; }
+  .tile .imgbox.ph-story { aspect-ratio: 9/16; }
+  .tile .imgbox.ph-feed { aspect-ratio: 4/5; }
+  .phtoggle { position: absolute; top: 8px; left: 8px; z-index: 3; display: flex; background: rgba(0,0,0,.55); border-radius: 7px; padding: 2px; gap: 2px; backdrop-filter: blur(4px); }
+  .phtoggle button { background: transparent; border: none; color: #fff; font-size: 10px; font-weight: 600; padding: 3px 7px; border-radius: 5px; cursor: pointer; font-family: inherit; }
+  .phtoggle button.on { background: var(--accent); }
   @keyframes shimmer { to { background-position: -220% 0; } }
   .tile .meta { padding: 13px 14px 4px; }
   .tile .meta .a { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; text-transform: capitalize; flex-wrap: wrap; }
@@ -479,6 +484,13 @@ function fidelityHtml(c) {
 function tilePlaceholder(text, spin) {
   return `<div style="aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;padding:0 12px">${spin ? '<span class="spinner"></span>' : ''}${text}</div>`;
 }
+function setPlacement(btn, id, p) {
+  const box = btn.closest('.imgbox');
+  const img = box.querySelector('img');
+  box.classList.remove('ph-story', 'ph-feed'); box.classList.add('ph-' + p);
+  img.src = p === 'feed' ? `/api/creatives/${id}/image?p=feed` : `/api/creatives/${id}/image`;
+  box.querySelectorAll('.phtoggle button').forEach(b => b.classList.toggle('on', b === btn));
+}
 function openZoom(src) { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').classList.add('on'); }
 function closeZoom() { document.getElementById('lightbox').classList.remove('on'); document.getElementById('lightboxImg').src = ''; }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeZoom(); });
@@ -508,7 +520,12 @@ function singleTile(c) {
   if (c.genStatus === 'generating') visual = tilePlaceholder('Generando…', true);
   else if (c.genStatus === 'failed') visual = tilePlaceholder('Falló: ' + (c.genError || 'error'), false);
   else if (c.qcStatus === 'rejected') visual = tilePlaceholder('sin imagen', false);
-  else visual = `<div class="imgbox"><img src="/api/creatives/${c._id}/image" loading="lazy" onload="this.parentElement.classList.add('loaded')" onclick="openZoom('/api/creatives/${c._id}/image')" alt="${c.angle}" />${c.hasReference ? `<img class="refov" src="/api/creatives/${c._id}/reference" onclick="event.stopPropagation();openZoom('/api/creatives/${c._id}/reference')" title="Referencia de estilo usada" alt="ref" />` : ''}</div>`;
+  else visual = `<div class="imgbox ph-story"><img src="/api/creatives/${c._id}/image" loading="lazy" onload="this.parentElement.classList.add('loaded')" onclick="openZoom(this.src)" alt="${c.angle}" />
+    <div class="phtoggle">
+      <button class="on" onclick="event.stopPropagation();setPlacement(this,'${c._id}','story')">9:16</button>
+      <button onclick="event.stopPropagation();setPlacement(this,'${c._id}','feed')">4:5</button>
+    </div>
+    ${c.hasReference ? `<img class="refov" src="/api/creatives/${c._id}/reference" onclick="event.stopPropagation();openZoom('/api/creatives/${c._id}/reference')" title="Referencia de estilo usada" alt="ref" />` : ''}</div>`;
   const canQc = c.genStatus === 'ready' && c.qcStatus === 'generated';
   return `<div class="tile">${visual}
     <div class="meta">

@@ -69,6 +69,21 @@ Striking and scroll-stopping while still looking like a real photograph.`,
 
 export const DEFAULT_ANGLE = 'realista';
 
+// Reframe del placement: misma foto (imagen 2 = el 9:16) recompuesta a 4:5 de feed.
+export function buildFeedReframePrompt(productDescription = '') {
+  return `${GARMENT_LOCK}
+
+The SECOND image is the SAME fitpic shot vertically (9:16). Reproduce the EXACT same
+photo — same real model, same outfit, same location, same pose, same lighting and
+colors — but recomposed for a 4:5 FEED frame (a bit wider, less tall). Keep the full
+denim shorts and the outfit clearly visible. It must read as the same photo, just
+framed for feed, not a new scene.
+${productDescription ? `\nThe product to preserve exactly: ${productDescription}` : ''}
+
+Real organic iPhone photo, phone-camera color (not professional grading), natural
+light, slight grain, candid framing.`;
+}
+
 // Arma el prompt final: garment lock + descripcion real del producto + (referencia)
 // + escena + anti-IA. La descripcion (de Shopify) ancla que jean preservar.
 export function buildPrompt(angleId, { withReference = false, productDescription = '' } = {}) {

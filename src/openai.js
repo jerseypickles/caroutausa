@@ -5,7 +5,9 @@ import { buildPrompt } from './angles.js';
 
 const client = new OpenAI({ apiKey: config.openaiApiKey });
 
-const SIZE = '1024x1536'; // vertical 2:3 para Reels/Stories/feed
+// Tamaños nativos por placement (divisibles por 16 para gpt-image-2).
+export const STORY_SIZE = '1024x1824'; // 9:16 Reels/Stories
+export const FEED_SIZE = '1024x1280';  // 4:5 Feed
 const QUALITY = 'high';
 // WebP comprimido: ~120KB vs ~3MB PNG (carga ~25x mas rapido en el panel).
 const OUTPUT_FORMAT = 'webp';
@@ -32,7 +34,7 @@ async function fetchSourceImage(imageUrl) {
 
 // Genera UNA variante para un angulo. Si viene referenceB64, se pasa como 2da
 // imagen (referencia de estilo). Devuelve { b64 } o lanza error.
-export async function generateVariant({ imageUrl, angleId, referenceB64, productDescription, prompt: promptOverride }) {
+export async function generateVariant({ imageUrl, angleId, referenceB64, productDescription, prompt: promptOverride, size = STORY_SIZE }) {
   const productImage = await fetchSourceImage(imageUrl);
   const model = config.imageModel;
 
@@ -46,7 +48,7 @@ export async function generateVariant({ imageUrl, angleId, referenceB64, product
   const prompt = promptOverride || buildPrompt(angleId, { withReference: Boolean(referenceB64), productDescription });
 
   const params = {
-    model, image, prompt, size: SIZE, quality: QUALITY, n: 1,
+    model, image, prompt, size, quality: QUALITY, n: 1,
     output_format: OUTPUT_FORMAT, output_compression: OUTPUT_COMPRESSION,
   };
   if (acceptsInputFidelity(model)) {
