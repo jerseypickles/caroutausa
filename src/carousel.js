@@ -43,7 +43,7 @@ ${IPHONE}`;
 export async function generateCarousel({ imageUrl, productDescription, heroReferenceB64, product, wash, cards = 5 }) {
   // 1. Hero (set el look): el director (Claude) inventa la escena del set; las demas
   // cards encadenan del hero, asi que la cohesion se mantiene sola.
-  const creativeDirection = await directCreative({ product, wash, angle: 'realista', withReference: Boolean(heroReferenceB64) });
+  const creativeDirection = await directCreative({ product, wash, angle: 'realista', withReference: Boolean(heroReferenceB64), mode: 'carouselHero' });
   const hero = await generateVariant({ imageUrl, angleId: 'realista', referenceB64: heroReferenceB64, productDescription, creativeDirection });
   const heroB64 = hero.b64;
 
