@@ -12,21 +12,28 @@ Do NOT clean up, restyle, lighten, darken, recolor, lengthen, shorten, smooth or
 "improve" the denim in any way. Render it as the exact real photographed product.
 If anything conflicts, the denim from the first image ALWAYS wins.`;
 
-// Anti-IA: se concatena a cada prompt para empujar realismo y matar tells.
-const ANTI_AI = `Photoreal, shot on a real camera, real available light with real shadows.
-Natural skin with visible pores and slight grain, no waxy or plastic skin,
-no over-smoothing, no perfect symmetry, no uniform HDR glow.
-Slightly muted real white balance, not oversaturated. Real cluttered environment with texture.`;
+// Anti-IA: se concatena a cada prompt. Empuja look de iPhone organico, no estudio.
+const ANTI_AI = `Make it look like a REAL, organic iPhone photo — a candid fitpic a
+normal person would actually post, NOT an ad and NOT a professional shoot.
+Shot on a recent iPhone: natural phone-camera rendering, slightly imperfect and
+casual framing, real available light (window, overcast, golden hour) with real shadows.
+PHONE-CAMERA COLOR, not professional or cinematic grading: a bit muted and natural,
+real white balance, slightly flat dynamic range, never oversaturated, no HDR glow,
+no glossy studio polish.
+Natural skin with visible pores and fine grain, no waxy or plastic skin, no
+over-smoothing, no perfect symmetry. Real lived-in environment with everyday texture.`;
 
 // Referencia de estilo (imagen 2): SUBORDINADA al producto. Solo aporta el resto
 // del look y la escena; jamas toca el jean.
-const STYLE_REFERENCE = `The SECOND image is ONLY a styling moodboard and is SECONDARY
-to the product. Copy from it only: the top/jacket, the footwear/sneakers, the
-accessories, the pose, the location/scene, the lighting and the overall vibe.
+const STYLE_REFERENCE = `The SECOND image is ONLY a styling reference and is SECONDARY
+to the product. From it, take ONLY the OUTFIT and styling: the top/jacket, the
+footwear/sneakers, the accessories, and how the clothes are worn.
+Do NOT copy its background, location or color grading — place the model in a real,
+organic everyday setting and keep the natural iPhone look described below; the
+reference is for the outfit, not the scene.
 NEVER take the pants, shorts or bottoms from the second image — the bottoms are
-ALWAYS the exact denim garment from the FIRST image. The second image must NOT
-change the denim's wash, color, rips, distressing, hem or length in any way.
-Do NOT copy the face or identity from the second image; use a different real model.`;
+ALWAYS the exact denim garment from the FIRST image, with its wash, rips, hem and
+length unchanged. Do NOT copy the face or identity from the second image.`;
 
 export const ANGLES = {
   realista: {
@@ -39,9 +46,10 @@ Real room or street with everyday clutter, window daylight or overcast light.`,
   realismo_completo: {
     id: 'realismo_completo',
     label: 'Maximo realismo foto (anti-AI)',
-    prompt: `Maximum photographic realism. Editorial-grade but unmistakably real photo.
-Visible film-like grain, real lens character, real fabric texture on the denim.
-Golden hour or overcast daylight with directional real shadows.`,
+    prompt: `Maximum realism, an unmistakably real organic iPhone snapshot — never a
+studio, editorial or professional camera look. Visible fine grain, real fabric
+texture on the denim, candid casual framing. Golden hour or overcast daylight with
+directional real shadows.`,
   },
   gancho_click: {
     id: 'gancho_click',
