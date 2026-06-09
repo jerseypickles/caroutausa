@@ -32,7 +32,7 @@ async function fetchSourceImage(imageUrl) {
 
 // Genera UNA variante para un angulo. Si viene referenceB64, se pasa como 2da
 // imagen (referencia de estilo). Devuelve { b64 } o lanza error.
-export async function generateVariant({ imageUrl, angleId, referenceB64, productDescription }) {
+export async function generateVariant({ imageUrl, angleId, referenceB64, productDescription, prompt: promptOverride }) {
   const productImage = await fetchSourceImage(imageUrl);
   const model = config.imageModel;
 
@@ -42,7 +42,8 @@ export async function generateVariant({ imageUrl, angleId, referenceB64, product
     const refFile = await toFile(Buffer.from(referenceB64, 'base64'), 'reference.png', { type: 'image/png' });
     image = [productImage, refFile];
   }
-  const prompt = buildPrompt(angleId, { withReference: Boolean(referenceB64), productDescription });
+  // prompt custom (ej. carrusel) o el armado por angulo.
+  const prompt = promptOverride || buildPrompt(angleId, { withReference: Boolean(referenceB64), productDescription });
 
   const params = {
     model, image, prompt, size: SIZE, quality: QUALITY, n: 1,
