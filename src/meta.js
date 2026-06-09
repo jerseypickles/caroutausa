@@ -130,3 +130,58 @@ export async function getInsights(objectId, datePreset = 'maximum') {
   const json = await graph('GET', `${objectId}/insights`, { fields, date_preset: datePreset });
   return json.data?.[0] || null;
 }
+
+// Parsea actions de Meta a ATC / compras.
+export function parseActions(row) {
+  const out = { addToCart: 0, purchases: 0 };
+  for (const a of row?.actions || []) {
+    if (/add_to_cart/.test(a.action_type)) out.addToCart += Number(a.value) || 0;
+    if (/purchase/.test(a.action_type)) out.purchases += Number(a.value) || 0;
+  }
+  return out;
+}
+
+function normInsights(row) {
+  if (!row) return null;
+  const acts = parseActions(row);
+  return {
+    impressions: Number(row.impressions) || 0,
+    clicks: Number(row.clicks) || 0,
+    ctr: Number(row.ctr) || 0,
+    cpc: Number(row.cpc) || 0,
+    spend: Number(row.spend) || 0,
+    addToCart: acts.addToCart,
+    purchases: acts.purchases,
+  };
+}
+
+// --- VISUALIZACION: lee las campañas que YA existen en la cuenta ---
+export async function listAccountCampaigns() {
+  const fields = 'name,status,effective_status,objective,daily_budget,lifetime_budget,created_time,' +
+    'insights.date_preset(maximum){impressions,clicks,ctr,cpc,spend,actions}';
+  const json = await graph('GET', `${acct()}/campaigns`, { fields, limit: 50 });
+  return (json.data || []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    status: c.status,
+    effectiveStatus: c.effective_status,
+    objective: c.objective,
+    dailyBudget: c.daily_budget ? Number(c.daily_budget) / 100 : null,
+    createdTime: c.created_time,
+    insights: normInsights(c.insights?.data?.[0]),
+  }));
+}
+
+// Ads de una campaña, con thumbnail del creative y metricas.
+export async function getCampaignAds(campaignId) {
+  const fields = 'name,effective_status,creative{thumbnail_url,image_url},' +
+    'insights.date_preset(maximum){impressions,clicks,ctr,spend,actions}';
+  const json = await graph('GET', `${campaignId}/ads`, { fields, limit: 50 });
+  return (json.data || []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    effectiveStatus: a.effective_status,
+    thumbnail: a.creative?.image_url || a.creative?.thumbnail_url || null,
+    insights: normInsights(a.insights?.data?.[0]),
+  }));
+}
