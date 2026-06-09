@@ -82,7 +82,15 @@ export async function enqueueJobs({ imageUrl, jobs, meta = {}, productDescriptio
       referenceImageData: ref?.b64 || null,
     }))
   );
-  created.forEach((doc, i) => generateInBackground(doc._id, imageUrl, doc.angle, jobs[i].ref?.b64 || null, productDescription, 0, fitSpec));
+  // Secuencial (no en paralelo): el plan starter tiene poca RAM y 2+ generaciones
+  // simultaneas la saturan y reinician el server (mata los jobs). Una a la vez.
+  (async () => {
+    for (let i = 0; i < created.length; i++) {
+      try {
+        await generateInBackground(created[i]._id, imageUrl, created[i].angle, jobs[i].ref?.b64 || null, productDescription, 0, fitSpec);
+      } catch (e) { console.error('[gen] job fallo:', e.message); }
+    }
+  })();
   return created;
 }
 
