@@ -3,6 +3,7 @@ import { generateVariant, STORY_SIZE, FEED_SIZE } from './openai.js';
 import { buildFeedReframePrompt } from './angles.js';
 import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
+import { directCreative } from './director.js';
 import { config } from './config.js';
 
 // Genera en background y actualiza el doc cuando termina. Tras la imagen corre el
@@ -11,8 +12,17 @@ import { config } from './config.js';
 export async function generateInBackground(creativeId, imageUrl, angleId, referenceB64, productDescription, attempt = 0) {
   let b64;
   try {
+    // El director (Claude) inventa la direccion creativa de este fitpic. Si no hay
+    // key o falla, generateVariant cae al prompt fijo del angulo. En reintentos se
+    // re-dirige (nueva escena) para aprovechar la varianza.
+    const doc = await Creative.findById(creativeId).lean();
+    const creativeDirection = await directCreative({
+      product: doc?.product, wash: doc?.wash, angle: angleId,
+      withReference: Boolean(referenceB64),
+      seed: attempt > 0 ? `retry ${attempt}: try a completely different setting and energy` : '',
+    });
     // 9:16 (story/reels) = placement principal
-    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64, productDescription, size: STORY_SIZE }));
+    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64, productDescription, creativeDirection, size: STORY_SIZE }));
     // 4:5 (feed) = la MISMA foto reframed (usa el 9:16 como referencia)
     let feedB64 = null;
     try {

@@ -4,6 +4,7 @@ import { Carousel } from './models/carousel.js';
 import { Product } from './models/product.js';
 import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
+import { directCreative } from './director.js';
 import { config } from './config.js';
 
 const IPHONE = `Real organic iPhone photo: phone-camera color (not professional/cinematic
@@ -39,9 +40,11 @@ ${IPHONE}`;
 
 // Genera un carrusel cohesivo: hero -> N poses + 1 detail, usando el hero como
 // referencia para que compartan modelo/fondo/color. Devuelve [{role,b64}].
-export async function generateCarousel({ imageUrl, productDescription, heroReferenceB64, cards = 5 }) {
-  // 1. Hero (set el look): producto bloqueado + referencia de estilo opcional.
-  const hero = await generateVariant({ imageUrl, angleId: 'realista', referenceB64: heroReferenceB64, productDescription });
+export async function generateCarousel({ imageUrl, productDescription, heroReferenceB64, product, wash, cards = 5 }) {
+  // 1. Hero (set el look): el director (Claude) inventa la escena del set; las demas
+  // cards encadenan del hero, asi que la cohesion se mantiene sola.
+  const creativeDirection = await directCreative({ product, wash, angle: 'realista', withReference: Boolean(heroReferenceB64) });
+  const hero = await generateVariant({ imageUrl, angleId: 'realista', referenceB64: heroReferenceB64, productDescription, creativeDirection });
   const heroB64 = hero.b64;
 
   // 2. Poses + detail en paralelo, cada una con el hero como 2da imagen (cohesion).
@@ -76,6 +79,8 @@ export async function generateCarouselInBackground(carouselId) {
       imageUrl: doc.sourceImageUrl,
       productDescription,
       heroReferenceB64: doc.referenceImageData,
+      product: doc.product,
+      wash: doc.wash,
       cards: 5,
     });
   } catch (err) {

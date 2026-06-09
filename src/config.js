@@ -14,6 +14,10 @@ export const config = {
   mongoUri: required('MONGODB_URI'),
   imageModel: process.env.IMAGE_MODEL || 'gpt-image-2',
   judgeModel: process.env.JUDGE_MODEL || 'gpt-5.1',
+  // Director creativo (Anthropic): genera los prompts de imagen dinamicamente.
+  // Las imagenes las sigue haciendo gpt-image. Opcional: sin key, cae al prompt fijo.
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+  directorModel: process.env.DIRECTOR_MODEL || 'claude-fable-5',
   fidelityPass: Number(process.env.FIDELITY_PASS || 85), // umbral de aprobado
   // receta mixta por producto: por cada angulo, 1 variante SIN referencia (jean
   // garantizado) + 1 CON referencia (vibe, gated por el juez).

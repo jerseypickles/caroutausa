@@ -86,14 +86,16 @@ light, slight grain, candid framing.`;
 
 // Arma el prompt final: garment lock + descripcion real del producto + (referencia)
 // + escena + anti-IA. La descripcion (de Shopify) ancla que jean preservar.
-export function buildPrompt(angleId, { withReference = false, productDescription = '' } = {}) {
+export function buildPrompt(angleId, { withReference = false, productDescription = '', creativeDirection = '' } = {}) {
   const angle = ANGLES[angleId];
-  if (!angle) {
+  if (!angle && !creativeDirection) {
     throw new Error(`Angulo desconocido: ${angleId}. Validos: ${Object.keys(ANGLES).join(', ')}`);
   }
   const desc = productDescription
     ? `\n\nThe exact product to preserve (keep faithful to this): ${productDescription}`
     : '';
   const ref = withReference ? `\n\n${STYLE_REFERENCE}` : '';
-  return `${GARMENT_LOCK}${desc}${ref}\n\n${angle.prompt}\n\n${ANTI_AI}`;
+  // El director (Claude) reemplaza la escena fija del angulo; si no hay, cae al fijo.
+  const scene = creativeDirection || angle.prompt;
+  return `${GARMENT_LOCK}${desc}${ref}\n\n${scene}\n\n${ANTI_AI}`;
 }
