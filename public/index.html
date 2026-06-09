@@ -218,6 +218,7 @@
   .tbadge { font-size: 9.5px; font-weight: 600; padding: 3px 7px; border-radius: 5px; }
   .tbadge.car { background: rgba(251,191,36,.14); color: var(--warn); }
   .tbadge.sgl { background: var(--accent-soft); color: var(--accent2); }
+  .tbadge.flat { background: rgba(120,200,160,.16); color: #5bbf8a; }
   .sid { font-size: 10px; color: var(--faint); font-family: 'JetBrains Mono', monospace; }
   .sthumb { position: relative; aspect-ratio: 3/4; border-radius: 8px; overflow: hidden; background: var(--surface3); }
   .sthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -472,6 +473,7 @@ async function loadProducts() {
       <div class="foot">
         <button class="btn sm" onclick="generateProduct(${p.id}, this)">Singles</button>
         <button class="btn ghost sm" onclick="generateCarousel(${p.id}, this)">Carrusel</button>
+        <button class="btn ghost sm" onclick="generateFlatlay(${p.id}, this)">Flat-lay</button>
       </div>
     </div>`).join('');
 }
@@ -495,6 +497,16 @@ async function generateCarousel(id, btn) {
     toast('Carrusel cohesivo generando (5 cards, ~5 min)…');
     loadProducts(); showView('cola'); loadQueue();
   } catch (e) { toast('Error: ' + e.message); btn.disabled = false; btn.textContent = 'Carrusel'; }
+}
+async function generateFlatlay(id, btn) {
+  btn.disabled = true; btn.textContent = 'Encolando…';
+  try {
+    const r = await fetch(`/api/products/${id}/flatlay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Error');
+    toast('Flat-lay (packshot) generando…');
+    loadProducts(); showView('cola'); loadQueue();
+  } catch (e) { toast('Error: ' + e.message); btn.disabled = false; btn.textContent = 'Flat-lay'; }
 }
 async function syncNow() {
   const b = document.getElementById('syncBtn'); b.disabled = true;
@@ -714,9 +726,9 @@ function stripThumb(it) {
   return `<div class="sthumb"><img src="/api/creatives/${it._id}/image" loading="lazy" alt="" /></div>`;
 }
 function typeBadge(it) {
-  return it._type === 'carousel'
-    ? `<span class="tbadge car">Carrusel · ${it.cards?.length || 5}</span>`
-    : `<span class="tbadge sgl">9:16 · 4:5</span>`;
+  if (it._type === 'carousel') return `<span class="tbadge car">Carrusel · ${it.cards?.length || 5}</span>`;
+  if (it.format === 'flatlay') return `<span class="tbadge flat">Packshot</span>`;
+  return `<span class="tbadge sgl">9:16 · 4:5</span>`;
 }
 function renderStrip() {
   const items = qItems();
@@ -731,7 +743,7 @@ function renderStrip() {
     return `<div class="scard ${sel}" onclick="selectItem('${it._type}','${it._id}')">
       <div class="scard-top">${typeBadge(it)}<span class="sid">${shortId(it._id)}</span></div>
       ${stripThumb(it)}
-      <div class="scard-meta"><div class="st">${it._type === 'carousel' ? 'Carrusel' : it.angle.replace(/_/g,' ')}</div>
+      <div class="scard-meta"><div class="st">${it._type === 'carousel' ? 'Carrusel' : it.format === 'flatlay' ? 'Packshot' : it.angle.replace(/_/g,' ')}</div>
       <div class="sw">${[it.product, it.wash].filter(Boolean).join(' · ') || '—'}</div></div>${fid}</div>`;
   }).join('');
 }

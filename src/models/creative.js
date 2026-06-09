@@ -12,7 +12,8 @@ const creativeSchema = new Schema(
     product: { type: String },       // ej. "Onyx Wash Denim Short"
     wash: { type: String },          // ej. "onyx" | "ice" | "fog"
     fitSpec: { type: String, default: '' }, // silueta objetivo (del size finder) para mostrar en QC
-    angle: { type: String, required: true }, // realista | realismo_completo | gancho_click | llamada_atencion
+    angle: { type: String, required: true }, // realista | realismo_completo | gancho_click | llamada_atencion | flatlay
+    format: { type: String, enum: ['model', 'flatlay'], default: 'model' }, // foto con modelo vs packshot del producto
     styleMode: { type: String, enum: ['organic', 'campaign'], default: 'organic' }, // look organico vs campaña
     hook: { type: String },          // descripcion del primer frame
 

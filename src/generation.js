@@ -1,6 +1,6 @@
 import { Creative } from './models/creative.js';
 import { generateVariant, STORY_SIZE, FEED_SIZE } from './openai.js';
-import { buildFeedReframePrompt } from './angles.js';
+import { buildFeedReframePrompt, buildFlatlayPrompt } from './angles.js';
 import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
 import { directCreative } from './director.js';
@@ -66,6 +66,43 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     console.error(`[gen] juez fallo (${creativeId}):`, err.message);
     await Creative.findByIdAndUpdate(creativeId, { fidelityStatus: 'failed', fidelityError: err.message });
   }
+}
+
+// Flat-lay / packshot: genera el short SOLO como still-life (sin modelo, sin ref).
+export async function generateFlatlayInBackground(creativeId, imageUrl, productDescription = '', fitSpec = '') {
+  let b64;
+  try {
+    ({ b64 } = await generateVariant({ imageUrl, productDescription, prompt: buildFlatlayPrompt(productDescription, fitSpec), size: FEED_SIZE }));
+    await Creative.findByIdAndUpdate(creativeId, { imageData: b64, feedImageData: b64, genStatus: 'ready', genError: null });
+  } catch (err) {
+    console.error(`[flatlay] fallo (${creativeId}):`, err.message);
+    await Creative.findByIdAndUpdate(creativeId, { genStatus: 'failed', genError: err.message, fidelityStatus: 'failed' });
+    return;
+  }
+  try {
+    const doc = await Creative.findById(creativeId).lean();
+    if (!doc?.copy?.edited) {
+      const copy = await generateCopy({ product: doc.product, wash: doc.wash, angle: 'flatlay', description: productDescription });
+      await Creative.findByIdAndUpdate(creativeId, { copy: { ...copy, edited: false } });
+    }
+  } catch (err) { console.error(`[flatlay] copy fallo (${creativeId}):`, err.message); }
+  try {
+    const v = await judgeFidelity({ sourceImageUrl: imageUrl, b64, fitSpec });
+    await Creative.findByIdAndUpdate(creativeId, {
+      fidelityStatus: 'done', fidelityScore: v.score, fidelityVerdict: v.verdict,
+      fidelityIssues: v.issues, fidelitySummary: v.summary, fitScore: v.fitScore, fitIssues: v.fitIssues,
+    });
+  } catch (err) { console.error(`[flatlay] juez fallo (${creativeId}):`, err.message); }
+}
+
+// Encola un flat-lay para un producto.
+export async function enqueueFlatlay({ imageUrl, meta = {}, productDescription = '', fitSpec = '' }) {
+  const doc = await Creative.create({
+    ...meta, angle: 'flatlay', format: 'flatlay', styleMode: 'organic',
+    sourceImageUrl: imageUrl, qcStatus: 'generated', genStatus: 'generating', hasReference: false,
+  });
+  generateFlatlayInBackground(doc._id, imageUrl, productDescription, fitSpec).catch((e) => console.error('[flatlay] job:', e.message));
+  return doc;
 }
 
 // Crea y dispara N jobs explicitos. jobs: [{ angleId, ref: {b64}|null }].

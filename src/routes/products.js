@@ -2,10 +2,25 @@ import { Router } from 'express';
 import { Product } from '../models/product.js';
 import { Reference } from '../models/reference.js';
 import { syncProducts } from '../sync.js';
-import { enqueueJobs } from '../generation.js';
+import { enqueueJobs, enqueueFlatlay } from '../generation.js';
 import { config } from '../config.js';
 
 export const productsRouter = Router();
+
+// POST /api/products/:id/flatlay -> packshot still-life del producto (sin modelo).
+productsRouter.post('/products/:id/flatlay', async (req, res) => {
+  const product = await Product.findOne({ shopifyId: Number(req.params.id) }).lean();
+  if (!product) return res.status(404).json({ error: 'Producto no encontrado' });
+  if (!product.image) return res.status(400).json({ error: 'El producto no tiene imagen' });
+  const doc = await enqueueFlatlay({
+    imageUrl: product.image,
+    productDescription: [product.title, product.description].filter(Boolean).join('. '),
+    fitSpec: product.fitSpec || '',
+    meta: { shopifyProductId: product.shopifyId, product: product.title, wash: product.wash, fitSpec: product.fitSpec || '' },
+  });
+  await Product.updateOne({ shopifyId: product.shopifyId }, { $inc: { generatedCount: 1 }, $set: { lastGeneratedAt: new Date() } });
+  res.status(202).json({ id: doc._id, format: 'flatlay', status: 'generating' });
+});
 
 // GET /api/products -> productos sincronizados de Shopify (desde Mongo).
 // isNew = aun no se genero ninguna variante.

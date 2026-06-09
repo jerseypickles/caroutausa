@@ -114,6 +114,23 @@ Real organic iPhone photo, phone-camera color (not professional grading), natura
 light, slight grain, candid framing.`;
 }
 
+// Flat-lay / packshot: el short SOLO sobre superficie solida con sombra real. Sin
+// modelo. Producto como heroe -> formato que convierte mucho en Meta.
+export function buildFlatlayPrompt(productDescription = '', fitSpec = '') {
+  return `${GARMENT_LOCK}${fitLock(fitSpec)}${productDescription ? `\n\nThe exact product: ${productDescription}` : ''}
+
+Photograph this exact denim short as a premium STILL-LIFE PACKSHOT — NO model, NO person,
+NO legs, just the garment itself. Lay it flat and neatly arranged (or softly folded once)
+on a clean SOLID surface — warm cream, pale stone, sand or pale concrete — shot from directly
+above or a slight high angle. Use soft natural directional studio-daylight that casts ONE
+gentle, realistic, soft-edged shadow of the shorts onto the surface. Photoreal denim texture
+and stitching, true restrained color (a bit muted, never oversaturated or HDR), clean
+negative space, an elevated editorial e-commerce look — the kind of product shot that sells.
+You may add ONE subtle styling prop beside it (a silver chain or a folded tee), nothing busy.
+It must look like a REAL studio photograph — sharp, tactile, with real soft shadow — never a
+flat, fake or AI-looking render.`;
+}
+
 // Arma el prompt final: garment lock + descripcion real del producto + (referencia)
 // + escena + anti-IA. La descripcion (de Shopify) ancla que jean preservar.
 // Fit/silueta exacta (del Size Finder): ancla que tan ancho vs apretado va el short.
