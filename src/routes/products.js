@@ -41,18 +41,21 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
     ? req.body.angles
     : config.recipeAngles;
 
-  const activeRefs = await Reference.find({ active: true })
-    .sort({ createdAt: -1 })
-    .select('+imageData')
-    .lean();
+  const activeRefs = await Reference.find({ active: true }).select('+imageData').lean();
+  // Barajar (Fisher-Yates) para variar las referencias entre generaciones y usar
+  // todo el pool, no siempre las mismas. La variedad depende de cuantas haya activas.
+  for (let k = activeRefs.length - 1; k > 0; k--) {
+    const j = Math.floor(Math.random() * (k + 1));
+    [activeRefs[k], activeRefs[j]] = [activeRefs[j], activeRefs[k]];
+  }
 
   // Receta mixta (el jean es prioridad): por cada angulo, 1 variante FIEL (sin
-  // referencia, fidelidad garantizada) + 1 VIBE (con referencia, gated por el juez).
+  // referencia, fidelidad garantizada) + 1 VIBE (con referencia random del pool).
   const jobs = [];
   angles.forEach((angleId, i) => {
     jobs.push({ angleId, ref: null }); // fiel
     if (activeRefs.length) {
-      const r = activeRefs[i % activeRefs.length]; // rota entre las refs activas
+      const r = activeRefs[i % activeRefs.length]; // del pool barajado
       jobs.push({ angleId, ref: { b64: r.imageData } }); // vibe
     }
   });
