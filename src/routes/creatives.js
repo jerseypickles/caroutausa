@@ -1,7 +1,23 @@
 import { Router } from 'express';
 import { Creative } from '../models/creative.js';
+import { analyzeImage } from '../analyzer.js';
 
 export const creativesRouter = Router();
+
+// POST /api/creatives/:id/analyze -> Creative Analyzer (lazy, cacheado)
+creativesRouter.post('/creatives/:id/analyze', async (req, res) => {
+  const doc = await Creative.findById(req.params.id).select('+imageData').lean();
+  if (!doc) return res.status(404).json({ error: 'No encontrado' });
+  if (doc.analysis?.status === 'done') return res.json({ analysis: doc.analysis });
+  if (!doc.imageData) return res.status(400).json({ error: 'Sin imagen para analizar' });
+  try {
+    const analysis = await analyzeImage({ b64: doc.imageData, product: doc.product, wash: doc.wash });
+    await Creative.findByIdAndUpdate(doc._id, { analysis });
+    res.json({ analysis });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
 
 // Detecta el formato real por magic bytes (las viejas son png, las nuevas webp).
 function detectMime(buf) {

@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { config } from './config.js';
+import { dataUrl as toDataUrl } from './imgutil.js';
 
 const client = new OpenAI({ apiKey: config.openaiApiKey });
 
@@ -25,7 +26,7 @@ Set "verdict" to "pass" only if score >= ${config.fidelityPass}.`;
 
 // Compara la imagen original (URL) contra la generada (base64) y devuelve el veredicto.
 export async function judgeFidelity({ sourceImageUrl, b64 }) {
-  const dataUrl = `data:image/png;base64,${b64}`;
+  const dataUrl = toDataUrl(b64);
 
   const completion = await client.chat.completions.create({
     model: config.judgeModel,

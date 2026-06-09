@@ -42,6 +42,16 @@ const carouselSchema = new Schema(
 
     qcStatus: { type: String, enum: ['generated', 'approved', 'rejected'], default: 'generated', index: true },
     qcNotes: { type: String },
+
+    analysis: {
+      status: { type: String, enum: ['none', 'done'], default: 'none' },
+      hook: Number, scrollStop: Number, productFocus: Number,
+      ugcFeel: Number, fatigueRisk: Number, overall: Number,
+      confidence: String,
+      summary: String,
+      feedback: { type: [{ label: String, level: String, note: String }], default: [] },
+      analyzedAt: Date,
+    },
   },
   { timestamps: true }
 );

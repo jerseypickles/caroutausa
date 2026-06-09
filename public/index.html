@@ -248,6 +248,20 @@
   .fbitem b { font-size: 12.5px; } .fbitem span { color: var(--muted); }
   .fbitem.ok { border-left-color: var(--ok); } .fbitem.bad { border-left-color: var(--bad); }
   .ianalyzer { font-size: 11.5px; color: var(--muted); line-height: 1.5; padding: 12px; border: 1px dashed var(--border2); border-radius: 9px; margin-top: 6px; }
+  .estbadge { font-size: 10px; color: var(--accent2); background: var(--accent-soft); padding: 3px 9px; border-radius: 6px; font-weight: 600; }
+  .amgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+  .amc { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 10px; text-align: center; }
+  .amv { font-family: 'JetBrains Mono', monospace; font-size: 19px; font-weight: 700; }
+  .amv.ok { color: var(--ok); } .amv.warn { color: var(--warn); } .amv.bad { color: var(--bad); }
+  .aml { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .amq { font-size: 9px; margin-top: 2px; font-weight: 600; }
+  .amq.ok { color: var(--ok); } .amq.warn { color: var(--warn); } .amq.bad { color: var(--bad); }
+  .asum { font-size: 12px; color: var(--text); line-height: 1.5; margin-bottom: 10px; }
+  .afbs { display: flex; flex-direction: column; gap: 6px; }
+  .afb { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--surface2); border-left: 3px solid var(--border2); font-size: 11.5px; }
+  .afb b { font-size: 11.5px; } .afb span { color: var(--muted); }
+  .afb.ok { border-left-color: var(--ok); } .afb.warn { border-left-color: var(--warn); } .afb.bad { border-left-color: var(--bad); }
+  .ctrnote { font-size: 11px; color: var(--faint); margin-top: 10px; font-style: italic; }
   .fmtprev { display: flex; gap: 12px; flex-wrap: wrap; }
   .fmt { text-align: center; } .fmtl { font-size: 10.5px; color: var(--muted); margin-top: 6px; }
   .phone { background: var(--surface3); border: 1px solid var(--border2); border-radius: 10px; overflow: hidden; display: grid; place-items: center; }
@@ -744,7 +758,8 @@ function renderInspector() {
       <div class="isec">Análisis del jean</div>
       <div class="ascore">${bigRing(it.fidelityScore, it.fidelityVerdict)}<div><div class="asv ${it.fidelityVerdict === 'pass' ? 'okt' : 'badt'}">${it.fidelityStatus === 'done' ? (it.fidelityVerdict === 'pass' ? 'Fiel al diseño' : 'Revisar') : '—'}</div><div class="muted" style="font-size:12px">fidelidad del jean</div></div></div>
       ${fb}
-      <div class="ianalyzer">⌁ Análisis IA de performance (hook, scroll-stop, UGC, fatiga) — <b>próximamente</b>. El CTR real va a aparecer desde Meta cuando el creative corra.</div>
+      <div class="isec" style="margin-top:16px">Análisis IA de performance</div>
+      ${analyzerHtml(it)}
     </div>
     <div class="icol">
       <div class="isec">Vista previa por formato</div>
@@ -757,6 +772,47 @@ function renderInspector() {
       </div>
     </div>`;
   renderFlow(it);
+  if (it.genStatus === 'ready' && (!it.analysis || it.analysis.status !== 'done')) analyzeItem(it._type, it._id);
+}
+function metricCard(label, val, opts = {}) {
+  if (val == null) return `<div class="amc"><div class="amv">—</div><div class="aml">${label}</div></div>`;
+  const score = opts.inverted ? 100 - val : val;
+  const cls = score >= 80 ? 'ok' : score >= 60 ? 'warn' : 'bad';
+  const word = score >= 80 ? 'Muy bueno' : score >= 60 ? 'Bueno' : 'Bajo';
+  return `<div class="amc"><div class="amv ${cls}">${val}${opts.suf || ''}</div><div class="aml">${label}</div><div class="amq ${cls}">${word}</div></div>`;
+}
+function analyzerHtml(it) {
+  const a = it.analysis;
+  if (a && a.status === 'done') {
+    const fb = (a.feedback || []).map(f => `<div class="afb ${f.level}"><b>${esc(f.label)}</b><span>${esc(f.note)}</span></div>`).join('');
+    return `<div class="analyzer">
+      <div class="ahead"><span class="estbadge">estimación IA · confianza ${a.confidence}</span></div>
+      <div class="amgrid">
+        ${metricCard('Hook', a.hook)}${metricCard('Scroll Stop', a.scrollStop)}${metricCard('Product Focus', a.productFocus)}
+        ${metricCard('UGC Feel', a.ugcFeel)}${metricCard('Fatiga', a.fatigueRisk, { suf: '%', inverted: true })}${metricCard('Overall', a.overall)}
+      </div>
+      ${a.summary ? `<div class="asum">${esc(a.summary)}</div>` : ''}
+      ${fb ? `<div class="afbs">${fb}</div>` : ''}
+      <div class="ctrnote">El CTR real va a aparecer desde Meta cuando el creative corra.</div>
+    </div>`;
+  }
+  if (it.genStatus !== 'ready') return `<div class="ianalyzer">Disponible cuando el creative esté listo.</div>`;
+  return `<div class="ianalyzer"><span class="spinner"></span>Analizando performance con IA…</div>`;
+}
+const analyzing = new Set();
+async function analyzeItem(type, id) {
+  const k = `${type}:${id}`;
+  if (analyzing.has(k)) return;
+  analyzing.add(k);
+  try {
+    const url = type === 'carousel' ? `/api/carousels/${id}/analyze` : `/api/creatives/${id}/analyze`;
+    const d = await (await fetch(url, { method: 'POST' })).json();
+    if (d.analysis) {
+      const obj = (type === 'carousel' ? allCarousels : allCreatives).find(o => o._id === id);
+      if (obj) obj.analysis = d.analysis;
+      if (selectedKey === k) renderInspector();
+    }
+  } catch (e) { /* silencioso */ } finally { analyzing.delete(k); }
 }
 function renderFlow(it) {
   const steps = ['Generado por IA', 'En cola de QC', 'Revisión humana', 'Aprobado', 'Publicado', 'Resultados'];

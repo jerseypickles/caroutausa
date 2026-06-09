@@ -48,6 +48,17 @@ const creativeSchema = new Schema(
     fidelityError: { type: String, default: null },
     retries: { type: Number, default: 0 }, // reintentos automaticos por fidelidad baja
 
+    // --- Creative Analyzer (estimacion IA de performance, on-demand) ---
+    analysis: {
+      status: { type: String, enum: ['none', 'done'], default: 'none' },
+      hook: Number, scrollStop: Number, productFocus: Number,
+      ugcFeel: Number, fatigueRisk: Number, overall: Number,
+      confidence: String,
+      summary: String,
+      feedback: { type: [{ label: String, level: String, note: String }], default: [] },
+      analyzedAt: Date,
+    },
+
     // --- copy del ad (generado, editable en QC) ---
     copy: {
       primaryText: { type: String, default: '' },

@@ -3,8 +3,25 @@ import { Carousel } from '../models/carousel.js';
 import { Product } from '../models/product.js';
 import { Reference } from '../models/reference.js';
 import { generateCarouselInBackground } from '../carousel.js';
+import { analyzeImage } from '../analyzer.js';
 
 export const carouselsRouter = Router();
+
+// POST /api/carousels/:id/analyze -> analiza el hero card (lazy, cacheado)
+carouselsRouter.post('/carousels/:id/analyze', async (req, res) => {
+  const doc = await Carousel.findById(req.params.id).select('+cards.imageData').lean();
+  if (!doc) return res.status(404).json({ error: 'No encontrado' });
+  if (doc.analysis?.status === 'done') return res.json({ analysis: doc.analysis });
+  const hero = doc.cards?.[0]?.imageData;
+  if (!hero) return res.status(400).json({ error: 'Sin imagen para analizar' });
+  try {
+    const analysis = await analyzeImage({ b64: hero, product: doc.product, wash: doc.wash });
+    await Carousel.findByIdAndUpdate(doc._id, { analysis });
+    res.json({ analysis });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
 
 function detectMime(buf) {
   if (buf[0] === 0x89 && buf[1] === 0x50) return 'image/png';
