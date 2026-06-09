@@ -50,6 +50,10 @@ const carouselSchema = new Schema(
       confidence: String,
       summary: String,
       feedback: { type: [{ label: String, level: String, note: String }], default: [] },
+      attention: {
+        heat: String,
+        zones: { type: [{ label: String, percent: Number, x: Number, y: Number }], default: [] },
+      },
       analyzedAt: Date,
     },
   },

@@ -262,6 +262,16 @@
   .afb b { font-size: 11.5px; } .afb span { color: var(--muted); }
   .afb.ok { border-left-color: var(--ok); } .afb.warn { border-left-color: var(--warn); } .afb.bad { border-left-color: var(--bad); }
   .ctrnote { font-size: 11px; color: var(--faint); margin-top: 10px; font-style: italic; }
+  .heatwrap { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 10px; }
+  .heatimg { position: relative; width: 150px; flex: none; border-radius: 10px; overflow: hidden; background: var(--surface3); }
+  .heatimg img { width: 100%; display: block; }
+  .heatlayer { position: absolute; inset: 0; filter: blur(6px); mix-blend-mode: screen; pointer-events: none; }
+  .hblob { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; }
+  .hzones { flex: 1; display: flex; flex-direction: column; gap: 11px; padding-top: 4px; }
+  .hzone { display: flex; align-items: center; gap: 10px; font-size: 11.5px; }
+  .hzl { flex: 1; } .hzbar { width: 72px; height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+  .hzbar div { height: 100%; border-radius: 3px; }
+  .hzp { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); width: 34px; text-align: right; }
   .fmtprev { display: flex; gap: 12px; flex-wrap: wrap; }
   .fmt { text-align: center; } .fmtl { font-size: 10.5px; color: var(--muted); margin-top: 6px; }
   .phone { background: var(--surface3); border: 1px solid var(--border2); border-radius: 10px; overflow: hidden; display: grid; place-items: center; }
@@ -793,11 +803,34 @@ function analyzerHtml(it) {
       </div>
       ${a.summary ? `<div class="asum">${esc(a.summary)}</div>` : ''}
       ${fb ? `<div class="afbs">${fb}</div>` : ''}
+      ${heatmapHtml(it)}
       <div class="ctrnote">El CTR real va a aparecer desde Meta cuando el creative corra.</div>
     </div>`;
   }
   if (it.genStatus !== 'ready') return `<div class="ianalyzer">Disponible cuando el creative esté listo.</div>`;
   return `<div class="ianalyzer"><span class="spinner"></span>Analizando performance con IA…</div>`;
+}
+function blobColor(p) {
+  if (p >= 33) return 'rgba(255,70,45,.65)';
+  if (p >= 20) return 'rgba(255,190,40,.55)';
+  return 'rgba(70,150,255,.5)';
+}
+function heatmapHtml(it) {
+  const att = it.analysis?.attention;
+  if (!att || !att.zones || !att.zones.length) return '';
+  const imgUrl = it._type === 'carousel' ? `/api/carousels/${it._id}/cards/0/image` : `/api/creatives/${it._id}/image`;
+  const blobs = att.zones.map(z => {
+    const sz = 34 + (z.percent / 100) * 90;
+    return `<div class="hblob" style="left:${(z.x * 100).toFixed(0)}%;top:${(z.y * 100).toFixed(0)}%;width:${sz}px;height:${sz}px;background:radial-gradient(circle,${blobColor(z.percent)} 0%,transparent 70%)"></div>`;
+  }).join('');
+  const bars = att.zones.map((z, i) => `<div class="hzone"><span class="hzl">${i + 1}. ${esc(z.label)}</span><div class="hzbar"><div style="width:${z.percent}%;background:${blobColor(z.percent)}"></div></div><span class="hzp">${z.percent}%</span></div>`).join('');
+  const heatTxt = att.heat === 'alto' ? 'buen calor' : att.heat === 'bajo' ? 'calor bajo' : 'calor medio';
+  const heatCls = att.heat === 'alto' ? 'okt' : att.heat === 'bajo' ? 'badt' : '';
+  return `<div class="isec" style="margin-top:16px">Mapa de calor IA · <span class="${heatCls}" style="text-transform:none;letter-spacing:0">${heatTxt}</span></div>
+    <div class="heatwrap">
+      <div class="heatimg"><img src="${imgUrl}" alt="" /><div class="heatlayer">${blobs}</div></div>
+      <div class="hzones">${bars}</div>
+    </div>`;
 }
 const analyzing = new Set();
 async function analyzeItem(type, id) {

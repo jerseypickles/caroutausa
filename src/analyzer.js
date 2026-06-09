@@ -23,9 +23,22 @@ const INSTRUCTION = `Return ONLY a JSON object:
   "summary": "<one concise sentence, Spanish>",
   "feedback": [
     { "label": "<short, e.g. Composición/Textura/Iluminación/Desgaste>", "level": "ok"|"warn"|"bad", "note": "<short, Spanish>" }
-  ]
+  ],
+  "attention": {
+    "heat": "alto" | "medio" | "bajo",
+    "zones": [
+      { "label": "Cara / Cabeza", "percent": <int>, "x": <0-1>, "y": <0-1> },
+      { "label": "Upper Body",     "percent": <int>, "x": <0-1>, "y": <0-1> },
+      { "label": "Producto (Short)","percent": <int>, "x": <0-1>, "y": <0-1> },
+      { "label": "Fondo",          "percent": <int>, "x": <0-1>, "y": <0-1> }
+    ]
+  }
 }
-Give 2-4 feedback items. Write summary and notes in Spanish.`;
+For "attention": estimate where a viewer's eye lands first (visual saliency). The four
+percents should sum to ~100. x,y are the approximate normalized center (0=left/top,
+1=right/bottom) of each zone IN THIS IMAGE so a heatmap can be drawn. "heat" answers:
+for a CLOTHING ad, does enough attention reach the product? (alto = good for selling
+the garment). Give 2-4 feedback items. Write summary and notes in Spanish.`;
 
 function clamp(n) { return Math.max(0, Math.min(100, Math.round(Number(n) || 0))); }
 
@@ -62,6 +75,15 @@ export async function analyzeImage({ b64, product, wash }) {
       level: ['ok', 'warn', 'bad'].includes(f.level) ? f.level : 'ok',
       note: String(f.note || '').slice(0, 220),
     })) : [],
+    attention: {
+      heat: ['alto', 'medio', 'bajo'].includes(p.attention?.heat) ? p.attention.heat : 'medio',
+      zones: Array.isArray(p.attention?.zones) ? p.attention.zones.slice(0, 4).map((z) => ({
+        label: String(z.label || '').slice(0, 24),
+        percent: clamp(z.percent),
+        x: Math.max(0, Math.min(1, Number(z.x) || 0.5)),
+        y: Math.max(0, Math.min(1, Number(z.y) || 0.5)),
+      })) : [],
+    },
     analyzedAt: new Date(),
   };
 }
