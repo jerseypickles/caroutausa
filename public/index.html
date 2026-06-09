@@ -198,6 +198,75 @@
   .adcard .an { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .adcard .am { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
   .empty { color: var(--muted); font-size: 13px; padding: 50px 0; text-align: center; border: 1px dashed var(--border2); border-radius: 12px; }
+
+  /* ===== QC STUDIO ===== */
+  .qbar { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  .qtabs { display: flex; gap: 4px; }
+  .qtabs button { background: transparent; color: var(--muted); border: none; padding: 8px 12px; font-family: inherit; font-size: 13px; font-weight: 500; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 7px; }
+  .qtabs button.on { background: var(--accent-soft); color: var(--accent2); }
+  .qtabs .cnt { background: var(--surface3); color: var(--muted); font-size: 11px; padding: 1px 7px; border-radius: 10px; font-weight: 600; }
+  .qtabs button.on .cnt { background: var(--accent); color: #fff; }
+  .qtypes { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); padding: 4px; border-radius: 9px; }
+  .qtypes button { background: transparent; color: var(--muted); border: none; padding: 6px 12px; font-family: inherit; font-size: 12.5px; font-weight: 500; border-radius: 6px; cursor: pointer; }
+  .qtypes button.on { background: var(--accent-soft); color: var(--accent2); }
+
+  .qstrip { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; scrollbar-width: thin; }
+  .scard { flex: none; width: 186px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px; cursor: pointer; transition: .15s; }
+  .scard:hover { border-color: var(--border2); }
+  .scard.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .scard-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .tbadge { font-size: 9.5px; font-weight: 600; padding: 3px 7px; border-radius: 5px; }
+  .tbadge.car { background: rgba(251,191,36,.14); color: var(--warn); }
+  .tbadge.sgl { background: var(--accent-soft); color: var(--accent2); }
+  .sid { font-size: 10px; color: var(--faint); font-family: 'JetBrains Mono', monospace; }
+  .sthumb { position: relative; aspect-ratio: 3/4; border-radius: 8px; overflow: hidden; background: var(--surface3); }
+  .sthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .sthumb.gen { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; }
+  .sthumb.stk { box-shadow: 4px 4px 0 -1px var(--surface2), 8px 8px 0 -2px var(--surface); }
+  .scard-meta { margin-top: 9px; } .scard-meta .st { font-size: 12.5px; font-weight: 600; text-transform: capitalize; }
+  .scard-meta .sw { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .sfid { display: flex; align-items: center; gap: 7px; margin-top: 9px; font-size: 11px; }
+  .sfid .dotf { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 6px; }
+  .sfid .dotf.ok { background: var(--ok-soft); color: var(--ok); } .sfid .dotf.bad { background: var(--bad-soft); color: var(--bad); }
+  .okt { color: var(--ok); font-weight: 600; } .badt { color: var(--bad); font-weight: 600; }
+
+  .qinspect { display: grid; grid-template-columns: 1.05fr 1fr 1.1fr; gap: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .icol { min-width: 0; }
+  .ihead { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .ipreview { position: relative; border-radius: 10px; overflow: hidden; background: var(--surface3); }
+  .ipreview.ph-story { aspect-ratio: 9/16; max-height: 420px; }
+  .ipreview.ph-feed { aspect-ratio: 4/5; max-height: 420px; }
+  .ipreview > img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
+  .ipreview.cargrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; aspect-ratio: auto; cursor: pointer; }
+  .ipreview.cargrid img { width: 100%; aspect-ratio: 3/4; object-fit: cover; }
+  .ipreview .more { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.7); color: #fff; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
+  .iprod { font-size: 14px; font-weight: 600; margin: 12px 0 10px; }
+  .isec { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent2); font-weight: 600; margin-bottom: 12px; }
+  .ascore { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .asv { font-size: 15px; font-weight: 700; }
+  .fbitem { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 9px; background: var(--surface2); border-left: 3px solid var(--border2); margin-bottom: 8px; font-size: 12px; }
+  .fbitem b { font-size: 12.5px; } .fbitem span { color: var(--muted); }
+  .fbitem.ok { border-left-color: var(--ok); } .fbitem.bad { border-left-color: var(--bad); }
+  .ianalyzer { font-size: 11.5px; color: var(--muted); line-height: 1.5; padding: 12px; border: 1px dashed var(--border2); border-radius: 9px; margin-top: 6px; }
+  .fmtprev { display: flex; gap: 12px; flex-wrap: wrap; }
+  .fmt { text-align: center; } .fmtl { font-size: 10.5px; color: var(--muted); margin-top: 6px; }
+  .phone { background: var(--surface3); border: 1px solid var(--border2); border-radius: 10px; overflow: hidden; display: grid; place-items: center; }
+  .phone img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+  .phone.p916 { width: 84px; aspect-ratio: 9/16; } .phone.p45 { width: 100px; aspect-ratio: 4/5; } .phone.p11 { width: 100px; aspect-ratio: 1/1; }
+  .iacts { display: flex; flex-direction: column; gap: 8px; }
+  .iacts .btn { justify-content: center; }
+
+  .qflow { margin-top: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px; }
+  .flowtitle { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+  .flowline { display: flex; justify-content: space-between; position: relative; }
+  .flowline::before { content: ''; position: absolute; top: 6px; left: 6px; right: 6px; height: 2px; background: var(--border2); }
+  .fstep { display: flex; flex-direction: column; align-items: center; gap: 7px; position: relative; z-index: 1; flex: 1; }
+  .fdot { width: 13px; height: 13px; border-radius: 50%; background: var(--surface3); border: 2px solid var(--border2); }
+  .fstep.done .fdot { background: var(--accent); border-color: var(--accent); }
+  .fstep.cur .fdot { box-shadow: 0 0 0 4px var(--accent-soft); }
+  .flbl { font-size: 11px; color: var(--muted); text-align: center; }
+  .fstep.done .flbl { color: var(--text); }
+  @media (max-width: 1000px) { .qinspect { grid-template-columns: 1fr; } }
   .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border2); border-top-color: var(--accent2);
     border-radius: 50%; animation: rot .9s linear infinite; vertical-align: -2px; margin-right: 7px; }
   @keyframes rot { to { transform: rotate(360deg); } }
@@ -275,16 +344,24 @@
 
     <!-- COLA DE QC -->
     <section class="view" id="view-cola">
-      <div class="secthead"><h2>Cola de QC</h2><span style="flex:1"></span>
-        <div class="filters" id="filters">
-          <button data-f="generated" class="on" onclick="setFilter('generated')">Pendientes</button>
-          <button data-f="approved" onclick="setFilter('approved')">Aprobados</button>
-          <button data-f="rejected" onclick="setFilter('rejected')">Rechazados</button>
-          <button data-f="" onclick="setFilter('')">Todos</button>
+      <div class="qbar">
+        <div class="qtabs" id="filters">
+          <button data-f="generated" class="on" onclick="setFilter('generated')">Pendientes <span class="cnt" id="cntPend">0</span></button>
+          <button data-f="approved" onclick="setFilter('approved')">Aprobados <span class="cnt" id="cntApp">0</span></button>
+          <button data-f="rejected" onclick="setFilter('rejected')">Rechazados <span class="cnt" id="cntRej">0</span></button>
+          <button data-f="" onclick="setFilter('')">Todos <span class="cnt" id="cntAll">0</span></button>
+        </div>
+        <span style="flex:1"></span>
+        <div class="qtypes" id="qtypes">
+          <button data-t="" class="on" onclick="setTypeFilter('')">Todos</button>
+          <button data-t="carousel" onclick="setTypeFilter('carousel')">Carrusel</button>
+          <button data-t="single" onclick="setTypeFilter('single')">Singles</button>
         </div>
       </div>
-      <div class="grid" id="grid"></div>
-      <div class="empty" id="empty" style="display:none">Sin creatives en esta vista. Generá desde Productos.</div>
+      <div class="qstrip" id="qstrip"></div>
+      <div class="empty" id="empty" style="display:none">Sin creativos en esta vista. Generá desde Productos.</div>
+      <div class="qinspect" id="qinspect"></div>
+      <div class="qflow" id="qflow"></div>
     </section>
 
     <!-- AD MANAGER -->
@@ -310,6 +387,8 @@ let products = [];
 let references = [];
 let allCreatives = [];
 let allCarousels = [];
+let typeFilter = '';
+let selectedKey = null;
 let pollTimer = null;
 let lastSig = null;
 
@@ -456,9 +535,14 @@ async function deleteRef(id) {
 
 /* ===== COLA DE QC ===== */
 function setFilter(f) {
-  filter = f; lastSig = null;
+  filter = f;
   document.querySelectorAll('#filters button').forEach(b => b.classList.toggle('on', b.dataset.f === f));
-  renderQueue();
+  selectedKey = null; renderQC();
+}
+function setTypeFilter(t) {
+  typeFilter = t;
+  document.querySelectorAll('#qtypes button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  selectedKey = null; renderQC();
 }
 function ringSvg(score, cls) {
   const r = 15, c = 2 * Math.PI * r, off = c * (1 - score / 100);
@@ -559,13 +643,137 @@ function carouselTile(c) {
       <button class="btn bad sm" onclick="qcCarousel('${c._id}','rejected')">Rechazar</button></div>` : ''}
   </div>`;
 }
-function renderQueue() {
-  const singles = filter ? allCreatives.filter(c => c.qcStatus === filter) : allCreatives;
-  const carousels = filter ? allCarousels.filter(c => c.qcStatus === filter) : allCarousels;
-  const grid = document.getElementById('grid'), empty = document.getElementById('empty');
-  empty.style.display = (singles.length + carousels.length) ? 'none' : 'block';
-  grid.innerHTML = carousels.map(carouselTile).join('') + singles.map(singleTile).join('');
+/* ===== QC STUDIO ===== */
+const keyOf = it => `${it._type}:${it._id}`;
+const shortId = id => '#QC-' + String(id).slice(-4).toUpperCase();
+function qItems() {
+  let items = [
+    ...allCarousels.map(c => ({ ...c, _type: 'carousel' })),
+    ...allCreatives.map(c => ({ ...c, _type: 'single' })),
+  ];
+  if (filter) items = items.filter(i => i.qcStatus === filter);
+  if (typeFilter) items = items.filter(i => i._type === typeFilter);
+  return items;
 }
+function renderCounts() {
+  const all = [...allCarousels, ...allCreatives];
+  const by = s => all.filter(c => c.qcStatus === s).length;
+  cntPend.textContent = by('generated'); cntApp.textContent = by('approved');
+  cntRej.textContent = by('rejected'); cntAll.textContent = all.length;
+  const pend = by('generated');
+  pillQc.textContent = pend; pillQc.classList.toggle('zero', pend === 0);
+}
+function bigRing(score, verdict) {
+  if (score == null) return '';
+  const cls = verdict === 'pass' ? 'pass' : 'fail';
+  const r = 26, c = 2 * Math.PI * r, off = c * (1 - score / 100);
+  const col = cls === 'pass' ? 'var(--ok)' : 'var(--bad)';
+  return `<svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--surface3)" stroke-width="5"/>
+    <circle cx="32" cy="32" r="${r}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 32 32)"/>
+    <text x="32" y="38" text-anchor="middle" fill="var(--text)" font-size="20" font-weight="700" font-family="JetBrains Mono">${score}</text></svg>`;
+}
+function stripThumb(it) {
+  if (it.genStatus === 'generating') return `<div class="sthumb gen"><span class="spinner"></span></div>`;
+  if (it.genStatus === 'failed' || it.qcStatus === 'rejected') return `<div class="sthumb gen">—</div>`;
+  if (it._type === 'carousel') return `<div class="sthumb stk"><img src="/api/carousels/${it._id}/cards/0/image" loading="lazy" alt="" /></div>`;
+  return `<div class="sthumb"><img src="/api/creatives/${it._id}/image" loading="lazy" alt="" /></div>`;
+}
+function typeBadge(it) {
+  return it._type === 'carousel'
+    ? `<span class="tbadge car">Carrusel · ${it.cards?.length || 5}</span>`
+    : `<span class="tbadge sgl">9:16 · 4:5</span>`;
+}
+function renderStrip() {
+  const items = qItems();
+  empty.style.display = items.length ? 'none' : 'block';
+  qstrip.style.display = items.length ? 'flex' : 'none';
+  qstrip.innerHTML = items.map(it => {
+    const sel = keyOf(it) === selectedKey ? 'sel' : '';
+    let fid = '';
+    if (it.fidelityStatus === 'done') { const ok = it.fidelityVerdict === 'pass';
+      fid = `<div class="sfid"><span class="dotf ${ok ? 'ok' : 'bad'}">${it.fidelityScore}</span><span class="${ok ? 'okt' : 'badt'}">${ok ? 'Fiel' : 'Revisar'}</span></div>`;
+    } else if (it.genStatus === 'ready') fid = `<div class="sfid muted">evaluando…</div>`;
+    return `<div class="scard ${sel}" onclick="selectItem('${it._type}','${it._id}')">
+      <div class="scard-top">${typeBadge(it)}<span class="sid">${shortId(it._id)}</span></div>
+      ${stripThumb(it)}
+      <div class="scard-meta"><div class="st">${it._type === 'carousel' ? 'Carrusel' : it.angle.replace(/_/g,' ')}</div>
+      <div class="sw">${[it.product, it.wash].filter(Boolean).join(' · ') || '—'}</div></div>${fid}</div>`;
+  }).join('');
+}
+function fmtFrame(label, url, cls) {
+  return `<div class="fmt"><div class="phone ${cls}">${url ? `<img src="${url}" onclick="openZoom('${url}')" alt="" />` : '<span class="muted">—</span>'}</div><div class="fmtl">${label}</div></div>`;
+}
+function formatPreviews(it) {
+  if (it._type === 'carousel') {
+    const url = `/api/carousels/${it._id}/cards/0/image`;
+    return fmtFrame('Cover', url, 'p916') + fmtFrame('Card 2', `/api/carousels/${it._id}/cards/1/image`, 'p916');
+  }
+  const story = `/api/creatives/${it._id}/image`;
+  const feed = `/api/creatives/${it._id}/image?p=feed`;
+  return fmtFrame('9:16 Story', story, 'p916') + fmtFrame('4:5 Feed', feed, 'p45') + fmtFrame('1:1 Square', feed, 'p11');
+}
+function renderInspector() {
+  const items = qItems();
+  let it = items.find(i => keyOf(i) === selectedKey) || items.find(i => i.genStatus === 'ready') || items[0];
+  if (!it) { qinspect.innerHTML = ''; qflow.innerHTML = ''; return; }
+  selectedKey = keyOf(it);
+  const saveFn = it._type === 'carousel' ? 'saveCarouselCopy' : 'saveCopy';
+  const apprFn = it._type === 'carousel' ? 'qcCarousel' : 'qc';
+  const canQc = it.genStatus === 'ready' && it.qcStatus === 'generated';
+  let preview;
+  if (it.genStatus !== 'ready') preview = `<div class="ipreview"><div class="sthumb gen" style="height:340px">${it.genStatus === 'generating' ? '<span class="spinner"></span> generando…' : (it.genError || 'sin imagen')}</div></div>`;
+  else if (it._type === 'carousel') {
+    const n = it.cards?.length || 5;
+    preview = `<div class="ipreview cargrid" onclick="openCarouselView('${it._id}',${n})">${Array.from({ length: Math.min(n, 4) }, (_, i) => `<img src="/api/carousels/${it._id}/cards/${i}/image" alt="" />`).join('')}${n > 4 ? `<span class="more">+${n - 4}</span>` : ''}</div>
+      <button class="btn ghost sm" onclick="openCarouselView('${it._id}',${n})" style="margin-top:10px">Ver todas las cards</button>`;
+  } else {
+    preview = `<div class="ipreview ph-story" id="ipbox"><img src="/api/creatives/${it._id}/image" onclick="openZoom(this.src)" alt="" />
+      <div class="phtoggle"><button class="on" onclick="event.stopPropagation();setInspPlacement(this,'${it._id}','story')">9:16</button><button onclick="event.stopPropagation();setInspPlacement(this,'${it._id}','feed')">4:5</button></div></div>`;
+  }
+  const fb = it.fidelityStatus === 'done'
+    ? `<div class="fbitem ${it.fidelityVerdict === 'pass' ? 'ok' : 'bad'}"><b>Fidelidad del jean</b><span>${(it.fidelityIssues && it.fidelityIssues.length) ? 'Pierde: ' + it.fidelityIssues.join(' · ') : 'Diseño preservado ✓'}</span></div>`
+    : `<div class="fbitem muted">Evaluando fidelidad…</div>`;
+  qinspect.innerHTML = `
+    <div class="icol">
+      <div class="ihead">${typeBadge(it)}<span class="sid">${shortId(it._id)}</span></div>
+      ${preview}
+      <div class="iprod">${it.product || '—'}<span class="muted"> · ${it.wash || ''}</span></div>
+      ${it.copy && (it.copy.primaryText || it.copy.headline) ? copyBox(it, saveFn) : ''}
+    </div>
+    <div class="icol">
+      <div class="isec">Análisis del jean</div>
+      <div class="ascore">${bigRing(it.fidelityScore, it.fidelityVerdict)}<div><div class="asv ${it.fidelityVerdict === 'pass' ? 'okt' : 'badt'}">${it.fidelityStatus === 'done' ? (it.fidelityVerdict === 'pass' ? 'Fiel al diseño' : 'Revisar') : '—'}</div><div class="muted" style="font-size:12px">fidelidad del jean</div></div></div>
+      ${fb}
+      <div class="ianalyzer">⌁ Análisis IA de performance (hook, scroll-stop, UGC, fatiga) — <b>próximamente</b>. El CTR real va a aparecer desde Meta cuando el creative corra.</div>
+    </div>
+    <div class="icol">
+      <div class="isec">Vista previa por formato</div>
+      <div class="fmtprev">${formatPreviews(it)}</div>
+      <div class="isec" style="margin-top:14px">Acciones</div>
+      <div class="iacts">
+        ${canQc ? `<button class="btn ok" onclick="${apprFn}('${it._id}','approved')">✓ Aprobar</button>
+        <button class="btn bad" onclick="${apprFn}('${it._id}','rejected')">✕ Rechazar</button>` : `<span class="badge ${it.qcStatus}">${it.qcStatus}</span>`}
+        <button class="btn ghost" disabled title="Próximamente (loop con Meta)">⚗ Enviar a test</button>
+      </div>
+    </div>`;
+  renderFlow(it);
+}
+function renderFlow(it) {
+  const steps = ['Generado por IA', 'En cola de QC', 'Revisión humana', 'Aprobado', 'Publicado', 'Resultados'];
+  let idx = 1;
+  if (it.qcStatus === 'approved') idx = 3;
+  else if (it.qcStatus === 'rejected') idx = 2;
+  qflow.innerHTML = `<div class="flowtitle">Flujo del creativo</div><div class="flowline">` +
+    steps.map((s, i) => `<div class="fstep ${i <= idx ? 'done' : ''} ${i === idx ? 'cur' : ''}"><span class="fdot"></span><span class="flbl">${s}</span></div>`).join('') + `</div>`;
+}
+function setInspPlacement(btn, id, p) {
+  const box = document.getElementById('ipbox');
+  box.classList.remove('ph-story', 'ph-feed'); box.classList.add('ph-' + p);
+  box.querySelector('img').src = p === 'feed' ? `/api/creatives/${id}/image?p=feed` : `/api/creatives/${id}/image`;
+  box.querySelectorAll('.phtoggle button').forEach(b => b.classList.toggle('on', b === btn));
+}
+function selectItem(type, id) { selectedKey = `${type}:${id}`; renderStrip(); renderInspector(); }
+function renderQC() { renderCounts(); renderStrip(); renderInspector(); }
 async function loadQueue() {
   const [cr, ca] = await Promise.all([
     fetch('/api/creatives').then(r => r.json()).catch(() => ({ creatives: [] })),
@@ -579,7 +787,7 @@ async function loadQueue() {
   const sig = [...allCreatives, ...allCarousels].map(c => `${c._id}:${c.genStatus}:${c.qcStatus}:${c.qcNotes || ''}:${c.fidelityStatus}:${c.fidelityScore}:${c.copy?.primaryText ? 1 : 0}`).join('|');
   if (sig === lastSig) return;
   lastSig = sig;
-  renderKpis(); renderQueue();
+  renderKpis(); renderQC();
 }
 async function qc(id, qcStatus) {
   await fetch(`/api/creatives/${id}/qc`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ qcStatus }) });
