@@ -230,7 +230,10 @@
   .sfid .dotf.ok { background: var(--ok-soft); color: var(--ok); } .sfid .dotf.bad { background: var(--bad-soft); color: var(--bad); }
   .okt { color: var(--ok); font-weight: 600; } .badt { color: var(--bad); font-weight: 600; }
 
-  .qinspect { display: grid; grid-template-columns: 1.05fr 1fr 1.1fr; gap: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .qinspect { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .itop { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .ibottom { display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+  .ipanel { min-width: 0; }
   .icol { min-width: 0; }
   .ihead { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
   .ipreview { position: relative; border-radius: 10px; overflow: hidden; background: var(--surface3); }
@@ -263,7 +266,7 @@
   .afb.ok { border-left-color: var(--ok); } .afb.warn { border-left-color: var(--warn); } .afb.bad { border-left-color: var(--bad); }
   .ctrnote { font-size: 11px; color: var(--faint); margin-top: 10px; font-style: italic; }
   .heatwrap { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 10px; }
-  .heatimg { position: relative; width: 150px; flex: none; border-radius: 10px; overflow: hidden; background: var(--surface3); }
+  .heatimg { position: relative; width: 180px; flex: none; border-radius: 10px; overflow: hidden; background: var(--surface3); }
   .heatimg img { width: 100%; display: block; }
   .heatlayer { position: absolute; inset: 0; filter: blur(6px); mix-blend-mode: screen; pointer-events: none; }
   .hblob { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; }
@@ -290,7 +293,7 @@
   .fstep.cur .fdot { box-shadow: 0 0 0 4px var(--accent-soft); }
   .flbl { font-size: 11px; color: var(--muted); text-align: center; }
   .fstep.done .flbl { color: var(--text); }
-  @media (max-width: 1000px) { .qinspect { grid-template-columns: 1fr; } }
+  @media (max-width: 1000px) { .itop, .ibottom { grid-template-columns: 1fr; } }
   .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border2); border-top-color: var(--accent2);
     border-radius: 50%; animation: rot .9s linear infinite; vertical-align: -2px; margin-right: 7px; }
   @keyframes rot { to { transform: rotate(360deg); } }
@@ -757,32 +760,50 @@ function renderInspector() {
   const fb = it.fidelityStatus === 'done'
     ? `<div class="fbitem ${it.fidelityVerdict === 'pass' ? 'ok' : 'bad'}"><b>Fidelidad del jean</b><span>${(it.fidelityIssues && it.fidelityIssues.length) ? 'Pierde: ' + it.fidelityIssues.join(' · ') : 'Diseño preservado ✓'}</span></div>`
     : `<div class="fbitem muted">Evaluando fidelidad…</div>`;
+  const ready = it.genStatus === 'ready';
+  const a = it.analysis;
+  const analyzed = a?.status === 'done';
   qinspect.innerHTML = `
-    <div class="icol">
-      <div class="ihead">${typeBadge(it)}<span class="sid">${shortId(it._id)}</span></div>
-      ${preview}
-      <div class="iprod">${it.product || '—'}<span class="muted"> · ${it.wash || ''}</span></div>
-      ${it.copy && (it.copy.primaryText || it.copy.headline) ? copyBox(it, saveFn) : ''}
-    </div>
-    <div class="icol">
-      <div class="isec">Análisis del jean</div>
-      <div class="ascore">${bigRing(it.fidelityScore, it.fidelityVerdict)}<div><div class="asv ${it.fidelityVerdict === 'pass' ? 'okt' : 'badt'}">${it.fidelityStatus === 'done' ? (it.fidelityVerdict === 'pass' ? 'Fiel al diseño' : 'Revisar') : '—'}</div><div class="muted" style="font-size:12px">fidelidad del jean</div></div></div>
-      ${fb}
-      <div class="isec" style="margin-top:16px">Análisis IA de performance</div>
-      ${analyzerHtml(it)}
-    </div>
-    <div class="icol">
-      <div class="isec">Vista previa por formato</div>
-      <div class="fmtprev">${formatPreviews(it)}</div>
-      <div class="isec" style="margin-top:14px">Acciones</div>
-      <div class="iacts">
-        ${canQc ? `<button class="btn ok" onclick="${apprFn}('${it._id}','approved')">✓ Aprobar</button>
-        <button class="btn bad" onclick="${apprFn}('${it._id}','rejected')">✕ Rechazar</button>` : `<span class="badge ${it.qcStatus}">${it.qcStatus}</span>`}
-        <button class="btn ghost" disabled title="Próximamente (loop con Meta)">⚗ Enviar a test</button>
+    <div class="itop">
+      <div class="icol">
+        <div class="ihead">${typeBadge(it)}<span class="sid">${shortId(it._id)}</span></div>
+        ${preview}
+        <div class="iprod">${it.product || '—'}<span class="muted"> · ${it.wash || ''}</span></div>
+        ${it.copy && (it.copy.primaryText || it.copy.headline) ? copyBox(it, saveFn) : ''}
       </div>
-    </div>`;
+      <div class="icol">
+        <div class="isec">Análisis del jean</div>
+        <div class="ascore">${bigRing(it.fidelityScore, it.fidelityVerdict)}<div><div class="asv ${it.fidelityVerdict === 'pass' ? 'okt' : 'badt'}">${it.fidelityStatus === 'done' ? (it.fidelityVerdict === 'pass' ? 'Fiel al diseño' : 'Revisar') : '—'}</div><div class="muted" style="font-size:12px">fidelidad del jean</div></div></div>
+        ${fb}
+        <div class="isec" style="margin-top:16px">Performance IA</div>
+        ${analyzed ? analyzerMetrics(a) : (ready ? '<div class="ianalyzer"><span class="spinner"></span>Analizando con IA…</div>' : '<div class="ianalyzer">Disponible cuando esté listo.</div>')}
+      </div>
+      <div class="icol">
+        <div class="isec">Vista previa por formato</div>
+        <div class="fmtprev">${formatPreviews(it)}</div>
+        <div class="isec" style="margin-top:14px">Acciones</div>
+        <div class="iacts">
+          ${canQc ? `<button class="btn ok" onclick="${apprFn}('${it._id}','approved')">✓ Aprobar</button>
+          <button class="btn bad" onclick="${apprFn}('${it._id}','rejected')">✕ Rechazar</button>` : `<span class="badge ${it.qcStatus}">${it.qcStatus}</span>`}
+          <button class="btn ghost" disabled title="Próximamente (loop con Meta)">⚗ Enviar a test</button>
+        </div>
+      </div>
+    </div>
+    ${analyzed ? `<div class="ibottom">${heatmapPanel(it)}${feedbackPanel(a)}</div>` : ''}`;
   renderFlow(it);
-  if (it.genStatus === 'ready' && (!it.analysis || it.analysis.status !== 'done')) analyzeItem(it._type, it._id);
+  if (ready && !analyzed) analyzeItem(it._type, it._id);
+}
+function analyzerMetrics(a) {
+  return `<div class="ahead"><span class="estbadge">estimación IA · confianza ${a.confidence}</span></div>
+    <div class="amgrid">
+      ${metricCard('Hook', a.hook)}${metricCard('Scroll Stop', a.scrollStop)}${metricCard('Product Focus', a.productFocus)}
+      ${metricCard('UGC Feel', a.ugcFeel)}${metricCard('Fatiga', a.fatigueRisk, { suf: '%', inverted: true })}${metricCard('Overall', a.overall)}
+    </div>${a.summary ? `<div class="asum">${esc(a.summary)}</div>` : ''}`;
+}
+function feedbackPanel(a) {
+  const fb = (a.feedback || []).map(f => `<div class="afb ${f.level}"><b>${esc(f.label)}</b><span>${esc(f.note)}</span></div>`).join('');
+  return `<div class="ipanel"><div class="isec">Feedback IA</div>${fb || '<div class="muted" style="font-size:12px">—</div>'}
+    <div class="ctrnote">El CTR real va a aparecer desde Meta cuando el creative corra.</div></div>`;
 }
 function metricCard(label, val, opts = {}) {
   if (val == null) return `<div class="amc"><div class="amv">—</div><div class="aml">${label}</div></div>`;
@@ -791,46 +812,27 @@ function metricCard(label, val, opts = {}) {
   const word = score >= 80 ? 'Muy bueno' : score >= 60 ? 'Bueno' : 'Bajo';
   return `<div class="amc"><div class="amv ${cls}">${val}${opts.suf || ''}</div><div class="aml">${label}</div><div class="amq ${cls}">${word}</div></div>`;
 }
-function analyzerHtml(it) {
-  const a = it.analysis;
-  if (a && a.status === 'done') {
-    const fb = (a.feedback || []).map(f => `<div class="afb ${f.level}"><b>${esc(f.label)}</b><span>${esc(f.note)}</span></div>`).join('');
-    return `<div class="analyzer">
-      <div class="ahead"><span class="estbadge">estimación IA · confianza ${a.confidence}</span></div>
-      <div class="amgrid">
-        ${metricCard('Hook', a.hook)}${metricCard('Scroll Stop', a.scrollStop)}${metricCard('Product Focus', a.productFocus)}
-        ${metricCard('UGC Feel', a.ugcFeel)}${metricCard('Fatiga', a.fatigueRisk, { suf: '%', inverted: true })}${metricCard('Overall', a.overall)}
-      </div>
-      ${a.summary ? `<div class="asum">${esc(a.summary)}</div>` : ''}
-      ${fb ? `<div class="afbs">${fb}</div>` : ''}
-      ${heatmapHtml(it)}
-      <div class="ctrnote">El CTR real va a aparecer desde Meta cuando el creative corra.</div>
-    </div>`;
-  }
-  if (it.genStatus !== 'ready') return `<div class="ianalyzer">Disponible cuando el creative esté listo.</div>`;
-  return `<div class="ianalyzer"><span class="spinner"></span>Analizando performance con IA…</div>`;
-}
 function blobColor(p) {
   if (p >= 33) return 'rgba(255,70,45,.65)';
   if (p >= 20) return 'rgba(255,190,40,.55)';
   return 'rgba(70,150,255,.5)';
 }
-function heatmapHtml(it) {
+function heatmapPanel(it) {
   const att = it.analysis?.attention;
-  if (!att || !att.zones || !att.zones.length) return '';
+  if (!att || !att.zones || !att.zones.length) return '<div class="ipanel"></div>';
   const imgUrl = it._type === 'carousel' ? `/api/carousels/${it._id}/cards/0/image` : `/api/creatives/${it._id}/image`;
   const blobs = att.zones.map(z => {
-    const sz = 34 + (z.percent / 100) * 90;
+    const sz = 40 + (z.percent / 100) * 110;
     return `<div class="hblob" style="left:${(z.x * 100).toFixed(0)}%;top:${(z.y * 100).toFixed(0)}%;width:${sz}px;height:${sz}px;background:radial-gradient(circle,${blobColor(z.percent)} 0%,transparent 70%)"></div>`;
   }).join('');
   const bars = att.zones.map((z, i) => `<div class="hzone"><span class="hzl">${i + 1}. ${esc(z.label)}</span><div class="hzbar"><div style="width:${z.percent}%;background:${blobColor(z.percent)}"></div></div><span class="hzp">${z.percent}%</span></div>`).join('');
   const heatTxt = att.heat === 'alto' ? 'buen calor' : att.heat === 'bajo' ? 'calor bajo' : 'calor medio';
   const heatCls = att.heat === 'alto' ? 'okt' : att.heat === 'bajo' ? 'badt' : '';
-  return `<div class="isec" style="margin-top:16px">Mapa de calor IA · <span class="${heatCls}" style="text-transform:none;letter-spacing:0">${heatTxt}</span></div>
+  return `<div class="ipanel"><div class="isec">Mapa de calor IA · <span class="${heatCls}" style="text-transform:none;letter-spacing:0">${heatTxt}</span></div>
     <div class="heatwrap">
       <div class="heatimg"><img src="${imgUrl}" alt="" /><div class="heatlayer">${blobs}</div></div>
       <div class="hzones">${bars}</div>
-    </div>`;
+    </div></div>`;
 }
 const analyzing = new Set();
 async function analyzeItem(type, id) {
