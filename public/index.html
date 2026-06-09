@@ -144,6 +144,24 @@
   .fid.pending { color: var(--muted); font-size: 12px; padding: 12px 14px 0; }
   .fid-issues { font-size: 11px; color: var(--muted); padding: 8px 14px 0; line-height: 1.45; } .fid-issues b { color: var(--bad); }
 
+  /* ad manager */
+  .egrid { display: grid; grid-template-columns: repeat(auto-fill, 116px); gap: 12px; margin-bottom: 16px; }
+  .egrid .pcard { width: 116px; }
+  .egrid .pcard img { width: 116px !important; height: 174px !important; aspect-ratio: auto !important; object-fit: cover !important; display: block; }
+  .pcard .pick { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; border-radius: 5px; border: 2px solid #fff;
+    background: rgba(0,0,0,.4); display: grid; place-items: center; z-index: 2; }
+  .pcard.sel .pick { background: var(--accent); border-color: var(--accent); }
+  .pcard .pick svg { width: 13px; height: 13px; color: #fff; opacity: 0; }
+  .pcard.sel .pick svg { opacity: 1; }
+  .campaign { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+  .campaign .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .campaign .top h3 { margin: 0; font-size: 14px; font-weight: 700; }
+  .campaign .meta-row { display: flex; gap: 22px; margin-top: 14px; flex-wrap: wrap; }
+  .campaign .metric { display: flex; flex-direction: column; gap: 2px; }
+  .campaign .metric .v { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; }
+  .campaign .metric .k { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .badge.active { background: var(--ok-soft); color: var(--ok); }
+  .badge.paused { background: var(--warn-soft); color: var(--warn); }
   .empty { color: var(--muted); font-size: 13px; padding: 50px 0; text-align: center; border: 1px dashed var(--border2); border-radius: 12px; }
   .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border2); border-top-color: var(--accent2);
     border-radius: 50%; animation: rot .9s linear infinite; vertical-align: -2px; margin-right: 7px; }
@@ -171,6 +189,7 @@
     <a data-view="productos" onclick="showView('productos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Productos<span class="pill zero" id="pillProd">0</span></a>
     <a data-view="referencias" onclick="showView('referencias')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15l-5-5L5 21"/><circle cx="9" cy="9" r="2"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Referencias<span class="pill zero" id="pillRef">0</span></a>
     <a data-view="cola" onclick="showView('cola')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Cola de QC<span class="pill zero" id="pillQc">0</span></a>
+    <a data-view="ads" onclick="showView('ads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-5"/></svg>Ad Manager<span class="pill zero" id="pillAds">0</span></a>
   </nav>
   <div class="foot"><span class="dot"></span>Cron Shopify activo</div>
 </aside>
@@ -233,6 +252,36 @@
       <div class="empty" id="empty" style="display:none">Sin creatives en esta vista. Generá desde Productos.</div>
     </section>
 
+    <!-- AD MANAGER -->
+    <section class="view" id="view-ads">
+      <div class="secthead"><h2>Lanzar campaña</h2><span class="muted" id="metaStatus"></span></div>
+      <div class="card" style="margin-bottom:24px"><div class="body">
+        <div class="row">
+          <div style="flex:2"><label for="campName">Nombre de la campaña</label><input type="text" id="campName" placeholder="SS26 · Ronda 1" /></div>
+          <div><label for="campBudget">Budget diario (USD)</label><input type="text" id="campBudget" value="25" /></div>
+          <div><label for="campEvent">Optimizar por</label>
+            <select id="campEvent" style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-family:inherit;font-size:13px">
+              <option value="ADD_TO_CART">Add to Cart (recomendado p/ arrancar)</option>
+              <option value="PURCHASE">Purchase</option>
+            </select>
+          </div>
+        </div>
+        <label>Elegí los creativos aprobados (cada uno = un ad imagen sola)</label>
+        <div class="egrid" id="eligibleGrid"></div>
+        <button class="btn" id="launchBtn" onclick="launchCampaign()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Lanzar (en PAUSED)
+        </button>
+        <span class="muted" id="launchHint" style="margin-left:12px;font-size:12px">Todo se crea en PAUSED. Lo activás cuando quieras.</span>
+      </div></div>
+
+      <div class="secthead"><h2>Campañas</h2><span style="flex:1"></span>
+        <a href="https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=8541984519168996" target="_blank" class="btn ghost sm">Abrir en Meta ↗</a>
+      </div>
+      <div id="campaignList"></div>
+      <div class="empty" id="campEmpty" style="display:none">Sin campañas todavía. Lanzá tu primera ronda arriba.</div>
+    </section>
+
   </div>
 </div>
 
@@ -253,6 +302,7 @@ const TITLES = {
   productos: ['Productos', 'Catálogo de Shopify · generá variantes por producto'],
   referencias: ['Referencias', 'Biblioteca de pins que dirigen el estilo'],
   cola: ['Cola de QC', 'Revisá, aprobá o rechazá cada variante'],
+  ads: ['Ad Manager', 'Lanzá y gestioná campañas de conversión en Meta'],
 };
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
@@ -261,6 +311,7 @@ function showView(name) {
   document.getElementById('topSub').textContent = TITLES[name][1];
   if (name === 'productos') loadProducts();
   if (name === 'referencias') loadReferences();
+  if (name === 'ads') loadAdManager();
 }
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -459,6 +510,102 @@ async function loadQueue() {
 async function qc(id, qcStatus) {
   await fetch(`/api/creatives/${id}/qc`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ qcStatus }) });
   lastSig = null; loadQueue();
+}
+
+/* ===== AD MANAGER ===== */
+let eligible = [];
+let selectedCreatives = new Set();
+
+async function loadAdManager() { loadMetaStatus(); loadEligible(); loadCampaigns(); }
+
+async function loadMetaStatus() {
+  try {
+    const s = await (await fetch('/api/meta/status')).json();
+    document.getElementById('metaStatus').textContent = s.configured ? `Conectado · ${s.adAccountId}` : 'Meta no configurado';
+  } catch (e) {}
+}
+async function loadEligible() {
+  const { creatives } = await (await fetch('/api/meta/eligible')).json();
+  eligible = creatives;
+  const grid = document.getElementById('eligibleGrid');
+  if (!eligible.length) { grid.innerHTML = '<div class="empty">Sin creativos aprobados. Aprobá en Cola de QC para poder lanzarlos.</div>'; return; }
+  grid.innerHTML = eligible.map(c => `
+    <div class="pcard ${selectedCreatives.has(c._id) ? 'sel' : ''}" onclick="toggleEligible('${c._id}')" title="${c.product}">
+      <div class="pick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <img src="/api/creatives/${c._id}/image" loading="lazy" alt="${c.angle}" />
+      <div class="t">${c.product || '—'}<br>${c.angle.replace(/_/g,' ')} · ${c.fidelityScore || '—'}</div>
+    </div>`).join('');
+}
+function toggleEligible(id) {
+  selectedCreatives.has(id) ? selectedCreatives.delete(id) : selectedCreatives.add(id);
+  loadEligible();
+}
+async function launchCampaign() {
+  const name = document.getElementById('campName').value.trim();
+  if (!name) return alert('Ponle un nombre a la campaña.');
+  if (!selectedCreatives.size) return alert('Elegí al menos un creativo aprobado.');
+  const btn = document.getElementById('launchBtn'), hint = document.getElementById('launchHint');
+  btn.disabled = true; hint.innerHTML = '<span class="spinner"></span>Creando campaña, ad set y ads en Meta…';
+  try {
+    const body = {
+      name, dailyBudget: document.getElementById('campBudget').value.trim() || 25,
+      optimizationEvent: document.getElementById('campEvent').value,
+      creativeIds: [...selectedCreatives],
+    };
+    const r = await fetch('/api/meta/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Error');
+    toast(`Campaña creada en PAUSED con ${data.campaign.ads.length} ads`);
+    selectedCreatives.clear();
+    document.getElementById('campName').value = '';
+    hint.textContent = 'Todo se crea en PAUSED. Lo activás cuando quieras.';
+    loadEligible(); loadCampaigns();
+  } catch (e) { hint.textContent = 'Error: ' + e.message; }
+  finally { btn.disabled = false; }
+}
+async function loadCampaigns() {
+  const { campaigns } = await (await fetch('/api/meta/campaigns')).json();
+  document.getElementById('pillAds').textContent = campaigns.length;
+  document.getElementById('pillAds').classList.toggle('zero', campaigns.length === 0);
+  const list = document.getElementById('campaignList'), empty = document.getElementById('campEmpty');
+  empty.style.display = campaigns.length ? 'none' : 'block';
+  list.innerHTML = campaigns.map(campaignCard).join('');
+}
+function campaignCard(c) {
+  const i = c.insights || {};
+  const active = c.status === 'ACTIVE';
+  const m = (v, k, pre = '', suf = '') => `<div class="metric"><span class="v">${v == null ? '—' : pre + v + suf}</span><span class="k">${k}</span></div>`;
+  return `<div class="campaign">
+    <div class="top">
+      <h3>${c.name}</h3>
+      <span class="badge ${active ? 'active' : 'paused'}">${active ? 'activa' : 'pausada'}</span>
+      <span class="muted" style="font-size:12px">$${c.dailyBudget}/día · ${c.optimizationEvent} · ${c.ads.length} ads</span>
+      <span style="flex:1"></span>
+      <button class="btn sm ${active ? 'bad' : 'ok'}" onclick="toggleCampaign('${c._id}','${active ? 'PAUSED' : 'ACTIVE'}')">${active ? 'Pausar' : 'Activar'}</button>
+      <button class="btn ghost sm" onclick="refreshInsights('${c._id}', this)">Métricas</button>
+    </div>
+    <div class="meta-row">
+      ${m(i.impressions?.toLocaleString?.(), 'Impresiones')}
+      ${m(i.clicks, 'Clicks')}
+      ${m(i.ctr ? i.ctr.toFixed(2) : null, 'CTR', '', '%')}
+      ${m(i.cpc ? i.cpc.toFixed(2) : null, 'CPC', '$')}
+      ${m(i.spend, 'Gasto', '$')}
+      ${m(i.addToCart, 'Add to Cart')}
+      ${m(i.purchases, 'Compras')}
+    </div>
+  </div>`;
+}
+async function toggleCampaign(id, status) {
+  const r = await fetch(`/api/meta/campaigns/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+  const d = await r.json();
+  if (!r.ok) return toast('Error: ' + d.error);
+  toast(status === 'ACTIVE' ? 'Campaña activada' : 'Campaña pausada');
+  loadCampaigns();
+}
+async function refreshInsights(id, btn) {
+  btn.disabled = true; btn.textContent = '…';
+  try { await fetch(`/api/meta/campaigns/${id}/insights`); toast('Métricas actualizadas'); loadCampaigns(); }
+  catch (e) { toast('Error métricas'); } finally { btn.disabled = false; }
 }
 
 /* init */

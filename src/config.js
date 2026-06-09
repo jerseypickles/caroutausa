@@ -21,4 +21,16 @@ export const config = {
   // reintentos automaticos cuando el juez marca fail (aprovecha la varianza de la ref)
   fidelityRetries: Number(process.env.FIDELITY_RETRIES || 1),
   syncIntervalMin: Number(process.env.SYNC_INTERVAL_MIN || 10),
+  // Tienda Shopify (para el link de destino de los ads)
+  storeUrl: process.env.STORE_URL || 'https://carotaus.com',
+  // Meta Marketing API (valores en Render). Opcional: el server arranca sin esto.
+  meta: {
+    graphVersion: process.env.META_GRAPH_VERSION || 'v23.0',
+    appId: process.env.META_APP_ID || '',
+    appSecret: process.env.META_APP_SECRET || '',
+    accessToken: process.env.META_ACCESS_TOKEN || '',
+    adAccountId: process.env.META_AD_ACCOUNT_ID || '',
+    pageId: process.env.META_PAGE_ID || '',
+    pixelId: process.env.META_PIXEL_ID || '',
+  },
 };

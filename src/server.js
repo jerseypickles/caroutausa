@@ -7,6 +7,7 @@ import { adAnglesRouter } from './routes/adAngles.js';
 import { creativesRouter } from './routes/creatives.js';
 import { productsRouter } from './routes/products.js';
 import { referencesRouter } from './routes/references.js';
+import { metaRouter } from './routes/meta.js';
 import { startProductCron } from './sync.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -20,6 +21,7 @@ app.use('/api', adAnglesRouter);
 app.use('/api', creativesRouter);
 app.use('/api', productsRouter);
 app.use('/api', referencesRouter);
+app.use('/api', metaRouter);
 
 // Panel de QC (frontend estatico) servido por el mismo servicio -> sin CORS, un solo deploy.
 app.use(express.static(publicDir));
