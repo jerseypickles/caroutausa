@@ -17,11 +17,14 @@ const ANTI_AI = `Make it look like a REAL, organic iPhone photo — a candid fit
 normal person would actually post, NOT an ad and NOT a professional shoot.
 Shot on a recent iPhone: natural phone-camera rendering, slightly imperfect and
 casual framing, real available light (window, overcast, golden hour) with real shadows.
-PHONE-CAMERA COLOR, not professional or cinematic grading: a bit muted and natural,
-real white balance, slightly flat dynamic range, never oversaturated, no HDR glow,
-no glossy studio polish.
-Natural skin with visible pores and fine grain, no waxy or plastic skin, no
-over-smoothing, no perfect symmetry. Real lived-in environment with everyday texture.`;
+PHONE-CAMERA COLOR, not professional or cinematic grading: clearly MUTED and DESATURATED,
+low saturation, soft low contrast, a slightly dull / flat / overcast feel like a real
+unedited iPhone photo — colors should look a bit washed out and understated, NEVER vibrant,
+punchy, oversaturated or HDR, no cinematic teal-orange grade, no glossy studio polish.
+Real natural white balance, sometimes a touch cool or grey.
+Natural skin with visible pores and fine grain, real ordinary-looking face, no waxy or
+plastic skin, no over-smoothing, no perfect symmetry, no model-perfect beauty-AI look.
+Real lived-in environment with everyday texture.`;
 
 // Look de campaña: shoot de marca REAL fotografiado con cámara pro (no render IA).
 // Brief fotográfico profundo basado en analizar campañas reales (Lorenzo/Represent).
