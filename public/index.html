@@ -266,9 +266,9 @@
   .afb.ok { border-left-color: var(--ok); } .afb.warn { border-left-color: var(--warn); } .afb.bad { border-left-color: var(--bad); }
   .ctrnote { font-size: 11px; color: var(--faint); margin-top: 10px; font-style: italic; }
   .heatwrap { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 10px; }
-  .heatimg { position: relative; width: 180px; flex: none; border-radius: 10px; overflow: hidden; background: var(--surface3); }
-  .heatimg img { width: 100%; display: block; }
-  .heatlayer { position: absolute; inset: 0; filter: blur(6px); mix-blend-mode: screen; pointer-events: none; }
+  .heatimg { position: relative; width: 190px; flex: none; border-radius: 10px; overflow: hidden; background: #000; }
+  .heatimg img { width: 100%; display: block; filter: brightness(.42) saturate(.85); }
+  .heatlayer { position: absolute; inset: 0; filter: blur(11px); mix-blend-mode: screen; pointer-events: none; }
   .hblob { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; }
   .hzones { flex: 1; display: flex; flex-direction: column; gap: 11px; padding-top: 4px; }
   .hzone { display: flex; align-items: center; gap: 10px; font-size: 11.5px; }
@@ -813,17 +813,17 @@ function metricCard(label, val, opts = {}) {
   return `<div class="amc"><div class="amv ${cls}">${val}${opts.suf || ''}</div><div class="aml">${label}</div><div class="amq ${cls}">${word}</div></div>`;
 }
 function blobColor(p) {
-  if (p >= 33) return 'rgba(255,70,45,.65)';
-  if (p >= 20) return 'rgba(255,190,40,.55)';
-  return 'rgba(70,150,255,.5)';
+  if (p >= 33) return 'rgba(255,40,25,.95)';   // caliente
+  if (p >= 20) return 'rgba(255,180,20,.9)';   // medio
+  return 'rgba(40,120,255,.85)';               // frío
 }
 function heatmapPanel(it) {
   const att = it.analysis?.attention;
   if (!att || !att.zones || !att.zones.length) return '<div class="ipanel"></div>';
   const imgUrl = it._type === 'carousel' ? `/api/carousels/${it._id}/cards/0/image` : `/api/creatives/${it._id}/image`;
   const blobs = att.zones.map(z => {
-    const sz = 40 + (z.percent / 100) * 110;
-    return `<div class="hblob" style="left:${(z.x * 100).toFixed(0)}%;top:${(z.y * 100).toFixed(0)}%;width:${sz}px;height:${sz}px;background:radial-gradient(circle,${blobColor(z.percent)} 0%,transparent 70%)"></div>`;
+    const sz = 70 + (z.percent / 100) * 150;
+    return `<div class="hblob" style="left:${(z.x * 100).toFixed(0)}%;top:${(z.y * 100).toFixed(0)}%;width:${sz}px;height:${sz}px;background:radial-gradient(circle,${blobColor(z.percent)} 0%,transparent 72%)"></div>`;
   }).join('');
   const bars = att.zones.map((z, i) => `<div class="hzone"><span class="hzl">${i + 1}. ${esc(z.label)}</span><div class="hzbar"><div style="width:${z.percent}%;background:${blobColor(z.percent)}"></div></div><span class="hzp">${z.percent}%</span></div>`).join('');
   const heatTxt = att.heat === 'alto' ? 'buen calor' : att.heat === 'bajo' ? 'calor bajo' : 'calor medio';
