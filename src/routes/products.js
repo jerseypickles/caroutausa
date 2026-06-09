@@ -52,15 +52,19 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
     [activeRefs[k], activeRefs[j]] = [activeRefs[j], activeRefs[k]];
   }
 
-  // Receta ORGANICA (look iPhone, colores apagados): por cada angulo, 1 variante FIEL
-  // (sin referencia, fidelidad garantizada) + 1 VIBE (con referencia del pool). El
-  // estilo campaña se descarto (se veia demasiado IA) -> todo organico, con referencias.
+  // Receta REFERENCE-DRIVEN (look iPhone apagado): cada variante usa una REFERENCIA
+  // (el outfit lo manda la referencia; el director solo dirige la escena). Por angulo,
+  // 2 referencias distintas del pool. Sin referencias activas -> cae a director-styled.
   const jobs = [];
   angles.forEach((angleId, i) => {
-    jobs.push({ angleId, ref: null, styleMode: 'organic' }); // fiel
     if (activeRefs.length) {
-      const r = activeRefs[i % activeRefs.length]; // del pool barajado
-      jobs.push({ angleId, ref: { b64: r.imageData }, styleMode: 'organic' }); // vibe
+      const n = Math.min(2, activeRefs.length);
+      for (let k = 0; k < n; k++) {
+        const r = activeRefs[(i * 2 + k) % activeRefs.length];
+        jobs.push({ angleId, ref: { b64: r.imageData }, styleMode: 'organic' });
+      }
+    } else {
+      jobs.push({ angleId, ref: null, styleMode: 'organic' });
     }
   });
 

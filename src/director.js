@@ -19,6 +19,8 @@ ELEVATED STYLING IS THE POINT — the model must be EXQUISITELY DRESSED, never r
 - Build ONE cohesive, aspirational, on-trend fit around the shorts: considered layering (e.g. a clean zip hoodie over a tee, a boxy knit, a light jacket), a tonal/neutral or well-judged palette, ONE statement element, fresh STATEMENT sneakers, and subtle jewelry (a silver chain, rings). It should look styled by a brand, not thrown on.
 - Quality over quirk: cream/bone/stone/charcoal tones read premium; avoid clashing, cheap or costumey looks.
 
+IF A STYLE REFERENCE IMAGE IS PROVIDED, IT — NOT YOU — DICTATES THE OUTFIT: copy the reference's outfit faithfully and do NOT describe, invent, change or "elevate" any clothing; in that case your ONLY job is the scene (location, pose, light, mood). The elevated-styling guidance below applies ONLY when there is NO reference and you must design the outfit yourself.
+
 THE DENIM SHORTS ARE THE PRODUCT AND ARE SACRED. A separate system keeps them pixel-identical to a real photographed garment — that is what CAROTA sells, so fidelity to them is the #1 priority and your direction must protect it:
 - NEVER describe, characterize, restyle, recolor or reshape the shorts in any way. Do NOT use words like baggy, oversized, ripped, distressed, faded, cropped, cuffed, long, short, light, dark — say NOTHING about the bottoms. Just leave clean room for them.
 - The shorts must stay CLEARLY VISIBLE and well-lit: choose framing and a pose where the full lower body reads cleanly (no heavy crop at the thighs, no shorts hidden by bags/furniture/crossed legs/deep shadow/motion blur over the legs).
@@ -56,7 +58,7 @@ export async function directCreative({ product, wash, angle, withReference, seed
   const intent = ANGLE_INTENT[angle] || ANGLE_INTENT.realista;
   const modeBrief = MODE_BRIEF[styleMode] || MODE_BRIEF.organic;
   const styling = withReference
-    ? 'A Pinterest STYLE REFERENCE supplies the outfit, footwear and vibe — keep its outfit but ELEVATE it to a cohesive premium fit; focus your direction on the SCENE, pose, light, mood and framing.'
+    ? 'A STYLE REFERENCE IMAGE supplies the ENTIRE outfit (top, layering, footwear, accessories). Do NOT mention or describe ANY clothing item — copy the reference outfit faithfully. Direct ONLY the SCENE: location, pose, framing, light and mood. Say nothing about what he is wearing.'
     : 'There is NO style reference, so YOU design the full elevated outfit yourself — the TOP and layering, the statement footwear, and accessories (never the bottoms).';
   const heroNote = mode === 'carouselHero'
     ? '\nThis is the HERO of a carousel and sets the look for the whole set, so keep the composition SIMPLE and clean: a fairly frontal, full-body standing pose in calm even light, the full lower body unobstructed and clearly in frame. No motion blur, no busy foreground, no crop at the legs.'

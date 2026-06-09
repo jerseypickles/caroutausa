@@ -53,15 +53,17 @@ and editorial, yet unmistakably a real photo.`;
 
 // Referencia de estilo (imagen 2): SUBORDINADA al producto. Solo aporta el resto
 // del look y la escena; jamas toca el jean.
-const STYLE_REFERENCE = `The SECOND image is ONLY a styling reference and is SECONDARY
-to the product. From it, take ONLY the OUTFIT and styling: the top/jacket, the
-footwear/sneakers, the accessories, and how the clothes are worn.
-Do NOT copy its background, location or color grading — place the model in a real,
-organic everyday setting and keep the natural iPhone look described below; the
-reference is for the outfit, not the scene.
-NEVER take the pants, shorts or bottoms from the second image — the bottoms are
-ALWAYS the exact denim garment from the FIRST image, with its wash, rips, hem and
-length unchanged. Do NOT copy the face or identity from the second image.`;
+const STYLE_REFERENCE = `The SECOND image is the OUTFIT REFERENCE. REPLICATE its outfit
+on the model as faithfully as possible: the same top/jacket and layering, the same
+footwear/sneakers (same style and colorway), the same accessories (caps, chains, bags,
+socks) and the same way the clothes are worn and styled. The model's outfit should clearly
+read as the SAME look as the second image.
+Do NOT copy its background, location or color grading — place the model in a real, organic
+everyday setting with the natural muted iPhone look described below; the reference is for
+the OUTFIT, not the scene.
+NEVER take the pants, shorts or bottoms from the second image — the bottoms are ALWAYS the
+exact denim garment from the FIRST image, with its wash, rips, hem and length unchanged.
+Do NOT copy the face or identity from the second image.`;
 
 export const ANGLES = {
   realista: {
