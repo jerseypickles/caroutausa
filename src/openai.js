@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { toFile } from 'openai';
 import { config } from './config.js';
-import { buildPrompt } from './angles.js';
+import { buildPrompt, fitLock } from './angles.js';
 
 const client = new OpenAI({ apiKey: config.openaiApiKey });
 
@@ -34,7 +34,7 @@ async function fetchSourceImage(imageUrl) {
 
 // Genera UNA variante para un angulo. Si viene referenceB64, se pasa como 2da
 // imagen (referencia de estilo). Devuelve { b64 } o lanza error.
-export async function generateVariant({ imageUrl, angleId, referenceB64, productDescription, creativeDirection = '', prompt: promptOverride, size = STORY_SIZE }) {
+export async function generateVariant({ imageUrl, angleId, referenceB64, productDescription, creativeDirection = '', fitSpec = '', prompt: promptOverride, size = STORY_SIZE }) {
   const productImage = await fetchSourceImage(imageUrl);
   const model = config.imageModel;
 
@@ -44,8 +44,10 @@ export async function generateVariant({ imageUrl, angleId, referenceB64, product
     const refFile = await toFile(Buffer.from(referenceB64, 'base64'), 'reference.png', { type: 'image/png' });
     image = [productImage, refFile];
   }
-  // prompt custom (ej. carrusel) o el armado por angulo.
-  const prompt = promptOverride || buildPrompt(angleId, { withReference: Boolean(referenceB64), productDescription, creativeDirection });
+  // prompt custom (ej. carrusel/reframe) + fit, o el armado por angulo (ya incluye fit).
+  const prompt = promptOverride
+    ? `${promptOverride}${fitLock(fitSpec)}`
+    : buildPrompt(angleId, { withReference: Boolean(referenceB64), productDescription, creativeDirection, fitSpec });
 
   const params = {
     model, image, prompt, size, quality: QUALITY, n: 1,

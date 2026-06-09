@@ -86,7 +86,13 @@ light, slight grain, candid framing.`;
 
 // Arma el prompt final: garment lock + descripcion real del producto + (referencia)
 // + escena + anti-IA. La descripcion (de Shopify) ancla que jean preservar.
-export function buildPrompt(angleId, { withReference = false, productDescription = '', creativeDirection = '' } = {}) {
+// Fit/silueta exacta (del Size Finder): ancla que tan ancho vs apretado va el short.
+export function fitLock(fitSpec = '') {
+  if (!fitSpec) return '';
+  return `\n\nEXACT FIT & SILHOUETTE (reproduce precisely — do NOT make the shorts slimmer, wider, longer or shorter than this): ${fitSpec}`;
+}
+
+export function buildPrompt(angleId, { withReference = false, productDescription = '', creativeDirection = '', fitSpec = '' } = {}) {
   const angle = ANGLES[angleId];
   if (!angle && !creativeDirection) {
     throw new Error(`Angulo desconocido: ${angleId}. Validos: ${Object.keys(ANGLES).join(', ')}`);
@@ -97,5 +103,5 @@ export function buildPrompt(angleId, { withReference = false, productDescription
   const ref = withReference ? `\n\n${STYLE_REFERENCE}` : '';
   // El director (Claude) reemplaza la escena fija del angulo; si no hay, cae al fijo.
   const scene = creativeDirection || angle.prompt;
-  return `${GARMENT_LOCK}${desc}${ref}\n\n${scene}\n\n${ANTI_AI}`;
+  return `${GARMENT_LOCK}${fitLock(fitSpec)}${desc}${ref}\n\n${scene}\n\n${ANTI_AI}`;
 }

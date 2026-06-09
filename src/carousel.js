@@ -40,11 +40,11 @@ ${IPHONE}`;
 
 // Genera un carrusel cohesivo: hero -> N poses + 1 detail, usando el hero como
 // referencia para que compartan modelo/fondo/color. Devuelve [{role,b64}].
-export async function generateCarousel({ imageUrl, productDescription, heroReferenceB64, product, wash, cards = 5 }) {
+export async function generateCarousel({ imageUrl, productDescription, heroReferenceB64, product, wash, fitSpec = '', cards = 5 }) {
   // 1. Hero (set el look): el director (Claude) inventa la escena del set; las demas
   // cards encadenan del hero, asi que la cohesion se mantiene sola.
   const creativeDirection = await directCreative({ product, wash, angle: 'realista', withReference: Boolean(heroReferenceB64), mode: 'carouselHero' });
-  const hero = await generateVariant({ imageUrl, angleId: 'realista', referenceB64: heroReferenceB64, productDescription, creativeDirection });
+  const hero = await generateVariant({ imageUrl, angleId: 'realista', referenceB64: heroReferenceB64, productDescription, creativeDirection, fitSpec });
   const heroB64 = hero.b64;
 
   // 2. Poses + detail en paralelo, cada una con el hero como 2da imagen (cohesion).
@@ -52,12 +52,12 @@ export async function generateCarousel({ imageUrl, productDescription, heroRefer
   const tasks = [];
   for (let i = 0; i < poseCount; i++) {
     tasks.push(
-      generateVariant({ imageUrl, referenceB64: heroB64, productDescription, prompt: posePrompt(productDescription) })
+      generateVariant({ imageUrl, referenceB64: heroB64, productDescription, fitSpec, prompt: posePrompt(productDescription) })
         .then((r) => ({ role: 'pose', b64: r.b64 }))
     );
   }
   tasks.push(
-    generateVariant({ imageUrl, referenceB64: heroB64, productDescription, prompt: detailPrompt(productDescription) })
+    generateVariant({ imageUrl, referenceB64: heroB64, productDescription, fitSpec, prompt: detailPrompt(productDescription) })
       .then((r) => ({ role: 'detail', b64: r.b64 }))
   );
   const rest = await Promise.all(tasks);
@@ -81,6 +81,7 @@ export async function generateCarouselInBackground(carouselId) {
       heroReferenceB64: doc.referenceImageData,
       product: doc.product,
       wash: doc.wash,
+      fitSpec: prod?.fitSpec || '',
       cards: 5,
     });
   } catch (err) {

@@ -9,7 +9,7 @@ import { config } from './config.js';
 // Genera en background y actualiza el doc cuando termina. Tras la imagen corre el
 // juez de fidelidad; si marca fail y quedan reintentos, regenera in-place (la
 // referencia tiene varianza alta, un re-roll suele caer mejor).
-export async function generateInBackground(creativeId, imageUrl, angleId, referenceB64, productDescription, attempt = 0) {
+export async function generateInBackground(creativeId, imageUrl, angleId, referenceB64, productDescription, attempt = 0, fitSpec = '') {
   let b64;
   try {
     // El director (Claude) inventa la direccion creativa de este fitpic. Si no hay
@@ -22,11 +22,11 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
       seed: attempt > 0 ? `retry ${attempt}: try a completely different setting and energy` : '',
     });
     // 9:16 (story/reels) = placement principal
-    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64, productDescription, creativeDirection, size: STORY_SIZE }));
+    ({ b64 } = await generateVariant({ imageUrl, angleId, referenceB64, productDescription, creativeDirection, fitSpec, size: STORY_SIZE }));
     // 4:5 (feed) = la MISMA foto reframed (usa el 9:16 como referencia)
     let feedB64 = null;
     try {
-      const feed = await generateVariant({ imageUrl, referenceB64: b64, productDescription, prompt: buildFeedReframePrompt(productDescription), size: FEED_SIZE });
+      const feed = await generateVariant({ imageUrl, referenceB64: b64, productDescription, fitSpec, prompt: buildFeedReframePrompt(productDescription), size: FEED_SIZE });
       feedB64 = feed.b64;
     } catch (e) { console.error(`[gen] feed 4:5 fallo (${creativeId}):`, e.message); }
     await Creative.findByIdAndUpdate(creativeId, { imageData: b64, feedImageData: feedB64, genStatus: 'ready', genError: null });
@@ -58,7 +58,7 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     if (v.verdict !== 'pass' && attempt < config.fidelityRetries) {
       console.log(`[gen] fidelidad ${v.score} < umbral, regenerando (intento ${attempt + 1}) ${creativeId}`);
       await Creative.findByIdAndUpdate(creativeId, { genStatus: 'generating', fidelityStatus: 'pending' });
-      return generateInBackground(creativeId, imageUrl, angleId, referenceB64, productDescription, attempt + 1);
+      return generateInBackground(creativeId, imageUrl, angleId, referenceB64, productDescription, attempt + 1, fitSpec);
     }
   } catch (err) {
     console.error(`[gen] juez fallo (${creativeId}):`, err.message);
@@ -67,7 +67,7 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
 }
 
 // Crea y dispara N jobs explicitos. jobs: [{ angleId, ref: {b64}|null }].
-export async function enqueueJobs({ imageUrl, jobs, meta = {}, productDescription = '' }) {
+export async function enqueueJobs({ imageUrl, jobs, meta = {}, productDescription = '', fitSpec = '' }) {
   const created = await Creative.create(
     jobs.map(({ angleId, ref }) => ({
       ...meta,
@@ -79,14 +79,14 @@ export async function enqueueJobs({ imageUrl, jobs, meta = {}, productDescriptio
       referenceImageData: ref?.b64 || null,
     }))
   );
-  created.forEach((doc, i) => generateInBackground(doc._id, imageUrl, doc.angle, jobs[i].ref?.b64 || null, productDescription));
+  created.forEach((doc, i) => generateInBackground(doc._id, imageUrl, doc.angle, jobs[i].ref?.b64 || null, productDescription, 0, fitSpec));
   return created;
 }
 
 // Wrapper: producto cartesiano angles × references (para el endpoint manual).
-export async function enqueueGeneration({ imageUrl, angles, references = [], meta = {}, productDescription = '' }) {
+export async function enqueueGeneration({ imageUrl, angles, references = [], meta = {}, productDescription = '', fitSpec = '' }) {
   const refs = references.length ? references : [null];
   const jobs = [];
   for (const angleId of angles) for (const ref of refs) jobs.push({ angleId, ref });
-  return enqueueJobs({ imageUrl, jobs, meta, productDescription });
+  return enqueueJobs({ imageUrl, jobs, meta, productDescription, fitSpec });
 }

@@ -64,6 +64,7 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
     imageUrl: product.image,
     jobs,
     productDescription: [product.title, product.description].filter(Boolean).join('. '),
+    fitSpec: product.fitSpec || '',
     meta: {
       shopifyProductId: product.shopifyId,
       product: product.title,

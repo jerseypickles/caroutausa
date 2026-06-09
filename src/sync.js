@@ -1,11 +1,14 @@
 import { fetchProducts } from './products.js';
 import { Product } from './models/product.js';
+import { scrapeSizeFinder, deriveFitSpec } from './sizeFinder.js';
 import { config } from './config.js';
 
 // Lee el catalogo de Shopify y hace upsert en Mongo. Los nuevos entran con
 // generatedCount=0 (=> badge "nuevo" en el panel). No genera nada (accion = listar).
 export async function syncProducts() {
   const products = await fetchProducts({ force: true });
+  const existing = await Product.find().select('shopifyId fitSpec sizeText').lean();
+  const byId = new Map(existing.map((e) => [e.shopifyId, e]));
   let added = 0;
   for (const p of products) {
     const res = await Product.updateOne(
@@ -17,6 +20,23 @@ export async function syncProducts() {
       { upsert: true }
     );
     if (res.upsertedCount) added++;
+
+    // Fit spec: solo si falta o cambio el size finder (evita scrapear/LLM en cada sync).
+    const prev = byId.get(p.id);
+    if (!prev || !prev.fitSpec) {
+      try {
+        const sizeText = await scrapeSizeFinder(p.handle);
+        if (sizeText && sizeText !== prev?.sizeText) {
+          const spec = await deriveFitSpec({ title: p.title, description: p.description, sizeText });
+          if (spec) {
+            await Product.updateOne({ shopifyId: p.id }, {
+              $set: { fitSpec: spec.fit, fitCut: spec.cut, fitLength: spec.length, fitMeasures: spec.measures, sizeText },
+            });
+            console.log(`[sync] fit resuelto: ${p.title} -> ${spec.cut}`);
+          }
+        }
+      } catch (e) { console.error(`[sync] fit fallo (${p.title}):`, e.message); }
+    }
   }
   if (added) console.log(`[sync] ${added} producto(s) nuevo(s) detectado(s)`);
   return { total: products.length, added };
