@@ -26,8 +26,14 @@ THE DENIM SHORTS ARE THE PRODUCT AND ARE SACRED. A separate system keeps them pi
 - The shorts must stay CLEARLY VISIBLE and well-lit: choose framing and a pose where the full lower body reads cleanly (no heavy crop at the thighs, no shorts hidden by bags/furniture/crossed legs/deep shadow/motion blur over the legs).
 - Do NOT invent props, layering or poses that would tempt a renderer to re-interpret the bottoms.
 
+CASTING (match the brand): the model is a young, FAIR / LIGHT-SKINNED male with a clean, current streetwear look — that is the CAROTA reference look. Keep it consistent; do not describe the face in detail beyond this.
+
+POSE & SHOT LOGIC — be intelligent and coherent, the pose MUST fit the scene:
+- A "holding the phone up to take the photo" mirror-selfie pose is ONLY allowed when the scene literally has a MIRROR (e.g. inside an apartment with a leaning mirror). NEVER use a phone-held-up pose outdoors or anywhere without a mirror — with no mirror it looks absurd, like an invisible mirror.
+- In any OUTDOOR or mirror-less setting, it is a candid photo TAKEN BY A FRIEND: both hands free and natural (in pockets, adjusting the cap, at his sides), a relaxed real-person stance — walking, leaning on a railing, looking off to the side — NO phone in hand.
+- Vary the pose and the shot each time; make it feel dynamic and real, never the same stiff stance.
+
 OTHER RULES:
-- Never describe a face/identity in detail.
 - No fantasy, no text overlays, no costumey props. Keep it a real, fresh moment with great taste.
 - Be CONCRETE and varied: specific location, time of day, pose, mood, and the elevated outfit styling for the TOP, footwear and accessories. Avoid generic "young man in an urban setting" and avoid laundromats.
 
@@ -37,7 +43,7 @@ OUTPUT: 2-5 sentences of vivid, specific art direction (richer and more detailed
 const MODE_BRIEF = {
   organic: `STYLE: organic but ELEVATED & ASPIRATIONAL — a real, candid iPhone fitpic a stylish person posted (not an ad), with a genuinely great designer-streetwear fit (the caliber of Broken Planet, Represent, Corteiz, Essentials).
 LIGHT: keep it CLEAN and BRIGHT with SOFT, EVEN, natural light — big window light, bright overcast, open shade, or clean coastal daylight. AVOID harsh direct sun, hard deep shadows, warm golden-hour / orange-yellow casts, and grungy dark or tan walls.
-SETTING — pick ONE aspirational-but-real location with VARIETY: a minimal bright apartment (large windows, oak floors), a clean modern interior, OR an ASPIRATIONAL COASTAL / RIVIERA scene (a terrace or pool deck over the sea, a stone balustrade with a hillside town and Mediterranean view, a clean rooftop) under soft bright daylight. Real, organic — like a stylish friend's vacation fitpic, never a staged studio ad.
+SETTING — pick ONE aspirational-but-real location with VARIETY: a minimal bright apartment (large windows, oak floors), a clean modern interior, OR an ASPIRATIONAL COASTAL / RIVIERA scene under soft bright daylight. If coastal, it must show REAL CONTEXT behind him — a Mediterranean hillside town with pastel villas and rooftops, a marina, a coastline curving away, a stone balustrade or pool deck — NOT just an empty flat sea and blank sky (that reads cheap and weird). Think Monaco / Èze / Amalfi terrace. Real, organic — like a stylish friend's vacation fitpic, never a staged studio ad.
 THE SHORTS ARE THE HERO: compose and light so the DENIM SHORTS are the clear focal point — prominent, well-lit lower body, framed FAIRLY CLOSE so the model fills most of the frame. Do NOT add big handbags, luggage or busy props that steal attention from the shorts.`,
   campaign: `STYLE: a REAL high-end brand campaign at the caliber of Lorenzo Worldwide — editorial, aspirational, photographed (not a render). Describe the look HEAD TO TOE with SPECIFIC, real, nameable pieces and materials so it renders with true detail:
 - the exact TOP and layering: garment type, cut, fabric and how it sits (e.g. "an open boxy cream heavyweight zip-hoodie with drawcords over a tonal-print tee");
