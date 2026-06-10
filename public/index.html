@@ -249,6 +249,52 @@
   .lmthumb img { width: 100%; height: 100%; object-fit: cover; }
   .lmthumb .lmcar { position: absolute; top: 2px; left: 2px; font-size: 10px; background: rgba(0,0,0,.6); color: #fff; padding: 0 4px; border-radius: 4px; }
   .lmfoot { display: flex; align-items: center; gap: 10px; padding: 16px 22px; border-top: 1px solid var(--border); }
+
+  /* ===== Cola de QC — rediseño claro (galería + modal) ===== */
+  #view-cola, .qcmodal {
+    --bg: #f6f7f9; --surface: #ffffff; --surface2: #eef0f3; --surface3: #e4e7eb;
+    --border: #e6e8ec; --border2: #d7dbe0;
+    --text: #1b1f27; --muted: #6b7280; --faint: #9aa0ab;
+    --ok: #0e9f6e; --ok-soft: rgba(14,159,110,.12);
+    --bad: #e02424; --bad-soft: rgba(224,36,36,.10);
+    --warn: #c27803; --warn-soft: rgba(194,120,3,.12);
+    color: var(--text);
+  }
+  #view-cola .qbar { background: transparent; border: none; margin-bottom: 18px; }
+  #view-cola .qtabs button, #view-cola .qtypes button { background: transparent; border: 1px solid transparent; color: var(--muted);
+    padding: 7px 13px; border-radius: 9px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  #view-cola .qtabs button:hover, #view-cola .qtypes button:hover { background: var(--surface2); color: var(--text); }
+  #view-cola .qtabs button.on { background: #1b1f27; color: #fff; }
+  #view-cola .qtypes button.on { background: var(--surface); border-color: var(--border2); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  #view-cola .qtabs .cnt { margin-left: 6px; font-size: 11px; opacity: .7; }
+  /* galería */
+  .qgallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+  .gcard { background: var(--surface); border: 1px solid var(--border); border-radius: 15px; overflow: hidden; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(16,24,40,.04); transition: box-shadow .16s ease, transform .16s ease, border-color .16s ease; }
+  .gcard:hover { box-shadow: 0 12px 30px rgba(16,24,40,.10); transform: translateY(-3px); border-color: var(--border2); }
+  .gimg { position: relative; aspect-ratio: 4/5; background: var(--surface2); overflow: hidden; }
+  .gimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gimg .gph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 12px; gap: 7px; }
+  .gtag { position: absolute; top: 9px; left: 9px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 7px;
+    background: rgba(255,255,255,.92); color: #1b1f27; font-size: 10.5px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.12); backdrop-filter: blur(4px); }
+  .gtag.car { background: #1b1f27; color: #fff; }
+  .gstatus { position: absolute; top: 9px; right: 9px; padding: 3px 8px; border-radius: 7px; font-size: 10.5px; font-weight: 700; }
+  .gstatus.approved { background: var(--ok); color: #fff; } .gstatus.rejected { background: var(--bad); color: #fff; }
+  .gmeta { padding: 11px 13px 13px; }
+  .gtitle { font-size: 13px; font-weight: 650; text-transform: capitalize; }
+  .gsub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .gchips { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+  .gchip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 7px; background: var(--surface2); color: var(--muted); }
+  .gchip.ok { background: var(--ok-soft); color: var(--ok); } .gchip.bad { background: var(--bad-soft); color: var(--bad); }
+  .gchip.ev { color: var(--faint); }
+  .gchip svg { width: 12px; height: 12px; }
+  /* modal QC */
+  .qcmodal { position: fixed; inset: 0; background: rgba(20,24,31,.55); backdrop-filter: blur(5px); z-index: 70; display: none; align-items: flex-start; justify-content: center; padding: 30px; overflow-y: auto; }
+  .qcmodal.open { display: flex; }
+  .qcmbox { width: 1060px; max-width: 100%; background: var(--bg); border-radius: 20px; position: relative; box-shadow: 0 40px 110px rgba(16,24,40,.45); padding: 26px 28px; }
+  .qcmx { position: absolute; top: 16px; right: 18px; z-index: 3; width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .qcmx:hover { color: var(--text); border-color: var(--border2); }
+  .gicon { width: 14px; height: 14px; vertical-align: -2px; }
   .adsbox:not(:empty) { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
   .adsgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .adcard { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
@@ -479,10 +525,8 @@
           <button data-t="single" onclick="setTypeFilter('single')">Singles</button>
         </div>
       </div>
-      <div class="qstrip" id="qstrip"></div>
+      <div class="qgallery" id="qstrip"></div>
       <div class="empty" id="empty" style="display:none">Sin creativos en esta vista. Generá desde Productos.</div>
-      <div class="qinspect" id="qinspect"></div>
-      <div class="qflow" id="qflow"></div>
     </section>
 
     <!-- AD MANAGER -->
@@ -529,6 +573,14 @@
 <div class="lightbox" id="lightbox" onclick="closeZoom()"><span class="close">&times;</span><img id="lightboxImg" src="" alt="" /></div>
 <div class="cviewer" id="cviewer" onclick="closeCViewer()"><span class="close">&times;</span><div class="cstrip" id="cstrip" onclick="event.stopPropagation()"></div></div>
 
+<!-- Modal de QC (inspector) -->
+<div class="qcmodal" id="qcModal" onclick="closeQcModal()">
+  <div class="qcmbox" onclick="event.stopPropagation()">
+    <button class="qcmx" onclick="closeQcModal()" aria-label="Cerrar">&times;</button>
+    <div id="qcModalBody"></div>
+  </div>
+</div>
+
 <!-- Modal de lanzamiento -->
 <div class="lmodal" id="launchModal" onclick="closeLaunch()">
   <div class="lmbox" onclick="event.stopPropagation()">
@@ -556,6 +608,7 @@
   </div>
 </div>
 
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script>
 let filter = 'generated';
 let products = [];
@@ -956,24 +1009,40 @@ function typeBadge(it) {
   if (it.format === 'flatlay') return `<span class="tbadge flat">Packshot</span>`;
   return `<span class="tbadge sgl">9:16 · 4:5</span>`;
 }
+function gThumb(it) {
+  if (it.genStatus === 'generating') return `<div class="gph"><span class="spinner"></span> generando…</div>`;
+  if (it.genStatus === 'failed') return `<div class="gph">— sin imagen</div>`;
+  if (it.qcStatus === 'rejected') return `<div class="gph">rechazado</div>`;
+  const src = it._type === 'carousel' ? `/api/carousels/${it._id}/cards/0/image` : `/api/creatives/${it._id}/image?p=square`;
+  const fb = it._type === 'carousel' ? '' : `onerror="this.onerror=null;this.src='/api/creatives/${it._id}/image'"`;
+  return `<img src="${src}" loading="lazy" ${fb} alt="" />`;
+}
+function gTag(it) {
+  if (it._type === 'carousel') return `<span class="gtag car"><i data-lucide="layers" class="gicon"></i>${it.cards?.length || 3}</span>`;
+  if (it.format === 'flatlay') return `<span class="gtag">Packshot</span>`;
+  return `<span class="gtag">${(it.angle || '').replace(/_/g, ' ')}</span>`;
+}
 function renderStrip() {
   const items = qItems();
   empty.style.display = items.length ? 'none' : 'block';
-  qstrip.style.display = items.length ? 'flex' : 'none';
+  qstrip.style.display = items.length ? 'grid' : 'none';
   qstrip.innerHTML = items.map(it => {
-    const sel = keyOf(it) === selectedKey ? 'sel' : '';
-    let fid = '';
-    if (it.fidelityStatus === 'done') { const ok = it.fidelityVerdict === 'pass';
-      const fitOk = it.fitScore == null ? null : it.fitScore >= 75;
-      const fitChip = it.fitScore != null ? `<span class="fitchip ${fitOk ? 'ok' : 'bad'}" title="Fidelidad al size chart (silueta/fit)">Fit ${it.fitScore}</span>` : '';
-      fid = `<div class="sfid"><span class="dotf ${ok ? 'ok' : 'bad'}">${it.fidelityScore}</span><span class="${ok ? 'okt' : 'badt'}">${ok ? 'Fiel' : 'Revisar'}</span>${fitChip}</div>`;
-    } else if (it.genStatus === 'ready') fid = `<div class="sfid muted">evaluando…</div>`;
-    return `<div class="scard ${sel}" onclick="selectItem('${it._type}','${it._id}')">
-      <div class="scard-top">${typeBadge(it)}<span class="sid">${shortId(it._id)}</span></div>
-      ${stripThumb(it)}
-      <div class="scard-meta"><div class="st">${it._type === 'carousel' ? 'Carrusel' : it.format === 'flatlay' ? 'Packshot' : it.angle.replace(/_/g,' ')}</div>
-      <div class="sw">${[it.product, it.wash].filter(Boolean).join(' · ') || '—'}</div></div>${fid}</div>`;
+    let chips = '';
+    if (it.fidelityStatus === 'done') {
+      const ok = it.fidelityVerdict === 'pass';
+      chips = `<span class="gchip ${ok ? 'ok' : 'bad'}"><i data-lucide="${ok ? 'check' : 'alert-triangle'}" class="gicon"></i>${it.fidelityScore}</span>`;
+      if (it.fitScore != null) chips += `<span class="gchip ${it.fitScore >= 75 ? 'ok' : 'bad'}">Fit ${it.fitScore}</span>`;
+    } else if (it.genStatus === 'ready') chips = `<span class="gchip ev">evaluando…</span>`;
+    const status = (it.qcStatus === 'approved' || it.qcStatus === 'rejected') ? `<span class="gstatus ${it.qcStatus}">${it.qcStatus === 'approved' ? 'Aprobado' : 'Rechazado'}</span>` : '';
+    const title = it._type === 'carousel' ? 'Carrusel' : it.format === 'flatlay' ? 'Packshot' : (it.angle || '').replace(/_/g, ' ');
+    return `<div class="gcard" onclick="selectItem('${it._type}','${it._id}')">
+      <div class="gimg">${gThumb(it)}${gTag(it)}${status}</div>
+      <div class="gmeta"><div class="gtitle">${title}</div>
+        <div class="gsub">${[it.product, it.wash].filter(Boolean).join(' · ') || '—'}</div>
+        <div class="gchips">${chips}</div></div>
+    </div>`;
   }).join('');
+  if (window.lucide) lucide.createIcons();
 }
 function fmtFrame(label, url, cls) {
   return `<div class="fmt"><div class="phone ${cls}">${url ? `<img src="${url}" onclick="openZoom('${url}')" alt="" />` : '<span class="muted">—</span>'}</div><div class="fmtl">${label}</div></div>`;
@@ -989,10 +1058,11 @@ function formatPreviews(it) {
   return fmtFrame('9:16 Story', story, 'p916') + fmtFrame('4:5 Feed', feed, 'p45') + fmtFrame('1:1 Square', square, 'p11');
 }
 function renderInspector() {
-  const items = qItems();
-  let it = items.find(i => keyOf(i) === selectedKey) || items.find(i => i.genStatus === 'ready') || items[0];
-  if (!it) { qinspect.innerHTML = ''; qflow.innerHTML = ''; return; }
-  selectedKey = keyOf(it);
+  const body = document.getElementById('qcModalBody');
+  if (!body) return;
+  const all = [...allCreatives.map(c => ({ ...c, _type: 'single', _id: c._id })), ...allCarousels.map(c => ({ ...c, _type: 'carousel', _id: c._id }))];
+  const it = all.find(i => keyOf(i) === selectedKey);
+  if (!it) { closeQcModal(); return; }
   const saveFn = it._type === 'carousel' ? 'saveCarouselCopy' : 'saveCopy';
   const apprFn = it._type === 'carousel' ? 'qcCarousel' : 'qc';
   const canQc = it.genStatus === 'ready' && it.qcStatus === 'generated';
@@ -1012,7 +1082,7 @@ function renderInspector() {
   const ready = it.genStatus === 'ready';
   const a = it.analysis;
   const analyzed = a?.status === 'done';
-  qinspect.innerHTML = `
+  body.innerHTML = `
     <div class="itop">
       <div class="icol">
         <div class="ihead">${typeBadge(it)}<span class="sid">${shortId(it._id)}</span></div>
@@ -1039,8 +1109,9 @@ function renderInspector() {
         </div>
       </div>
     </div>
-    ${analyzed ? `<div class="ibottom">${heatmapPanel(it)}${feedbackPanel(a)}</div>` : ''}`;
-  renderFlow(it);
+    ${analyzed ? `<div class="ibottom">${heatmapPanel(it)}${feedbackPanel(a)}</div>` : ''}
+    ${flowHtml(it)}`;
+  if (window.lucide) lucide.createIcons();
   if (ready && !analyzed) analyzeItem(it._type, it._id);
 }
 function styleBadge(it) {
@@ -1120,17 +1191,17 @@ async function analyzeItem(type, id) {
     if (d.analysis) {
       const obj = (type === 'carousel' ? allCarousels : allCreatives).find(o => o._id === id);
       if (obj) obj.analysis = d.analysis;
-      if (selectedKey === k) renderInspector();
+      if (qcModalOpen() && selectedKey === k) renderInspector();
     }
   } catch (e) { /* silencioso */ } finally { analyzing.delete(k); }
 }
-function renderFlow(it) {
+function flowHtml(it) {
   const steps = ['Generado por IA', 'En cola de QC', 'Revisión humana', 'Aprobado', 'Publicado', 'Resultados'];
   let idx = 1;
   if (it.qcStatus === 'approved') idx = 3;
   else if (it.qcStatus === 'rejected') idx = 2;
-  qflow.innerHTML = `<div class="flowtitle">Flujo del creativo</div><div class="flowline">` +
-    steps.map((s, i) => `<div class="fstep ${i <= idx ? 'done' : ''} ${i === idx ? 'cur' : ''}"><span class="fdot"></span><span class="flbl">${s}</span></div>`).join('') + `</div>`;
+  return `<div class="qflow"><div class="flowtitle">Flujo del creativo</div><div class="flowline">` +
+    steps.map((s, i) => `<div class="fstep ${i <= idx ? 'done' : ''} ${i === idx ? 'cur' : ''}"><span class="fdot"></span><span class="flbl">${s}</span></div>`).join('') + `</div></div>`;
 }
 function setInspPlacement(btn, id, p) {
   const box = document.getElementById('ipbox');
@@ -1138,8 +1209,11 @@ function setInspPlacement(btn, id, p) {
   box.querySelector('img').src = (p === 'feed' || p === 'square') ? `/api/creatives/${id}/image?p=${p}` : `/api/creatives/${id}/image`;
   box.querySelectorAll('.phtoggle button').forEach(b => b.classList.toggle('on', b === btn));
 }
-function selectItem(type, id) { selectedKey = `${type}:${id}`; renderStrip(); renderInspector(); }
-function renderQC() { renderCounts(); renderStrip(); renderInspector(); }
+function selectItem(type, id) { selectedKey = `${type}:${id}`; openQcModal(); }
+function qcModalOpen() { const m = document.getElementById('qcModal'); return m && m.classList.contains('open'); }
+function openQcModal() { const m = document.getElementById('qcModal'); m.classList.add('open'); document.body.style.overflow = 'hidden'; renderInspector(); }
+function closeQcModal() { const m = document.getElementById('qcModal'); if (m) m.classList.remove('open'); document.body.style.overflow = ''; selectedKey = null; }
+function renderQC() { renderCounts(); renderStrip(); if (qcModalOpen()) renderInspector(); }
 async function loadQueue() {
   const [cr, ca] = await Promise.all([
     fetch('/api/creatives').then(r => r.json()).catch(() => ({ creatives: [] })),
@@ -1157,11 +1231,11 @@ async function loadQueue() {
 }
 async function qc(id, qcStatus) {
   await fetch(`/api/creatives/${id}/qc`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ qcStatus }) });
-  lastSig = null; loadQueue();
+  closeQcModal(); toast(qcStatus === 'approved' ? 'Aprobado ✓' : 'Rechazado'); lastSig = null; loadQueue();
 }
 async function qcCarousel(id, qcStatus) {
   await fetch(`/api/carousels/${id}/qc`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ qcStatus }) });
-  lastSig = null; loadQueue();
+  closeQcModal(); toast(qcStatus === 'approved' ? 'Aprobado ✓' : 'Rechazado'); lastSig = null; loadQueue();
 }
 async function saveCarouselCopy(id, field, value) {
   await fetch(`/api/carousels/${id}/copy`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [field]: value }) });
@@ -1175,7 +1249,7 @@ function openCarouselView(id, n) {
   document.getElementById('cviewer').classList.add('on');
 }
 function closeCViewer() { document.getElementById('cviewer').classList.remove('on'); document.getElementById('cstrip').innerHTML = ''; }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCViewer(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeCViewer(); closeQcModal(); } });
 function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 async function saveCopy(id, field, value) {
