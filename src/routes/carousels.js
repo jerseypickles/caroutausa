@@ -53,7 +53,7 @@ carouselsRouter.post('/products/:id/carousel', async (req, res) => {
 
   generateCarouselInBackground(doc._id);
 
-  await Product.updateOne({ shopifyId: product.shopifyId }, { $inc: { generatedCount: 5 }, $set: { lastGeneratedAt: new Date() } });
+  await Product.updateOne({ shopifyId: product.shopifyId }, { $inc: { generatedCount: 3 }, $set: { lastGeneratedAt: new Date() } });
   res.status(202).json({ id: doc._id, status: 'generating' });
 });
 

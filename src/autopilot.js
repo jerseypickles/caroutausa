@@ -49,7 +49,7 @@ export async function runAutopilot({ manual = false } = {}) {
           hasReference: Boolean(ref), referenceId: ref?.id || null, referenceDna: ref?.dna || '', referenceImageData: ref?.b64 || null, genStatus: 'generating',
         });
         generateCarouselInBackground(cdoc._id).catch((e) => console.error('[autopilot] carousel:', e.message));
-        await Product.updateOne({ shopifyId: p.shopifyId }, { $inc: { generatedCount: 5 }, $set: { lastGeneratedAt: new Date() } });
+        await Product.updateOne({ shopifyId: p.shopifyId }, { $inc: { generatedCount: 3 }, $set: { lastGeneratedAt: new Date() } });
         await logActivity('carousel', `Auto: generando carrusel de ${p.title}`, { product: p.title, refId: String(cdoc._id), level: 'ok' });
         return { product: p.title, piece: 'carousel' };
       }

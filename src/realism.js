@@ -16,13 +16,12 @@ export async function realismPass(b64) {
       create: { width: w, height: h, channels: 3, background: { r: 128, g: 128, b: 128 }, noise: { type: 'gaussian', mean: 0, sigma: 11 } },
     }).png().toBuffer();
 
+    // Solo grano + micro-textura. NO tocamos color/contraste (antes quedaba lavado).
     const out = await sharp(input)
-      .modulate({ saturation: 0.95 })          // un poco menos saturado (color de telefono)
-      .linear(0.97, 4)                         // leve baja de contraste, negros no tan puros
       .composite([{ input: noise, blend: 'soft-light' }]) // grano fino
       .blur(0.3)                               // micro-suavizado de lente
       .sharpen({ sigma: 0.6 })                 // textura sutil de vuelta
-      .webp({ quality: 82 })
+      .webp({ quality: 84 })
       .toBuffer();
 
     return out.toString('base64');

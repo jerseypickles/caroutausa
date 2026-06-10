@@ -36,14 +36,17 @@ ${productDescription ? `\nThe product to preserve exactly: ${productDescription}
 ${IPHONE}`;
 }
 
-// Card de detalle: close-up del jean en el mismo setting/color del hero.
+// Card de detalle: close-up CERRADO del short tal como lo lleva el modelo (mismo
+// setting/color del hero). Cierra el set mostrando la tela/textura real.
 function detailPrompt(productDescription) {
   return `${GARMENT_LOCK}
 
-The SECOND image is the same look and scene. Now produce a CLOSE-UP DETAIL shot of the
-denim shorts in that same setting, lighting and colors: fill the frame with the shorts,
-showing the wash, the raw cutoff frayed hem, the stitching, pockets and any hardware up
-close. Same mood and color grading as the second image.
+The SECOND image is the same fitpic session — same real model, same location, same
+lighting and color. Now take a TIGHT CLOSE-UP of the denim shorts AS WORN: crop in close
+on the shorts on the model's lower body (waist-to-knee), filling most of the frame, like
+a phone photo zoomed in to show the fit and fabric. Show the real denim texture and wash,
+the raw cutoff frayed hem, the stitching, pockets and any hardware up close and sharp.
+Same mood and color grading as the second image. It is the SAME shorts, just closer.
 ${productDescription ? `\nThe product: ${productDescription}` : ''}
 
 ${IPHONE}`;
@@ -51,7 +54,7 @@ ${IPHONE}`;
 
 // Genera un carrusel cohesivo: hero -> N poses + 1 detail, usando el hero como
 // referencia para que compartan modelo/fondo/color. Devuelve [{role,b64}].
-export async function generateCarousel({ imageUrl, productBackUrl = '', productDescription, refDna = '', product, wash, fitSpec = '', cards = 5 }) {
+export async function generateCarousel({ imageUrl, productBackUrl = '', productDescription, refDna = '', product, wash, fitSpec = '', cards = 3 }) {
   // 1. Hero (set el look): el director arma un outfit INSPIRADO en el ADN de la
   // referencia (no clon); las demas cards encadenan del hero (cohesion). La 2da foto
   // (espalda) le da el garment completo para las poses de movimiento/espalda.
@@ -59,18 +62,18 @@ export async function generateCarousel({ imageUrl, productBackUrl = '', productD
   const hero = await generateVariant({ imageUrl, productBackUrl, angleId: 'realista', productDescription, creativeDirection, fitSpec });
   const heroB64 = hero.b64;
 
-  // 2. Cards SECUENCIAL (no en paralelo: el plan starter se queda sin RAM y reinicia).
-  // Set = hero + N poses (encadenadas del hero -> cohesion) + 1 packshot del producto.
+  // 2. Set TIGHT (max 3): hero (look completo) + N poses + 1 close-up del short.
+  // Secuencial (no en paralelo: el plan starter se queda sin RAM y reinicia).
   const out = [{ role: 'hero', b64: heroB64 }];
-  const poseCount = Math.max(0, cards - 2); // hero + packshot + poses
+  const poseCount = Math.max(0, cards - 2); // hero + close-up + poses
   for (let i = 0; i < poseCount; i++) {
     const poseBrief = POSE_SEQUENCE[i % POSE_SEQUENCE.length];
     const r = await generateVariant({ imageUrl, referenceB64: heroB64, productDescription, fitSpec, prompt: posePrompt(productDescription, poseBrief) });
     out.push({ role: 'pose', b64: r.b64 });
   }
-  // Card packshot: el short solo sobre superficie limpia (cierra el set, vendedor).
-  const pk = await generateVariant({ imageUrl, productDescription, prompt: buildFlatlayPrompt(productDescription, fitSpec) });
-  out.push({ role: 'packshot', b64: pk.b64 });
+  // Card de cierre: CLOSE-UP del short como lo lleva el modelo (mismo set que el hero).
+  const close = await generateVariant({ imageUrl, referenceB64: heroB64, productDescription, fitSpec, prompt: detailPrompt(productDescription) });
+  out.push({ role: 'detail', b64: close.b64 });
 
   return out;
 }
@@ -95,7 +98,7 @@ export async function generateCarouselInBackground(carouselId) {
       product: doc.product,
       wash: doc.wash,
       fitSpec: prod?.fitSpec || '',
-      cards: 5,
+      cards: 3,
     });
   } catch (err) {
     console.error(`[carousel] fallo generacion (${carouselId}):`, err.message);
