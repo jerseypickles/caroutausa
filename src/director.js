@@ -77,10 +77,20 @@ const CASTINGS = [
   'a dark-skinned young man, athletic, with a bit of attitude',
 ];
 
+// Round-robin (no al azar): cada generacion agarra el SIGUIENTE casting -> dos fotos
+// de una misma tanda NUNCA repiten tono de piel; con el tiempo recorre todos los tipos.
+// Arranca en un punto aleatorio para no empezar siempre por el mismo.
+let castCounter = Math.floor(Math.random() * CASTINGS.length);
+function nextCast() {
+  const c = CASTINGS[castCounter % CASTINGS.length];
+  castCounter += 1;
+  return c;
+}
+
 export async function directCreative({ product, wash, angle, refDna = '', seed = '', mode = 'single', styleMode = 'organic' }) {
   if (!client) return null;
   const intent = ANGLE_INTENT[angle] || ANGLE_INTENT.realista;
-  const cast = CASTINGS[Math.floor(Math.random() * CASTINGS.length)];
+  const cast = nextCast();
   const modeBrief = MODE_BRIEF[styleMode] || MODE_BRIEF.organic;
   const styling = refDna
     ? `Design a fresh, cohesive, elevated outfit INSPIRED by this reference style DNA — match its vibe, caliber, the kinds of brands and the footwear/sneaker lane, but do NOT copy it: choose your own specific top/layers, footwear and accessories so this fit is its own (never the bottoms). Reference style DNA: ${refDna}`
