@@ -258,6 +258,20 @@
   .lmthumb img { width: 100%; height: 100%; object-fit: cover; }
   .lmthumb .lmcar { position: absolute; top: 2px; left: 2px; font-size: 10px; background: rgba(0,0,0,.6); color: #fff; padding: 0 4px; border-radius: 4px; }
   .lmfoot { display: flex; align-items: center; gap: 10px; padding: 16px 22px; border-top: 1px solid var(--border); }
+  .lmsteptop { display: flex; align-items: center; gap: 8px; margin: 4px 0 9px; }
+  .lmsteplbl { font-size: 13px; font-weight: 700; }
+  .lmsug { background: #14161a; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .lmsug:hover { background: #2f333b; }
+  .lmrec { margin-top: 14px; border-radius: 12px; padding: 12px 14px; border: 1px solid var(--border); background: var(--surface2); }
+  .lmrec.good { background: var(--ok-soft); border-color: rgba(14,159,110,.3); }
+  .lmrec.warn { background: var(--warn-soft); border-color: rgba(180,83,9,.3); }
+  .lmrec.bad { background: var(--bad-soft); border-color: rgba(224,36,36,.3); }
+  .lmrechd { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .lmrecdot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .lmrec.good .lmrecdot { background: var(--ok); } .lmrec.warn .lmrecdot { background: var(--warn); } .lmrec.bad .lmrecdot { background: var(--bad); } .lmrec.ok .lmrecdot { background: var(--ok); }
+  .lmrecsub { font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.45; }
+  .lmrecbud { font-size: 12px; margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--border); color: var(--text); }
+  .lmrecbud.lo { color: var(--warn); }
 
   /* ===== Cola de QC — rediseño claro (galería + modal) ===== */
   .qcmodal, .lmodal {
@@ -598,6 +612,7 @@
     <div class="lmhead"><div><h3>Lanzar campaña</h3><div class="lmsub">Se crea EN PAUSA · optimiza Compras · nombre automático</div></div><span class="lmx" onclick="closeLaunch()">&times;</span></div>
     <div class="lmbody">
       <div class="lmdetect" id="lmDetect">Detectando piezas aprobadas…</div>
+      <div class="lmsteptop"><span class="lmsteplbl">Armá el ad set <span class="muted">· tráfico frío</span></span><span style="flex:1"></span><button class="lmsug" onclick="suggestMix()">✦ Sugerido</button></div>
       <div class="lmsteps">
         <div class="lmstep"><label>Fotos individuales</label>
           <div class="stepper"><button onclick="bumpQ('S',-1)">−</button><input id="qSingles" type="number" value="0" min="0" oninput="renderLaunchPrev()"/><button onclick="bumpQ('S',1)">+</button></div>
@@ -606,9 +621,10 @@
           <div class="stepper"><button onclick="bumpQ('C',-1)">−</button><input id="qCarousels" type="number" value="0" min="0" oninput="renderLaunchPrev()"/><button onclick="bumpQ('C',1)">+</button></div>
           <span class="lmmax" id="maxC"></span></div>
         <div class="lmstep"><label>Presupuesto $/día</label>
-          <div class="stepper"><button onclick="bumpB(-5)">−</button><input id="qBudget" type="number" value="25" min="1"/><button onclick="bumpB(5)">+</button></div>
+          <div class="stepper"><button onclick="bumpB(-5)">−</button><input id="qBudget" type="number" value="30" min="1" oninput="renderLaunchPrev()"/><button onclick="bumpB(5)">+</button></div>
           <span class="lmmax">por ad set</span></div>
       </div>
+      <div class="lmrec" id="lmRec"></div>
       <div class="lmprevwrap"><div class="lmprevlbl" id="lmPrevLbl"></div><div class="lmprev" id="lmPrev"></div></div>
     </div>
     <div class="lmfoot">
@@ -1312,6 +1328,38 @@ function renderLaunchPrev() {
   const b = Number(document.getElementById('qBudget').value) || 25;
   document.getElementById('lmSummary').textContent = `${ns + nc} ad(s) en 1 ad set · $${b}/día · Compras`;
   const lb = document.getElementById('lmLaunch'); if (lb) lb.disabled = !(ns + nc);
+  renderRec(ns, nc, b);
+}
+// Recomendacion para TRAFICO FRIO: 3-6 ads por ad set es el sweet spot (mas ads =
+// Meta reparte el budget muy fino y cuesta salir de aprendizaje). Y el budget tiene
+// que dar ~$8-10 por ad/dia.
+function renderRec(ns, nc, b) {
+  const box = document.getElementById('lmRec'); if (!box) return;
+  const total = ns + nc;
+  const perAd = total ? b / total : 0;
+  let state, head, sub;
+  if (total === 0) { state = 'bad'; head = 'Elegí al menos 1 pieza'; sub = ''; }
+  else if (total > 6) { state = 'warn'; head = `${total} ads — demasiados para frío`; sub = 'Meta reparte el budget muy fino y no salís de aprendizaje. Bajá a 3-6 (probá los ganadores y después escalás).'; }
+  else if (total < 3) { state = 'ok'; head = `${total} ad${total > 1 ? 's' : ''} — bien`; sub = 'En frío podés llevarlo a 3-6 para testear más variantes en el mismo ad set.'; }
+  else { state = 'good'; head = `${total} ads — óptimo para frío`; sub = 'Sweet spot (3-6): suficientes variantes sin diluir el budget.'; }
+  let bud = '';
+  if (total) {
+    const low = perAd < 7;
+    bud = `<div class="lmrecbud ${low ? 'lo' : ''}">≈ <b>$${perAd.toFixed(0)}</b> por ad/día${low ? ' · bajo para frío — apuntá a ≥$8/ad (subí budget o bajá ads)' : ' · alcanza para que cada ad junte señal'}</div>`;
+  }
+  box.className = `lmrec ${state}`;
+  box.innerHTML = `<div class="lmrechd"><span class="lmrecdot"></span><b>${head}</b></div>${sub ? `<div class="lmrecsub">${sub}</div>` : ''}${bud}`;
+}
+// Setea un mix recomendado para frío: hasta 3 singles + 1 carrusel, budget ~$10/ad.
+function suggestMix() {
+  const sMax = singlesElig().length, cMax = carouselsElig().length;
+  const nc = Math.min(1, cMax);
+  const ns = Math.min(sMax, Math.max(3 - nc, Math.min(3, sMax)));
+  const total = ns + nc || 1;
+  document.getElementById('qSingles').value = ns;
+  document.getElementById('qCarousels').value = nc;
+  document.getElementById('qBudget').value = Math.max(30, total * 10);
+  renderLaunchPrev();
 }
 async function launchFromModal(btn) {
   const { singles, carousels, ns, nc } = pickItems();
