@@ -18,6 +18,11 @@ import { startAutopilotCron } from './autopilot.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, '..', 'public');
 
+// Guardas: un error sin manejar en una generacion en background NO debe tirar el
+// proceso (antes reiniciaba y mataba todos los jobs). Logueamos y seguimos.
+process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', err?.message || err));
+process.on('uncaughtException', (err) => console.error('[uncaughtException]', err?.message || err));
+
 const app = express();
 app.use(express.json({ limit: '25mb' })); // base64 de imagenes (producto + referencia)
 

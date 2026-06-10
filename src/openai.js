@@ -4,7 +4,8 @@ import { config } from './config.js';
 import { buildPrompt, fitLock } from './angles.js';
 import { realismPass } from './realism.js';
 
-const client = new OpenAI({ apiKey: config.openaiApiKey });
+// timeout para que una request colgada de gpt-image no quede infinita.
+const client = new OpenAI({ apiKey: config.openaiApiKey, timeout: 150000, maxRetries: 2 });
 
 // Tamaños nativos por placement (divisibles por 16 para gpt-image-2).
 export const STORY_SIZE = '1024x1824'; // 9:16 Reels/Stories
@@ -33,23 +34,11 @@ async function fetchSourceImage(imageUrl) {
   return toFile(buffer, `source.${ext}`, { type: contentType });
 }
 
-// Cola global de generacion: el plan starter (poca RAM) hace OOM con varias
-// generaciones a la vez (single + carrusel + autopilot). Serializamos TODA la
-// generacion de imagen a 1 a la vez -> memoria acotada, sin reinicios.
-let genChain = Promise.resolve();
-function withGenLock(fn) {
-  const run = genChain.then(fn, fn);
-  genChain = run.then(() => {}, () => {}); // la cadena nunca se rompe por un error
-  return run;
-}
-
 // Genera UNA variante para un angulo. Si viene referenceB64, se pasa como 2da
-// imagen (referencia de estilo). Devuelve { b64 } o lanza error. Serializada.
-export function generateVariant(args) {
-  return withGenLock(() => generateVariantImpl(args));
-}
-
-async function generateVariantImpl({ imageUrl, productBackUrl = '', angleId, referenceB64, productDescription, creativeDirection = '', fitSpec = '', styleMode = 'organic', prompt: promptOverride, size = STORY_SIZE }) {
+// imagen (referencia de estilo). Devuelve { b64 } o lanza error.
+// (Con Standard/2GB ya no serializamos: el lock global colgaba todo si una request
+//  se trababa. La concurrencia por-flujo ya esta limitada en enqueueJobs/carousel.)
+export async function generateVariant({ imageUrl, productBackUrl = '', angleId, referenceB64, productDescription, creativeDirection = '', fitSpec = '', styleMode = 'organic', prompt: promptOverride, size = STORY_SIZE }) {
   const productImage = await fetchSourceImage(imageUrl);
   const model = config.imageModel;
 
