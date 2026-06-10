@@ -189,6 +189,22 @@
   .campaign .metric .k { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
   .badge.active { background: var(--ok-soft); color: var(--ok); }
   .badge.paused { background: var(--warn-soft); color: var(--warn); }
+  /* compositor de lanzamiento */
+  .hint { font-size: 12.5px; color: var(--muted); margin: -6px 0 14px; }
+  .hint b { color: var(--text); }
+  .eliggrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+  .eligcard { position: relative; border: 2px solid var(--border); border-radius: 11px; overflow: hidden; cursor: pointer; background: var(--card); transition: border-color .15s; }
+  .eligcard:hover { border-color: var(--muted); }
+  .eligcard.sel { border-color: var(--accent); }
+  .eligcard img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+  .eligcard .eligtick { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; opacity: 0; transition: opacity .15s; }
+  .eligcard.sel .eligtick { opacity: 1; background: var(--accent); }
+  .eligcard .eliglabel { padding: 6px 8px; font-size: 10.5px; color: var(--muted); text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .launchcfg { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; padding: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+  .launchcfg input[type=text], .launchcfg #campName { flex: 1; min-width: 200px; }
+  .launchcfg input, .launchcfg select { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 11px; font-family: inherit; font-size: 13px; }
+  .launchcfg .lfield { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .launchcfg .lfield input { width: 70px; }
   .adsbox:not(:empty) { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
   .adsgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .adcard { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
@@ -427,10 +443,30 @@
 
     <!-- AD MANAGER -->
     <section class="view" id="view-ads">
-      <div class="secthead"><h2>Campañas</h2><span class="muted" id="metaStatus"></span><span style="flex:1"></span>
-        <button class="btn ghost sm" onclick="loadCampaigns()" id="refreshCampsBtn">Refrescar</button>
+      <!-- Compositor de lanzamiento -->
+      <div class="secthead"><h2>Lanzar campaña</h2><span class="muted" id="eligCount"></span><span style="flex:1"></span>
+        <span class="muted" id="metaStatus" style="font-size:12px"></span></div>
+      <div class="hint">Elegí creatives aprobados, ponele nombre/presupuesto/objetivo y lanzá. Se crea <b>EN PAUSA</b> — no gasta un peso hasta que la actives.</div>
+      <div id="eligGrid" class="eliggrid"></div>
+      <div class="empty" id="eligEmpty" style="display:none">No hay creatives aprobados. Aprobá algunos en la <b>Cola de QC</b> y aparecen acá.</div>
+      <div class="launchcfg" id="launchCfg" style="display:none">
+        <input id="campName" placeholder="Nombre de la campaña (ej. SS26 · Onyx test)" />
+        <div class="lfield"><span>$/día</span><input id="campBudget" type="number" value="25" min="1" step="1" /></div>
+        <select id="campOpt"><option value="ADD_TO_CART">Optimizar: Add to Cart</option><option value="PURCHASE">Optimizar: Compras</option></select>
+        <button class="btn" id="launchBtn" onclick="launchCampaign(this)">Lanzar <span id="launchN"></span> (en pausa)</button>
+      </div>
+
+      <!-- Campañas lanzadas por CAROTA -->
+      <div class="secthead" style="margin-top:28px"><h2>Campañas lanzadas</h2><span style="flex:1"></span>
+        <button class="btn ghost sm" onclick="loadAdManager()">Refrescar</button>
         <a href="https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=8541984519168996" target="_blank" class="btn ghost sm">Abrir en Meta ↗</a>
       </div>
+      <div id="launchedList"></div>
+      <div class="empty" id="launchedEmpty" style="display:none">Todavía no lanzaste ninguna campaña desde acá.</div>
+
+      <!-- Viewer: todo lo que hay en la cuenta de Meta -->
+      <div class="secthead" style="margin-top:28px"><h2>Todas las campañas en la cuenta</h2><span style="flex:1"></span>
+        <button class="btn ghost sm" onclick="loadCampaigns()" id="refreshCampsBtn">Refrescar</button></div>
       <div id="campaignList"></div>
       <div class="empty" id="campEmpty" style="display:none">No hay campañas en la cuenta todavía.</div>
     </section>
@@ -1046,7 +1082,86 @@ async function saveCopy(id, field, value) {
 }
 
 /* ===== AD MANAGER (visualizador de campañas de la cuenta) ===== */
-async function loadAdManager() { loadMetaStatus(); loadCampaigns(); }
+let selectedAds = new Set();
+async function loadAdManager() { loadMetaStatus(); loadEligible(); loadLaunched(); loadCampaigns(); }
+
+async function loadEligible() {
+  let creatives = [];
+  try { const d = await (await fetch('/api/meta/eligible')).json(); creatives = d.creatives || []; } catch (e) {}
+  const grid = document.getElementById('eligGrid'), empty = document.getElementById('eligEmpty'), cfg = document.getElementById('launchCfg');
+  document.getElementById('eligCount').textContent = creatives.length ? `${creatives.length} aprobados listos` : '';
+  empty.style.display = creatives.length ? 'none' : 'block';
+  cfg.style.display = creatives.length ? 'flex' : 'none';
+  const live = new Set(creatives.map(c => c._id)); selectedAds.forEach(id => { if (!live.has(id)) selectedAds.delete(id); });
+  grid.innerHTML = creatives.map(c => `<div class="eligcard ${selectedAds.has(c._id) ? 'sel' : ''}" onclick="toggleElig('${c._id}', this)">
+      <img src="/api/creatives/${c._id}/image?p=square" loading="lazy" onerror="this.onerror=null;this.src='/api/creatives/${c._id}/image'" alt="" />
+      <div class="eligtick">✓</div>
+      <div class="eliglabel">${(c.product || '').replace(' Denim Short', '')} · ${(c.angle || '').replace(/_/g, ' ')}</div>
+    </div>`).join('');
+  updateLaunchN();
+}
+function toggleElig(id, el) {
+  if (selectedAds.has(id)) { selectedAds.delete(id); el.classList.remove('sel'); }
+  else { selectedAds.add(id); el.classList.add('sel'); }
+  updateLaunchN();
+}
+function updateLaunchN() { const e = document.getElementById('launchN'); if (e) e.textContent = selectedAds.size ? `(${selectedAds.size})` : ''; }
+
+async function launchCampaign(btn) {
+  const ids = [...selectedAds];
+  if (!ids.length) return toast('Elegí al menos un creative');
+  const name = document.getElementById('campName').value.trim();
+  if (!name) return toast('Ponele un nombre a la campaña');
+  const dailyBudget = Number(document.getElementById('campBudget').value) || 25;
+  const optimizationEvent = document.getElementById('campOpt').value;
+  if (!confirm(`Lanzar "${name}" con ${ids.length} ad(s), $${dailyBudget}/día, optimizando ${optimizationEvent}?\n\nSe crea EN PAUSA — no gasta hasta que la actives.`)) return;
+  btn.disabled = true; btn.textContent = 'Lanzando…';
+  try {
+    const r = await (await fetch('/api/meta/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, dailyBudget, optimizationEvent, creativeIds: ids }) })).json();
+    if (r.error) toast(r.error);
+    else { toast('Campaña creada en PAUSA ✓'); selectedAds.clear(); document.getElementById('campName').value = ''; loadAdManager(); }
+  } catch (e) { toast('Error lanzando la campaña'); }
+  finally { btn.disabled = false; btn.innerHTML = 'Lanzar <span id="launchN"></span> (en pausa)'; updateLaunchN(); }
+}
+
+async function loadLaunched() {
+  let camps = [];
+  try { const d = await (await fetch('/api/meta/campaigns')).json(); camps = d.campaigns || []; } catch (e) {}
+  const list = document.getElementById('launchedList'), empty = document.getElementById('launchedEmpty');
+  empty.style.display = camps.length ? 'none' : 'block';
+  list.innerHTML = camps.map(launchedCard).join('');
+  camps.forEach(c => loadLaunchedInsights(c._id));
+}
+function launchedCard(c) {
+  const active = c.status === 'ACTIVE';
+  return `<div class="campaign">
+    <div class="top">
+      <h3>${c.name}</h3>
+      <span class="badge ${active ? 'active' : 'paused'}">${(c.status || '').toLowerCase()}</span>
+      <span class="muted" style="font-size:12px">${(c.ads || []).length} ad(s) · $${c.dailyBudget}/día · ${c.optimizationEvent}</span>
+      <span style="flex:1"></span>
+      <button class="btn sm ${active ? 'ghost' : ''}" onclick="toggleCampaign('${c._id}','${active ? 'PAUSED' : 'ACTIVE'}',this)">${active ? 'Pausar' : 'Activar ▶'}</button>
+    </div>
+    <div class="meta-row" id="ci-${c._id}"><span class="muted" style="font-size:12px">cargando métricas…</span></div>
+  </div>`;
+}
+async function loadLaunchedInsights(id) {
+  try {
+    const i = await (await fetch(`/api/meta/campaigns/${id}/insights`)).json();
+    const box = document.getElementById('ci-' + id); if (!box) return;
+    if (i.error || !i.insights) { box.innerHTML = '<span class="muted" style="font-size:12px">Sin métricas todavía — corre cuando la activás.</span>'; return; }
+    const m = i.insights;
+    box.innerHTML = metric((m.impressions || 0).toLocaleString(), 'Impresiones') + metric(m.clicks, 'Clicks') + metric(m.ctr ? m.ctr.toFixed(2) : null, 'CTR', '', '%') + metric(m.cpc ? m.cpc.toFixed(2) : null, 'CPC', '$') + metric(m.spend, 'Gasto', '$') + metric(m.addToCart, 'Add to Cart') + metric(m.purchases, 'Compras');
+  } catch (e) {}
+}
+async function toggleCampaign(id, status, btn) {
+  if (status === 'ACTIVE' && !confirm('¿Activar la campaña? Va a EMPEZAR A GASTAR en Meta según el presupuesto diario.')) return;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await (await fetch(`/api/meta/campaigns/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })).json();
+    if (r.error) toast(r.error); else { toast(status === 'ACTIVE' ? 'Campaña activada ✓' : 'Campaña pausada ✓'); loadLaunched(); }
+  } catch (e) { toast('Error cambiando estado'); } finally { btn.disabled = false; }
+}
 
 async function loadMetaStatus() {
   try {

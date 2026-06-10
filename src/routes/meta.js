@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import sharp from 'sharp';
 import { Creative } from '../models/creative.js';
 import { Product } from '../models/product.js';
 import { MetaCampaign } from '../models/metaCampaign.js';
@@ -9,6 +10,15 @@ export const metaRouter = Router();
 
 function productLink(handle) {
   return handle ? `${config.storeUrl}/products/${handle}` : config.storeUrl;
+}
+
+// Meta no acepta WebP -> convertimos a JPG. Elegimos el mejor placement para feed:
+// 1:1 (square) > 4:5 (feed) > 9:16 (story). Devuelve base64 JPG.
+async function creativeJpgB64(c) {
+  const src = c.squareImageData || c.feedImageData || c.imageData;
+  if (!src) throw new Error(`Creative ${c._id} sin imagen`);
+  const jpg = await sharp(Buffer.from(src, 'base64')).flatten({ background: '#ffffff' }).jpeg({ quality: 90 }).toBuffer();
+  return jpg.toString('base64');
 }
 
 // Parsea las actions de insights de Meta a numeros utiles.
@@ -64,7 +74,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
   if (!Array.isArray(creativeIds) || !creativeIds.length) return res.status(400).json({ error: 'Elegí al menos un creative' });
   const budget = Number(dailyBudget) || 25;
 
-  const creatives = await Creative.find({ _id: { $in: creativeIds }, genStatus: 'ready' }).select('+imageData').lean();
+  const creatives = await Creative.find({ _id: { $in: creativeIds }, genStatus: 'ready' }).select('+imageData +feedImageData +squareImageData').lean();
   if (!creatives.length) return res.status(400).json({ error: 'Sin creatives validos' });
 
   try {
@@ -80,7 +90,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
     for (const c of creatives) {
       const prod = c.shopifyProductId ? await Product.findOne({ shopifyId: c.shopifyProductId }).lean() : null;
       const link = productLink(prod?.handle);
-      const hash = await meta.uploadImage(c.imageData);
+      const hash = await meta.uploadImage(await creativeJpgB64(c));
       const creative = await meta.createSingleImageCreative({
         name: `${c.product || 'CAROTA'} · ${c.angle}`,
         imageHash: hash, link, message: `${c.product || 'CAROTA'} — shop now`,
