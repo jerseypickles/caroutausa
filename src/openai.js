@@ -2,7 +2,6 @@ import OpenAI from 'openai';
 import { toFile } from 'openai';
 import { config } from './config.js';
 import { buildPrompt, fitLock } from './angles.js';
-import { realismPass } from './realism.js';
 
 // timeout para que una request colgada de gpt-image no quede infinita.
 const client = new OpenAI({ apiKey: config.openaiApiKey, timeout: 150000, maxRetries: 2 });
@@ -85,7 +84,7 @@ export async function generateVariant({ imageUrl, productBackUrl = '', angleId, 
   if (!b64) {
     throw new Error('La API no devolvio b64_json');
   }
-  // Pase de realismo (grano/tono iPhone) -> menos look IA, mas organico.
-  const finished = config.realismPass === false ? b64 : await realismPass(b64);
-  return { b64: finished };
+  // (Sin pase de realismo / sharp: colgaba la generacion y el usuario prefiere la
+  //  imagen directa, limpia y normal. Devolvemos el webp de gpt-image tal cual.)
+  return { b64 };
 }
