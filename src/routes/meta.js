@@ -44,6 +44,13 @@ metaRouter.get('/meta/diagnose', async (_req, res) => {
   catch (err) { res.status(502).json({ error: err.message }); }
 });
 
+// POST /api/meta/longlived -> intercambia el token actual por uno long-lived (~60 dias)
+metaRouter.post('/meta/longlived', async (_req, res) => {
+  if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });
+  try { res.json(await meta.exchangeLongLived()); }
+  catch (err) { res.status(502).json({ error: err.message }); }
+});
+
 // GET /api/meta/account-campaigns -> campañas que YA existen en la cuenta (en vivo)
 metaRouter.get('/meta/account-campaigns', async (_req, res) => {
   if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });

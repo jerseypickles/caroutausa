@@ -224,6 +224,19 @@ export async function diagnose() {
   };
 }
 
+// Intercambia el token corto por uno LONG-LIVED (~60 dias). Usa el app_id (del
+// debug_token) + app_secret de la config + el token actual.
+export async function exchangeLongLived() {
+  if (!M.appSecret) throw new Error('Falta META_APP_SECRET');
+  const dbg = await fetch(`${BASE}/debug_token?input_token=${M.accessToken}&access_token=${M.accessToken}`).then((r) => r.json());
+  const appId = dbg.data?.app_id;
+  if (!appId) throw new Error('No pude obtener app_id del token: ' + (dbg.error?.message || ''));
+  const p = new URLSearchParams({ grant_type: 'fb_exchange_token', client_id: appId, client_secret: M.appSecret, fb_exchange_token: M.accessToken });
+  const r = await fetch(`${BASE}/oauth/access_token?${p.toString()}`).then((x) => x.json());
+  if (r.error) throw new Error(`${r.error.message} (${r.error.code})`);
+  return { token: r.access_token, expiresInDays: r.expires_in ? Math.round(r.expires_in / 86400) : null, type: r.token_type };
+}
+
 // Parsea actions de Meta a ATC / compras.
 export function parseActions(row) {
   const out = { addToCart: 0, purchases: 0 };
