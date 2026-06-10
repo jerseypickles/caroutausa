@@ -170,6 +170,12 @@
   .copytext { margin-bottom: 6px; line-height: 1.4; }
   .copyhead { font-weight: 600; }
   .copytext:focus, .copyhead:focus { outline: none; border-color: var(--accent); }
+  .copyrow { display: flex; align-items: flex-start; gap: 5px; }
+  .copyrow .copytext, .copyrow .copyhead { flex: 1; }
+  .copyx { flex: none; width: 22px; height: 22px; margin-top: 2px; border: 1px solid var(--border2); background: var(--surface2); color: var(--muted); border-radius: 6px; cursor: pointer; font-size: 13px; line-height: 1; }
+  .copyx:hover { color: var(--bad, #e5484d); border-color: var(--bad, #e5484d); }
+  .copyadd { background: none; border: 1px dashed var(--border2); color: var(--muted); font-size: 11px; padding: 4px 9px; border-radius: 6px; cursor: pointer; margin-top: 2px; font-family: inherit; }
+  .copyadd:hover { color: var(--accent); border-color: var(--accent); }
 
   /* ad manager */
   .egrid { display: grid; grid-template-columns: repeat(auto-fill, 116px); gap: 12px; margin-bottom: 16px; }
@@ -826,11 +832,45 @@ function renderKpis() {
   document.getElementById('pillQc').classList.toggle('zero', pending === 0);
 }
 function copyBox(c, saveFn) {
-  return `<div class="copybox">
-    <div class="copylabel">Copy${c.copy.edited ? ' · editado' : ''}</div>
-    <textarea class="copytext" rows="2" onblur="${saveFn}('${c._id}','primaryText',this.value)" placeholder="Texto del ad…">${esc(c.copy.primaryText)}</textarea>
-    <input class="copyhead" value="${escAttr(c.copy.headline)}" onblur="${saveFn}('${c._id}','headline',this.value)" placeholder="Headline" />
+  const type = saveFn === 'saveCarouselCopy' ? 'carousel' : 'single';
+  const pts = (c.copy.primaryTexts && c.copy.primaryTexts.length) ? c.copy.primaryTexts : (c.copy.primaryText ? [c.copy.primaryText] : ['']);
+  const hds = (c.copy.headlines && c.copy.headlines.length) ? c.copy.headlines : (c.copy.headline ? [c.copy.headline] : ['']);
+  const ptRow = (t, multi) => `<div class="copyrow"><textarea class="copytext" rows="2" onblur="saveCopyBox(this)" placeholder="Texto del ad…">${esc(t)}</textarea>${multi ? '<button class="copyx" onclick="rmCopy(this)" title="Quitar">×</button>' : ''}</div>`;
+  const hdRow = (t, multi) => `<div class="copyrow"><input class="copyhead" value="${escAttr(t)}" onblur="saveCopyBox(this)" placeholder="Headline" />${multi ? '<button class="copyx" onclick="rmCopy(this)" title="Quitar">×</button>' : ''}</div>`;
+  return `<div class="copybox" data-id="${c._id}" data-type="${type}">
+    <div class="copylabel">Primary text${c.copy.edited ? ' · editado' : ''} <span class="muted" style="text-transform:none;letter-spacing:0">· Meta testea hasta 5</span></div>
+    <div class="copylist pt">${pts.map((t) => ptRow(t, pts.length > 1)).join('')}</div>
+    ${pts.length < 5 ? '<button class="copyadd" onclick="addCopy(this,\'pt\')">+ variación</button>' : ''}
+    <div class="copylabel" style="margin-top:11px">Headline <span class="muted" style="text-transform:none;letter-spacing:0">· hasta 5</span></div>
+    <div class="copylist hd">${hds.map((t) => hdRow(t, hds.length > 1)).join('')}</div>
+    ${hds.length < 5 ? '<button class="copyadd" onclick="addCopy(this,\'hd\')">+ headline</button>' : ''}
   </div>`;
+}
+function saveCopyBox(el) {
+  const box = el.closest('.copybox'); if (!box) return;
+  const id = box.dataset.id, type = box.dataset.type;
+  const primaryTexts = [...box.querySelectorAll('.pt .copytext')].map(e => e.value.trim()).filter(Boolean);
+  const headlines = [...box.querySelectorAll('.hd .copyhead')].map(e => e.value.trim()).filter(Boolean);
+  const url = type === 'carousel' ? `/api/carousels/${id}/copy` : `/api/creatives/${id}/copy`;
+  fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ primaryTexts, headlines }) });
+  toast('Copy guardado');
+}
+function addCopy(btn, kind) {
+  const box = btn.closest('.copybox'); const list = box.querySelector(kind === 'pt' ? '.copylist.pt' : '.copylist.hd');
+  const row = document.createElement('div'); row.className = 'copyrow';
+  row.innerHTML = kind === 'pt'
+    ? '<textarea class="copytext" rows="2" onblur="saveCopyBox(this)" placeholder="Texto del ad…"></textarea><button class="copyx" onclick="rmCopy(this)" title="Quitar">×</button>'
+    : '<input class="copyhead" onblur="saveCopyBox(this)" placeholder="Headline" /><button class="copyx" onclick="rmCopy(this)" title="Quitar">×</button>';
+  list.appendChild(row); row.querySelector('textarea,input').focus();
+  if (list.children.length >= 5) btn.style.display = 'none';
+  list.querySelectorAll('.copyrow').forEach((r) => { if (!r.querySelector('.copyx')) { const x = document.createElement('button'); x.className = 'copyx'; x.textContent = '×'; x.title = 'Quitar'; x.onclick = () => rmCopy(x); r.appendChild(x); } });
+}
+function rmCopy(btn) {
+  const box = btn.closest('.copybox'); const list = btn.closest('.copylist');
+  btn.closest('.copyrow').remove();
+  if (list.children.length === 1) { const x = list.querySelector('.copyx'); if (x) x.remove(); }
+  const addBtn = list.parentElement.querySelector(`.copyadd`); if (addBtn && list.children.length < 5) addBtn.style.display = '';
+  saveCopyBox(box.querySelector('.copytext, .copyhead'));
 }
 function singleTile(c) {
   let visual;

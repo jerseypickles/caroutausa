@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Creative } from '../models/creative.js';
 import { analyzeImage } from '../analyzer.js';
+import { buildCopyUpdate } from '../copy.js';
 
 export const creativesRouter = Router();
 
@@ -70,12 +71,9 @@ creativesRouter.get('/creatives/:id/reference', async (req, res) => {
   res.send(refBuf);
 });
 
-// PATCH /api/creatives/:id/copy  body: { primaryText?, headline? } -> guarda copy editado
+// PATCH /api/creatives/:id/copy  body: { primaryTexts?: [], headlines?: [] } (o singular legacy)
 creativesRouter.patch('/creatives/:id/copy', async (req, res) => {
-  const { primaryText, headline } = req.body || {};
-  const update = { 'copy.edited': true };
-  if (typeof primaryText === 'string') update['copy.primaryText'] = primaryText;
-  if (typeof headline === 'string') update['copy.headline'] = headline;
+  const update = buildCopyUpdate(req.body || {});
   const doc = await Creative.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
   if (!doc) return res.status(404).json({ error: 'Creative no encontrado' });
   res.json({ copy: doc.copy });

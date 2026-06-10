@@ -4,6 +4,7 @@ import { Product } from '../models/product.js';
 import { pickRefs } from '../refs.js';
 import { generateCarouselInBackground } from '../carousel.js';
 import { analyzeImage } from '../analyzer.js';
+import { buildCopyUpdate } from '../copy.js';
 
 export const carouselsRouter = Router();
 
@@ -99,12 +100,9 @@ carouselsRouter.patch('/carousels/:id/qc', async (req, res) => {
   res.json({ qcStatus });
 });
 
-// PATCH /api/carousels/:id/copy
+// PATCH /api/carousels/:id/copy  body: { primaryTexts?: [], headlines?: [] } (o singular)
 carouselsRouter.patch('/carousels/:id/copy', async (req, res) => {
-  const { primaryText, headline } = req.body || {};
-  const update = { 'copy.edited': true };
-  if (typeof primaryText === 'string') update['copy.primaryText'] = primaryText;
-  if (typeof headline === 'string') update['copy.headline'] = headline;
+  const update = buildCopyUpdate(req.body || {});
   const doc = await Carousel.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
   if (!doc) return res.status(404).json({ error: 'No encontrado' });
   res.json({ copy: doc.copy });

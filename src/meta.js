@@ -112,7 +112,9 @@ export function createSingleImageCreative({ name, imageHash, link, message }) {
 
 // Creative de imagen con CUSTOMIZACION POR PLACEMENT: usa el 9:16 (story) en
 // Stories/Reels y el 1:1/4:5 (feed) en el resto. asset_feed_spec = Advantage+ creative.
-export function createPlacementImageCreative({ name, storyHash, feedHash, link, message }) {
+export function createPlacementImageCreative({ name, storyHash, feedHash, link, messages = [], titles = [] }) {
+  const bodies = (messages.length ? messages : ['']).slice(0, 5).map((t) => ({ text: t }));
+  const titleSpec = titles.filter(Boolean).slice(0, 5).map((t) => ({ text: t }));
   return graph('POST', `${acct()}/adcreatives`, {
     name,
     ...enhancements(),
@@ -122,7 +124,8 @@ export function createPlacementImageCreative({ name, storyHash, feedHash, link, 
         { hash: feedHash, adlabels: [{ name: 'feed_img' }] },
         { hash: storyHash, adlabels: [{ name: 'story_img' }] },
       ],
-      bodies: [{ text: message || '' }],
+      bodies,
+      ...(titleSpec.length ? { titles: titleSpec } : {}),
       link_urls: [{ website_url: link }],
       call_to_action_types: ['SHOP_NOW'],
       ad_formats: ['SINGLE_IMAGE'],

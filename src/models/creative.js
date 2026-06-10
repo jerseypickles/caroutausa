@@ -74,8 +74,10 @@ const creativeSchema = new Schema(
 
     // --- copy del ad (generado, editable en QC) ---
     copy: {
-      primaryText: { type: String, default: '' },
-      headline: { type: String, default: '' },
+      primaryTexts: { type: [String], default: [] }, // hasta 5 (Meta los testea)
+      headlines: { type: [String], default: [] },    // hasta 5
+      primaryText: { type: String, default: '' },     // compat: = primaryTexts[0]
+      headline: { type: String, default: '' },        // compat: = headlines[0]
       edited: { type: Boolean, default: false }, // el humano lo edito
     },
 

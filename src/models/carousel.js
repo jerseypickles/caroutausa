@@ -37,6 +37,8 @@ const carouselSchema = new Schema(
     fidelityVerdict: { type: String, default: null },
 
     copy: {
+      primaryTexts: { type: [String], default: [] },
+      headlines: { type: [String], default: [] },
       primaryText: { type: String, default: '' },
       headline: { type: String, default: '' },
       edited: { type: Boolean, default: false },
