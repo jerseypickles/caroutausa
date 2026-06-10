@@ -4,6 +4,7 @@ import { buildFeedReframePrompt, buildSquareReframePrompt, buildFlatlayPrompt } 
 import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
 import { directCreative } from './director.js';
+import { pickScene } from './refs.js';
 import { logActivity } from './models/activity.js';
 import { config } from './config.js';
 
@@ -20,9 +21,11 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     const styleMode = doc?.styleMode || 'organic';
     // La referencia es INSPIRACION (ADN de estilo), no un clon: el director arma un
     // outfit fresco en ese lane. NO mandamos la imagen de referencia a gpt-image.
+    // Si hay referencias de ESCENA, una maneja la locacion (si no, rota la lista fija).
+    const scene = await pickScene(doc?.shopifyProductId).catch(() => null);
     const dir = await directCreative({
       product: doc?.product, wash: doc?.wash, angle: angleId,
-      refDna: doc?.referenceDna || '', styleMode,
+      refDna: doc?.referenceDna || '', sceneDna: scene?.dna || '', styleMode,
       seed: attempt > 0 ? `retry ${attempt}: try a completely different setting and energy` : '',
     });
     const creativeDirection = dir?.text || '';

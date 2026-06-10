@@ -5,6 +5,7 @@ import { Product } from './models/product.js';
 import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
 import { directCreative } from './director.js';
+import { pickScene } from './refs.js';
 import { config } from './config.js';
 
 const IPHONE = `Real organic iPhone photo: phone-camera color (not professional/cinematic
@@ -58,7 +59,8 @@ export async function generateCarousel({ imageUrl, productBackUrl = '', productD
   // 1. Hero (set el look): el director arma un outfit INSPIRADO en el ADN de la
   // referencia (no clon); las demas cards encadenan del hero (cohesion). La 2da foto
   // (espalda) le da el garment completo para las poses de movimiento/espalda.
-  const dir = await directCreative({ product, wash, angle: 'realista', refDna, mode: 'carouselHero' });
+  const scene = await pickScene().catch(() => null);
+  const dir = await directCreative({ product, wash, angle: 'realista', refDna, sceneDna: scene?.dna || '', mode: 'carouselHero' });
   const creativeDirection = dir?.text || '';
   const hero = await generateVariant({ imageUrl, productBackUrl, angleId: 'realista', productDescription, creativeDirection, fitSpec });
   const heroB64 = hero.b64;

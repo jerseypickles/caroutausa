@@ -106,11 +106,14 @@ function nextSetting() {
   return s;
 }
 
-export async function directCreative({ product, wash, angle, refDna = '', seed = '', mode = 'single', styleMode = 'organic' }) {
+export async function directCreative({ product, wash, angle, refDna = '', sceneDna = '', seed = '', mode = 'single', styleMode = 'organic' }) {
   if (!client) return null;
   const intent = ANGLE_INTENT[angle] || ANGLE_INTENT.realista;
   const cast = nextCast();
-  const setting = nextSetting();
+  // Escena: si hay una REFERENCIA de escena, la usamos como locacion; si no, rota la lista fija.
+  let settingDesc, sceneTag;
+  if (sceneDna) { settingDesc = `${sceneDna} (recreate a similar real location/light, NOT a copy; never the product or the person's face)`; sceneTag = 'ref-scene'; }
+  else { const s = nextSetting(); settingDesc = s.desc; sceneTag = s.tag; }
   const modeBrief = MODE_BRIEF[styleMode] || MODE_BRIEF.organic;
   const styling = refDna
     ? `Design a fresh, cohesive, elevated outfit INSPIRED by this reference style DNA — match its overall VIBE, caliber and the FOOTWEAR / sneaker lane (real sneakers on-foot are fine), but design your own fit, never a copy (and never the bottoms).
@@ -122,7 +125,7 @@ CRITICAL on the TOP / apparel: do NOT put any recognizable THIRD-PARTY brand log
   const user = `Product: ${product || 'denim shorts'}${wash ? ` (wash: ${wash})` : ''}.
 Angle to hit: ${intent}.
 Casting for THIS shot: ${cast.desc} — handsome, with a clean current streetwear look.
-SETTING for THIS shot — use EXACTLY this location and shot type (do not default to the coast every time): ${setting.desc}
+SETTING for THIS shot — use EXACTLY this location and shot type (do not default to the coast every time): ${settingDesc}
 ${modeBrief}
 ${styling}${heroNote}
 Invent a fresh, well-styled direction that feels like a real brand campaign — vary the location, time of day, pose and energy.${seed ? ` Creative seed to push somewhere new: ${seed}.` : ''}
@@ -139,7 +142,7 @@ Remember: say NOTHING about the shorts and keep the lower body clearly visible.`
     if (!text) return null;
     // Garantizamos el casting en lo que llega a gpt-image (el director no siempre lo
     // repite). Devolvemos tambien los TAGS (escena + casting) para etiquetar el creativo.
-    return { text: `${text}\n\nThe model is ${cast.desc}.`, castTag: cast.tag, sceneTag: setting.tag };
+    return { text: `${text}\n\nThe model is ${cast.desc}.`, castTag: cast.tag, sceneTag };
   } catch (err) {
     console.error('[director] fallo, uso prompt fijo:', err.message);
     return null;

@@ -93,6 +93,12 @@
   /* REFERENCIAS */
   .refgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
   .ref { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .ref.avoidref { opacity: .5; }
+  .reftypes { display: flex; gap: 3px; padding: 7px 8px 0; }
+  .reftypes .rt { flex: 1; background: var(--surface2); border: 1px solid transparent; color: var(--muted); font-size: 10.5px; font-weight: 600; padding: 4px 2px; border-radius: 7px; cursor: pointer; font-family: inherit; }
+  .reftypes .rt.on { background: var(--accent); color: #fff; }
+  .iconbtn.fav { color: #f5a623; border-color: #f5a623; }
+  .iconbtn.avoidon { color: var(--bad); border-color: var(--bad); }
   .ref.inactive { opacity: .5; }
   .ref img { width: 100%; aspect-ratio: 3/4; object-fit: cover; background: var(--surface3); cursor: zoom-in; }
   .ref .body { padding: 11px 12px; display: flex; align-items: center; gap: 8px; }
@@ -822,17 +828,32 @@ async function loadReferences() {
   document.getElementById('pillRef').classList.toggle('zero', data.activeCount === 0);
   document.getElementById('kRefs').textContent = data.activeCount;
   const grid = document.getElementById('refgrid');
+  const RT = { outfit: '👕 outfit', scene: '🌊 escena', pose: '🧍 pose' };
   grid.innerHTML = references.length ? references.map(ref => `
-    <div class="ref ${ref.active ? '' : 'inactive'}">
+    <div class="ref ${ref.active ? '' : 'inactive'} ${ref.avoid ? 'avoidref' : ''}">
       <img src="/api/references/${ref._id}/image" loading="lazy" alt="referencia" onclick="openZoom('/api/references/${ref._id}/image')" />
+      <div class="reftypes">
+        ${Object.keys(RT).map(t => `<button class="rt ${(ref.type || 'outfit') === t ? 'on' : ''}" onclick="setRefType('${ref._id}','${t}')">${RT[t]}</button>`).join('')}
+      </div>
       <div class="body">
         <span class="label">${ref.label || 'pin'}</span>
+        <span style="flex:1"></span>
+        <button class="iconbtn ${ref.favorite ? 'fav' : ''}" title="Favorito (se usa más)" onclick="toggleRefFlag('${ref._id}','favorite',${!ref.favorite})">★</button>
+        <button class="iconbtn ${ref.avoid ? 'avoidon' : ''}" title="Evitar (nunca usar)" onclick="toggleRefFlag('${ref._id}','avoid',${!ref.avoid})">⊘</button>
         <label class="switch" title="Activa para generación">
           <input type="checkbox" ${ref.active ? 'checked' : ''} onchange="toggleRef('${ref._id}', this.checked)" /><span></span>
         </label>
         <button class="iconbtn" title="Eliminar" onclick="deleteRef('${ref._id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
       </div>
     </div>`).join('') : '<div class="empty">Sin referencias todavía. Subí tu primer pin arriba.</div>';
+}
+async function setRefType(id, type) {
+  await fetch(`/api/references/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type }) });
+  toast('Tipo: ' + type); loadReferences();
+}
+async function toggleRefFlag(id, flag, val) {
+  await fetch(`/api/references/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [flag]: val }) });
+  loadReferences();
 }
 function uploadRefFile(file) {
   return new Promise((resolve) => {
