@@ -26,7 +26,7 @@ THE DENIM SHORTS ARE THE PRODUCT AND ARE SACRED. A separate system keeps them pi
 - The shorts must stay CLEARLY VISIBLE and well-lit: choose framing and a pose where the full lower body reads cleanly (no heavy crop at the thighs, no shorts hidden by bags/furniture/crossed legs/deep shadow/motion blur over the legs).
 - Do NOT invent props, layering or poses that would tempt a renderer to re-interpret the bottoms.
 
-CASTING (match the brand): the model is a young, FAIR / LIGHT-SKINNED male with a clean, current streetwear look — that is the CAROTA reference look. Keep it consistent; do not describe the face in detail beyond this.
+CASTING: a young, good-looking male with a clean, current streetwear look. The specific skin tone / ethnicity is given per shot below — ROTATE it across shots for a real, DIVERSE cast (fair, olive/Mediterranean, tanned brown "moreno", Latino, Black, mixed — they ALL look great in this fashion, the morenos especially have a lot of pinta). Do not describe the face in detail beyond the given casting.
 
 POSE & SHOT LOGIC — be intelligent and coherent, the pose MUST fit the scene:
 - A "holding the phone up to take the photo" mirror-selfie pose is ONLY allowed when the scene literally has a MIRROR (e.g. inside an apartment with a leaning mirror). NEVER use a phone-held-up pose outdoors or anywhere without a mirror — with no mirror it looks absurd, like an invisible mirror.
@@ -62,9 +62,20 @@ const ANGLE_INTENT = {
 // Devuelve una direccion creativa (string) o null si no hay key / falla (cae al fijo).
 // mode 'carouselHero' = escena mas simple y encuadre frontal claro (el hero define
 // todo el set; si driftea el jean, arrastra a las cards encadenadas).
+// Casting rotativo: cada foto un color de piel / etnia distinto (variedad real).
+const CASTINGS = [
+  'a fair / light-skinned European young man',
+  'an olive-skinned Mediterranean young man',
+  'a tanned brown-skinned (moreno) young man',
+  'a Latino young man with light-brown skin',
+  'a Black / dark-skinned young man',
+  'a mixed-race young man with medium-brown skin',
+];
+
 export async function directCreative({ product, wash, angle, refDna = '', seed = '', mode = 'single', styleMode = 'organic' }) {
   if (!client) return null;
   const intent = ANGLE_INTENT[angle] || ANGLE_INTENT.realista;
+  const cast = CASTINGS[Math.floor(Math.random() * CASTINGS.length)];
   const modeBrief = MODE_BRIEF[styleMode] || MODE_BRIEF.organic;
   const styling = refDna
     ? `Design a fresh, cohesive, elevated outfit INSPIRED by this reference style DNA — match its vibe, caliber, the kinds of brands and the footwear/sneaker lane, but do NOT copy it: choose your own specific top/layers, footwear and accessories so this fit is its own (never the bottoms). Reference style DNA: ${refDna}`
@@ -74,6 +85,7 @@ export async function directCreative({ product, wash, angle, refDna = '', seed =
     : '';
   const user = `Product: ${product || 'denim shorts'}${wash ? ` (wash: ${wash})` : ''}.
 Angle to hit: ${intent}.
+Casting for THIS shot: ${cast} — handsome, with a clean current streetwear look.
 ${modeBrief}
 ${styling}${heroNote}
 Invent a fresh, well-styled direction that feels like a real brand campaign — vary the location, time of day, pose and energy.${seed ? ` Creative seed to push somewhere new: ${seed}.` : ''}
@@ -87,7 +99,10 @@ Remember: say NOTHING about the shorts and keep the lower body clearly visible.`
       messages: [{ role: 'user', content: user }],
     });
     const text = (msg.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
-    return text || null;
+    if (!text) return null;
+    // Garantizamos el casting en lo que llega a gpt-image (el director no siempre lo
+    // repite). Asi el color de piel / etnia rota de verdad foto a foto.
+    return `${text}\n\nThe model is ${cast}.`;
   } catch (err) {
     console.error('[director] fallo, uso prompt fijo:', err.message);
     return null;
