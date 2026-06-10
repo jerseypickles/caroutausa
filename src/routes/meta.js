@@ -37,6 +37,13 @@ metaRouter.get('/meta/status', (_req, res) => {
   res.json({ configured: meta.metaConfigured(), adAccountId: config.meta.adAccountId });
 });
 
+// GET /api/meta/diagnose -> qué puede REALMENTE el token (scopes, cuenta, página)
+metaRouter.get('/meta/diagnose', async (_req, res) => {
+  if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });
+  try { res.json(await meta.diagnose()); }
+  catch (err) { res.status(502).json({ error: err.message }); }
+});
+
 // GET /api/meta/account-campaigns -> campañas que YA existen en la cuenta (en vivo)
 metaRouter.get('/meta/account-campaigns', async (_req, res) => {
   if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });

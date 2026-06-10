@@ -188,6 +188,20 @@ export async function getInsights(objectId, datePreset = 'maximum') {
   return json.data?.[0] || null;
 }
 
+// Diagnostico: qué puede REALMENTE el token (scopes, validez, acceso a cuenta y página).
+export async function diagnose() {
+  const checks = {};
+  const run = async (key, method, path, params = {}) => {
+    try { checks[key] = { ok: true, data: await graph(method, path, params) }; }
+    catch (e) { checks[key] = { ok: false, error: e.message }; }
+  };
+  await run('token', 'GET', 'debug_token', { input_token: M.accessToken });
+  await run('me', 'GET', 'me', { fields: 'id,name' });
+  await run('adAccount', 'GET', acct(), { fields: 'name,account_status,currency' });
+  await run('page', 'GET', M.pageId, { fields: 'name,id' });
+  return checks;
+}
+
 // Parsea actions de Meta a ATC / compras.
 export function parseActions(row) {
   const out = { addToCart: 0, purchases: 0 };
