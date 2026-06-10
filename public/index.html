@@ -249,6 +249,8 @@
   .sfid { display: flex; align-items: center; gap: 7px; margin-top: 9px; font-size: 11px; }
   .sfid .dotf { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 6px; }
   .sfid .dotf.ok { background: var(--ok-soft); color: var(--ok); } .sfid .dotf.bad { background: var(--bad-soft); color: var(--bad); }
+  .sfid .fitchip { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--border2); }
+  .sfid .fitchip.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); } .sfid .fitchip.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
   .okt { color: var(--ok); font-weight: 600; } .badt { color: var(--bad); font-weight: 600; }
 
   .qinspect { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
@@ -823,7 +825,9 @@ function renderStrip() {
     const sel = keyOf(it) === selectedKey ? 'sel' : '';
     let fid = '';
     if (it.fidelityStatus === 'done') { const ok = it.fidelityVerdict === 'pass';
-      fid = `<div class="sfid"><span class="dotf ${ok ? 'ok' : 'bad'}">${it.fidelityScore}</span><span class="${ok ? 'okt' : 'badt'}">${ok ? 'Fiel' : 'Revisar'}</span></div>`;
+      const fitOk = it.fitScore == null ? null : it.fitScore >= 75;
+      const fitChip = it.fitScore != null ? `<span class="fitchip ${fitOk ? 'ok' : 'bad'}" title="Fidelidad al size chart (silueta/fit)">Fit ${it.fitScore}</span>` : '';
+      fid = `<div class="sfid"><span class="dotf ${ok ? 'ok' : 'bad'}">${it.fidelityScore}</span><span class="${ok ? 'okt' : 'badt'}">${ok ? 'Fiel' : 'Revisar'}</span>${fitChip}</div>`;
     } else if (it.genStatus === 'ready') fid = `<div class="sfid muted">evaluando…</div>`;
     return `<div class="scard ${sel}" onclick="selectItem('${it._type}','${it._id}')">
       <div class="scard-top">${typeBadge(it)}<span class="sid">${shortId(it._id)}</span></div>
@@ -922,7 +926,7 @@ function fitLine(it) {
   if (it.fitScore == null && !it.fitSpec) return '';
   const cls = it.fitScore == null ? '' : it.fitScore >= 80 ? 'ok' : it.fitScore >= 70 ? 'warn' : 'bad';
   const issues = (it.fitIssues && it.fitIssues.length) ? it.fitIssues.join(' · ') : '';
-  return `<div class="fbitem ${cls || 'muted'}"><b>Fit / silueta ${it.fitScore != null ? '· ' + it.fitScore : ''}</b><span>${esc(issues || it.fitSpec || 'Silueta preservada ✓')}</span></div>`;
+  return `<div class="fbitem ${cls || 'muted'}"><b>Fit vs size chart ${it.fitScore != null ? '· ' + it.fitScore + '%' : ''}</b><span>${esc(issues || it.fitSpec || 'Silueta fiel a las medidas ✓')}</span></div>`;
 }
 function analyzerMetrics(a) {
   return `<div class="ahead"><span class="estbadge">estimación IA · confianza ${a.confidence}</span></div>
