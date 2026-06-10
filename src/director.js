@@ -18,6 +18,7 @@ Your job: invent ONE fresh, specific creative direction for a SINGLE paid-social
 ELEVATED STYLING IS THE POINT — the model must be EXQUISITELY DRESSED, never random:
 - Build ONE cohesive, aspirational, on-trend fit around the shorts: considered layering (e.g. a clean zip hoodie over a tee, a boxy knit, a light jacket), a tonal/neutral or well-judged palette, ONE statement element, fresh STATEMENT sneakers, and subtle jewelry (a silver chain, rings). It should look styled by a brand, not thrown on.
 - Quality over quirk: cream/bone/stone/charcoal tones read premium; avoid clashing, cheap or costumey looks.
+- BRAND-SAFE TOP: the TOP / apparel (tee, hoodie, knit, jacket) must NEVER show a recognizable third-party brand logo, wordmark or signature graphic (no Stüssy, Supreme, Nike apparel, BBC, Icecream, Broken Planet, Pleasures, Corteiz, Carhartt, Fear of God, etc.). Reference brands only set the caliber/vibe — render the top CLEAN and premium (blank, tonal texture, or a subtle in-house-style graphic that could be CAROTA's own). This is a CAROTA ad — keep the brand attention on us. (Real sneakers on-foot are fine.)
 
 YOU ALWAYS DESIGN THE OUTFIT. When a reference STYLE DNA is provided, treat it as INSPIRATION — match its vibe, caliber, the kinds of brands and the footwear/sneaker lane — but design a FRESH outfit, never a copy; vary the specific pieces so each fit is its own. When there is no DNA, design freely. Either way, follow the elevated-styling guidance below.
 
@@ -112,8 +113,9 @@ export async function directCreative({ product, wash, angle, refDna = '', seed =
   const setting = nextSetting();
   const modeBrief = MODE_BRIEF[styleMode] || MODE_BRIEF.organic;
   const styling = refDna
-    ? `Design a fresh, cohesive, elevated outfit INSPIRED by this reference style DNA — match its vibe, caliber, the kinds of brands and the footwear/sneaker lane, but do NOT copy it: choose your own specific top/layers, footwear and accessories so this fit is its own (never the bottoms). Reference style DNA: ${refDna}`
-    : 'YOU design the full elevated outfit yourself — the TOP and layering, the statement footwear, and accessories (never the bottoms).';
+    ? `Design a fresh, cohesive, elevated outfit INSPIRED by this reference style DNA — match its overall VIBE, caliber and the FOOTWEAR / sneaker lane (real sneakers on-foot are fine), but design your own fit, never a copy (and never the bottoms).
+CRITICAL on the TOP / apparel: do NOT put any recognizable THIRD-PARTY brand logo, wordmark or signature graphic on the tee/hoodie/knit (no Stüssy, Supreme, BBC, Icecream, Broken Planet, Pleasures, Carhartt, etc.) — the reference brands are ONLY to gauge the caliber/vibe. Render the top as a CLEAN, premium, on-trend piece in the same vibe and palette: a blank or tonal heavyweight tee, a subtle in-house-style graphic, or a clean knit/zip — something that could be CAROTA's own. Keep the brand attention on CAROTA, never on another label. Reference style DNA: ${refDna}`
+    : 'YOU design the full elevated outfit yourself — the TOP and layering, the statement footwear, and accessories (never the bottoms). The TOP must NOT show any recognizable third-party brand logo/graphic — keep it clean premium or a subtle in-house piece.';
   const heroNote = mode === 'carouselHero'
     ? '\nThis is the HERO of a carousel and sets the look for the whole set, so keep the composition SIMPLE and clean: a fairly frontal full-body standing pose in SOFT, EVEN, BRIGHT light (a clean bright neutral setting — NOT harsh sun or warm walls), the full lower body unobstructed and clearly in frame, framed FAIRLY CLOSE so the model fills most of the frame (not small and distant). No motion blur, no busy foreground, no crop at the legs.'
     : '';

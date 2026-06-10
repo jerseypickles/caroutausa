@@ -159,6 +159,9 @@ export function fitLock(fitSpec = '') {
   return `\n\nEXACT FIT & SILHOUETTE (reproduce precisely — do NOT make the shorts slimmer, wider, longer or shorter than this): ${fitSpec}`;
 }
 
+// Brand-safe: nada de logos de OTRAS marcas en la parte de arriba (es un ad de CAROTA).
+const BRAND_SAFE = `BRAND-SAFE TOP: the top / upper clothing (tee, hoodie, knit, jacket) must have NO third-party brand logo, wordmark or recognizable brand graphic on it — no real brand names or famous logos. Keep the top CLEAN and plain, or with only a subtle abstract / tonal design. It is the brand's own apparel. (Real sneakers on the feet are fine.)`;
+
 export function buildPrompt(angleId, { withReference = false, productDescription = '', creativeDirection = '', fitSpec = '', styleMode = 'organic', hasBack = false } = {}) {
   const angle = ANGLES[angleId];
   if (!angle && !creativeDirection) {
@@ -173,5 +176,5 @@ export function buildPrompt(angleId, { withReference = false, productDescription
   const scene = creativeDirection || angle.prompt;
   // El riel de produccion depende del modo: organico (iPhone) vs campaña (pulido).
   const look = styleMode === 'campaign' ? CAMPAIGN_LOOK : ANTI_AI;
-  return `${GARMENT_LOCK}${back}${fitLock(fitSpec)}${desc}${ref}\n\n${scene}\n\n${look}`;
+  return `${GARMENT_LOCK}${back}${fitLock(fitSpec)}${desc}${ref}\n\n${scene}\n\n${BRAND_SAFE}\n\n${look}`;
 }
