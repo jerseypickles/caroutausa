@@ -35,10 +35,10 @@ OUTPUT: 2-5 sentences of vivid, specific art direction (richer and more detailed
 
 // Produccion segun el modo: organico (fitpic iPhone elevado) o campaña (shoot pulido).
 const MODE_BRIEF = {
-  organic: `STYLE: organic but elevated — a real, candid iPhone fitpic a stylish person posted (not an ad), with a genuinely great outfit.
-LIGHT & PALETTE (important): keep it CLEAN, BRIGHT and AIRY with SOFT, EVEN, DIFFUSE light — big window light, bright overcast, or open shade — and a clean, fairly NEUTRAL palette (soft whites, creams, light wood, light grey, pale neutrals). Settings like a minimal bright apartment with large windows and oak floors, a clean modern interior, a soft-lit café, or a calm street in soft even light.
-AVOID: harsh direct sun, hard deep shadows, warm golden-hour / orange-yellow color casts, and grungy dark or tan walls — that look is NOT wanted.
-FRAME FAIRLY CLOSE: the model fills most of the frame (a tight full-body or three-quarter crop), large and prominent — not small and distant.`,
+  organic: `STYLE: organic but ELEVATED & ASPIRATIONAL — a real, candid iPhone fitpic a stylish person posted (not an ad), with a genuinely great designer-streetwear fit (the caliber of Broken Planet, Represent, Corteiz, Essentials).
+LIGHT: keep it CLEAN and BRIGHT with SOFT, EVEN, natural light — big window light, bright overcast, open shade, or clean coastal daylight. AVOID harsh direct sun, hard deep shadows, warm golden-hour / orange-yellow casts, and grungy dark or tan walls.
+SETTING — pick ONE aspirational-but-real location with VARIETY: a minimal bright apartment (large windows, oak floors), a clean modern interior, OR an ASPIRATIONAL COASTAL / RIVIERA scene (a terrace or pool deck over the sea, a stone balustrade with a hillside town and Mediterranean view, a clean rooftop) under soft bright daylight. Real, organic — like a stylish friend's vacation fitpic, never a staged studio ad.
+THE SHORTS ARE THE HERO: compose and light so the DENIM SHORTS are the clear focal point — prominent, well-lit lower body, framed FAIRLY CLOSE so the model fills most of the frame. Do NOT add big handbags, luggage or busy props that steal attention from the shorts.`,
   campaign: `STYLE: a REAL high-end brand campaign at the caliber of Lorenzo Worldwide — editorial, aspirational, photographed (not a render). Describe the look HEAD TO TOE with SPECIFIC, real, nameable pieces and materials so it renders with true detail:
 - the exact TOP and layering: garment type, cut, fabric and how it sits (e.g. "an open boxy cream heavyweight zip-hoodie with drawcords over a tonal-print tee");
 - the accessories: a specific chain (e.g. silver Cuban link), rings, any hair detail;
