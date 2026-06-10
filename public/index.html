@@ -219,6 +219,19 @@
   .tbadge.car { background: rgba(251,191,36,.14); color: var(--warn); }
   .tbadge.sgl { background: var(--accent-soft); color: var(--accent2); }
   .tbadge.flat { background: rgba(120,200,160,.16); color: #5bbf8a; }
+  .nav a .dot { width: 7px; height: 7px; border-radius: 50%; background: transparent; margin-left: auto; }
+  .nav a .dot.on { background: var(--ok); box-shadow: 0 0 6px var(--ok); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  .motorstat { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .mstat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+  .mstat .mv { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .mstat .ml { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .feed { display: flex; flex-direction: column; gap: 2px; }
+  .fitem { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 9px; font-size: 13px; }
+  .fitem:nth-child(odd) { background: var(--surface); }
+  .fitem.ok { border-left: 3px solid var(--ok); } .fitem.error { border-left: 3px solid var(--bad); } .fitem.warn { border-left: 3px solid var(--warn); } .fitem.info { border-left: 3px solid var(--border2); }
+  .fic { font-size: 15px; } .fmsg { flex: 1; } .fts { color: var(--faint); font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+  @media (max-width: 900px) { .motorstat { grid-template-columns: repeat(3, 1fr); } }
   .sid { font-size: 10px; color: var(--faint); font-family: 'JetBrains Mono', monospace; }
   .sthumb { position: relative; aspect-ratio: 3/4; border-radius: 8px; overflow: hidden; background: var(--surface3); }
   .sthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -330,6 +343,7 @@
     <a data-view="referencias" onclick="showView('referencias')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15l-5-5L5 21"/><circle cx="9" cy="9" r="2"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Referencias<span class="pill zero" id="pillRef">0</span></a>
     <a data-view="cola" onclick="showView('cola')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Cola de QC<span class="pill zero" id="pillQc">0</span></a>
     <a data-view="ads" onclick="showView('ads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-5"/></svg>Ad Manager<span class="pill zero" id="pillAds">0</span></a>
+    <a data-view="motor" onclick="showView('motor')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5L19 19M19 5l-2.5 2.5M7.5 16.5L5 19"/></svg>Motor<span class="dot" id="motorDot"></span></a>
   </nav>
   <div class="foot"><span class="dot"></span>Cron Shopify activo</div>
 </aside>
@@ -410,6 +424,16 @@
       <div class="empty" id="campEmpty" style="display:none">No hay campañas en la cuenta todavía.</div>
     </section>
 
+    <!-- MOTOR -->
+    <section class="view" id="view-motor">
+      <div class="motorstat" id="motorStat"></div>
+      <div class="secthead" style="margin-top:18px"><h2>Actividad</h2><span style="flex:1"></span>
+        <button class="btn sm" onclick="runAutopilot(this)" id="runBtn">▶ Correr ahora</button>
+        <button class="btn ghost sm" onclick="loadMotor()">Refrescar</button>
+      </div>
+      <div class="feed" id="feed"></div>
+    </section>
+
   </div>
 </div>
 
@@ -435,6 +459,7 @@ const TITLES = {
   referencias: ['Referencias', 'Biblioteca de pins que dirigen el estilo'],
   cola: ['Cola de QC', 'Revisá, aprobá o rechazá cada variante'],
   ads: ['Ad Manager', 'Lanzá y gestioná campañas de conversión en Meta'],
+  motor: ['Motor', 'El engine trabajando solo · qué va desarrollando'],
 };
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
@@ -444,6 +469,43 @@ function showView(name) {
   if (name === 'productos') loadProducts();
   if (name === 'referencias') loadReferences();
   if (name === 'ads') loadAdManager();
+  if (name === 'motor') loadMotor();
+}
+/* ===== MOTOR (autopilot + feed) ===== */
+const KIND_ICON = { autopilot: '🤖', single: '🖼️', carousel: '🎞️', flatlay: '📦', sync: '🔄', error: '⚠️' };
+async function loadMotor() {
+  try {
+    const [st, ac] = await Promise.all([
+      fetch('/api/autopilot/status').then(r => r.json()),
+      fetch('/api/activity').then(r => r.json()),
+    ]);
+    const cells = [
+      ['Motor', st.enabled ? `<span class="okt">ON</span> · cada ${st.intervalMin}m` : '<span class="badt">OFF</span>'],
+      ['Productos', `${st.products}`],
+      ['Pendientes', `${st.pendientes}`],
+      ['Generando', `${st.generating}`],
+      ['Listos', `${st.ready}`],
+      ['Target', `${st.target}/producto`],
+    ];
+    document.getElementById('motorStat').innerHTML = cells.map(([l, v]) => `<div class="mstat"><div class="mv">${v}</div><div class="ml">${l}</div></div>`).join('');
+    document.getElementById('motorDot').classList.toggle('on', st.generating > 0);
+    const items = ac.activity || [];
+    document.getElementById('feed').innerHTML = items.length ? items.map(a => {
+      const t = new Date(a.createdAt);
+      const ts = isNaN(t) ? '' : t.toLocaleString('es', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      return `<div class="fitem ${a.level}"><span class="fic">${KIND_ICON[a.kind] || '•'}</span><span class="fmsg">${esc(a.message)}</span><span class="fts">${ts}</span></div>`;
+    }).join('') : '<div class="empty">Todavía no hay actividad. Tocá "Correr ahora" o esperá el próximo tick.</div>';
+  } catch (e) { document.getElementById('feed').innerHTML = '<div class="empty">Error cargando el motor.</div>'; }
+}
+async function runAutopilot(btn) {
+  btn.disabled = true; btn.textContent = 'Corriendo…';
+  try {
+    const r = await fetch('/api/autopilot/run', { method: 'POST' });
+    const d = await r.json();
+    toast(d.ran ? `Motor: ${d.result.piece} de ${d.result.product}` : 'Motor: todo al día');
+    setTimeout(loadMotor, 800);
+  } catch (e) { toast('Error: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = '▶ Correr ahora'; }
 }
 function toast(msg) {
   const t = document.getElementById('toast');

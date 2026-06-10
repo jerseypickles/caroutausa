@@ -26,6 +26,10 @@ export const config = {
   // reintentos automaticos cuando el juez marca fail (aprovecha la varianza de la ref)
   fidelityRetries: Number(process.env.FIDELITY_RETRIES || 1),
   syncIntervalMin: Number(process.env.SYNC_INTERVAL_MIN || 10),
+  // Motor autonomo: genera solo el mix de los productos pendientes.
+  autopilotEnabled: process.env.AUTOPILOT_ENABLED !== 'false', // default ON
+  autopilotIntervalMin: Number(process.env.AUTOPILOT_INTERVAL_MIN || 30),
+  autopilotTarget: Number(process.env.AUTOPILOT_TARGET || 8), // creatives por producto antes de parar
   // Tienda Shopify (para el link de destino de los ads)
   storeUrl: process.env.STORE_URL || 'https://carotaus.com',
   // Meta Marketing API (valores en Render). Opcional: el server arranca sin esto.

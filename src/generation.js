@@ -4,6 +4,7 @@ import { buildFeedReframePrompt, buildFlatlayPrompt } from './angles.js';
 import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
 import { directCreative } from './director.js';
+import { logActivity } from './models/activity.js';
 import { config } from './config.js';
 
 // Genera en background y actualiza el doc cuando termina. Tras la imagen corre el
@@ -31,9 +32,12 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
       feedB64 = feed.b64;
     } catch (e) { console.error(`[gen] feed 4:5 fallo (${creativeId}):`, e.message); }
     await Creative.findByIdAndUpdate(creativeId, { imageData: b64, feedImageData: feedB64, genStatus: 'ready', genError: null });
+    const d = await Creative.findById(creativeId).select('product').lean();
+    logActivity('single', `Single listo (${angleId}) de ${d?.product || ''}`, { product: d?.product || '', refId: String(creativeId), level: 'ok' });
   } catch (err) {
     console.error(`[gen] fallo angulo ${angleId} (${creativeId}):`, err.message);
     await Creative.findByIdAndUpdate(creativeId, { genStatus: 'failed', genError: err.message, fidelityStatus: 'failed' });
+    logActivity('error', `Single fallo (${angleId}): ${err.message}`, { level: 'error' });
     return;
   }
 
@@ -74,9 +78,12 @@ export async function generateFlatlayInBackground(creativeId, imageUrl, productD
   try {
     ({ b64 } = await generateVariant({ imageUrl, productDescription, prompt: buildFlatlayPrompt(productDescription, fitSpec), size: FEED_SIZE }));
     await Creative.findByIdAndUpdate(creativeId, { imageData: b64, feedImageData: b64, genStatus: 'ready', genError: null });
+    const d = await Creative.findById(creativeId).select('product').lean();
+    logActivity('flatlay', `Packshot listo de ${d?.product || ''}`, { product: d?.product || '', refId: String(creativeId), level: 'ok' });
   } catch (err) {
     console.error(`[flatlay] fallo (${creativeId}):`, err.message);
     await Creative.findByIdAndUpdate(creativeId, { genStatus: 'failed', genError: err.message, fidelityStatus: 'failed' });
+    logActivity('error', `Packshot fallo: ${err.message}`, { level: 'error' });
     return;
   }
   try {

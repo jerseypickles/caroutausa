@@ -11,7 +11,9 @@ import { productsRouter } from './routes/products.js';
 import { referencesRouter } from './routes/references.js';
 import { metaRouter } from './routes/meta.js';
 import { carouselsRouter } from './routes/carousels.js';
+import { autopilotRouter } from './routes/autopilot.js';
 import { startProductCron } from './sync.js';
+import { startAutopilotCron } from './autopilot.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, '..', 'public');
@@ -26,6 +28,7 @@ app.use('/api', productsRouter);
 app.use('/api', referencesRouter);
 app.use('/api', metaRouter);
 app.use('/api', carouselsRouter);
+app.use('/api', autopilotRouter);
 
 // Panel de QC (frontend estatico) servido por el mismo servicio -> sin CORS, un solo deploy.
 app.use(express.static(publicDir));
@@ -42,6 +45,7 @@ async function start() {
   await connectDb();
   await sweepOrphans(); // limpia generaciones cortadas por reinicios
   startProductCron(); // sincroniza Shopify al arranque y cada N min
+  startAutopilotCron(); // motor autonomo: genera el mix de productos pendientes
   app.listen(config.port, () => {
     console.log(`[server] escuchando en :${config.port}`);
   });

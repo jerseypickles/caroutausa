@@ -1,0 +1,78 @@
+import { Product } from './models/product.js';
+import { Creative } from './models/creative.js';
+import { Reference } from './models/reference.js';
+import { enqueueJobs, enqueueFlatlay } from './generation.js';
+import { logActivity } from './models/activity.js';
+import { config } from './config.js';
+
+// Motor inteligente: cada tick elige UN producto con trabajo pendiente y genera UNA
+// pieza (para no saturar la RAM del plan starter). Prioriza productos nuevos/menos
+// trabajados. Decide la pieza: si no tiene packshot -> flat-lay; si no -> singles
+// con referencia. Cuando todos llegan al target, queda al dia (idle).
+let running = false;
+
+export async function runAutopilot({ manual = false } = {}) {
+  if (!config.autopilotEnabled && !manual) return null;
+  if (running) return null; // no solapar ticks
+  running = true;
+  try {
+    const products = await Product.find({ image: { $ne: null } })
+      .sort({ generatedCount: 1, lastGeneratedAt: 1 })
+      .lean();
+
+    for (const p of products) {
+      if ((p.generatedCount || 0) >= config.autopilotTarget) continue;
+      // no pisar un producto que ya esta generando
+      const inflight = await Creative.countDocuments({ shopifyProductId: p.shopifyId, genStatus: 'generating' });
+      if (inflight) continue;
+
+      const productDescription = [p.title, p.description].filter(Boolean).join('. ');
+      const fitSpec = p.fitSpec || '';
+      const meta = { shopifyProductId: p.shopifyId, product: p.title, wash: p.wash, fitSpec };
+
+      // ¿ya tiene packshot? si no, ese es el siguiente paso.
+      const hasFlatlay = await Creative.countDocuments({ shopifyProductId: p.shopifyId, format: 'flatlay' });
+      if (!hasFlatlay) {
+        const doc = await enqueueFlatlay({ imageUrl: p.image, productDescription, fitSpec, meta });
+        await logActivity('flatlay', `Auto: generando packshot de ${p.title}`, { product: p.title, refId: String(doc._id), level: 'ok' });
+        return { product: p.title, piece: 'flatlay' };
+      }
+
+      // si no, una tanda de singles con referencia (reference-driven).
+      const activeRefs = await Reference.find({ active: true }).select('+imageData').lean();
+      const angle = (p.generatedCount || 0) % 2 === 0 ? 'realista' : 'gancho_click';
+      const jobs = [];
+      if (activeRefs.length) {
+        const n = Math.min(2, activeRefs.length);
+        for (let k = 0; k < n; k++) {
+          const r = activeRefs[((p.generatedCount || 0) + k) % activeRefs.length];
+          jobs.push({ angleId: angle, ref: { b64: r.imageData }, styleMode: 'organic' });
+        }
+      } else {
+        jobs.push({ angleId: angle, ref: null, styleMode: 'organic' });
+      }
+      await enqueueJobs({ imageUrl: p.image, jobs, meta, productDescription, fitSpec });
+      await Product.updateOne({ shopifyId: p.shopifyId }, { $inc: { generatedCount: jobs.length }, $set: { lastGeneratedAt: new Date() } });
+      await logActivity('single', `Auto: ${jobs.length} singles (${angle}) de ${p.title}`, { product: p.title, level: 'ok' });
+      return { product: p.title, piece: 'singles', count: jobs.length };
+    }
+
+    if (manual) await logActivity('autopilot', 'Autopilot: todos los productos al día', { level: 'info' });
+    return null;
+  } catch (err) {
+    await logActivity('error', `Autopilot error: ${err.message}`, { level: 'error' });
+    return null;
+  } finally {
+    running = false;
+  }
+}
+
+export function startAutopilotCron() {
+  if (!config.autopilotEnabled) {
+    console.log('[autopilot] desactivado (AUTOPILOT_ENABLED=false)');
+    return;
+  }
+  const ms = config.autopilotIntervalMin * 60 * 1000;
+  setInterval(() => { runAutopilot().catch((e) => console.error('[autopilot] tick fallo:', e.message)); }, ms);
+  console.log(`[autopilot] activo cada ${config.autopilotIntervalMin} min (target ${config.autopilotTarget}/producto)`);
+}
