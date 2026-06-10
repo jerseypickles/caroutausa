@@ -46,6 +46,7 @@ carouselsRouter.post('/products/:id/carousel', async (req, res) => {
     sourceImageUrl: product.image,
     hasReference: Boolean(ref),
     referenceId: ref?.id || null,
+    referenceDna: ref?.dna || '',
     referenceImageData: ref?.b64 || null,
     genStatus: 'generating',
   });

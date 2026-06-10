@@ -23,6 +23,7 @@ const carouselSchema = new Schema(
 
     hasReference: { type: Boolean, default: false },
     referenceId: { type: String, default: null },
+    referenceDna: { type: String, default: '' },
     referenceImageData: { type: String, default: null, select: false },
 
     genStatus: { type: String, enum: ['generating', 'ready', 'failed'], default: 'generating', index: true },

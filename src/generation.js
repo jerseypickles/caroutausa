@@ -18,14 +18,16 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     // re-dirige (nueva escena) para aprovechar la varianza.
     const doc = await Creative.findById(creativeId).lean();
     const styleMode = doc?.styleMode || 'organic';
+    // La referencia es INSPIRACION (ADN de estilo), no un clon: el director arma un
+    // outfit fresco en ese lane. NO mandamos la imagen de referencia a gpt-image.
     const creativeDirection = await directCreative({
       product: doc?.product, wash: doc?.wash, angle: angleId,
-      withReference: Boolean(referenceB64), styleMode,
+      refDna: doc?.referenceDna || '', styleMode,
       seed: attempt > 0 ? `retry ${attempt}: try a completely different setting and energy` : '',
     });
     // 9:16 (story/reels) = placement principal. La 2da foto (espalda) habilita
     // tomas de movimiento/espalda fieles.
-    ({ b64 } = await generateVariant({ imageUrl, productBackUrl: doc?.sourceBackUrl || '', angleId, referenceB64, productDescription, creativeDirection, fitSpec, styleMode, size: STORY_SIZE }));
+    ({ b64 } = await generateVariant({ imageUrl, productBackUrl: doc?.sourceBackUrl || '', angleId, productDescription, creativeDirection, fitSpec, styleMode, size: STORY_SIZE }));
     // 4:5 (feed) = la MISMA foto reframed (usa el 9:16 como referencia)
     let feedB64 = null;
     try {
@@ -125,6 +127,7 @@ export async function enqueueJobs({ imageUrl, jobs, meta = {}, productDescriptio
       genStatus: 'generating',
       hasReference: Boolean(ref),
       referenceId: ref?.id || null,
+      referenceDna: ref?.dna || '',
       referenceImageData: ref?.b64 || null,
     }))
   );

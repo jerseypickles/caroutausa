@@ -46,7 +46,7 @@ export async function runAutopilot({ manual = false } = {}) {
         const [ref] = await pickRefs({ shopifyProductId: p.shopifyId, n: 1 });
         const cdoc = await Carousel.create({
           shopifyProductId: p.shopifyId, product: p.title, wash: p.wash, sourceImageUrl: p.image,
-          hasReference: Boolean(ref), referenceId: ref?.id || null, referenceImageData: ref?.b64 || null, genStatus: 'generating',
+          hasReference: Boolean(ref), referenceId: ref?.id || null, referenceDna: ref?.dna || '', referenceImageData: ref?.b64 || null, genStatus: 'generating',
         });
         generateCarouselInBackground(cdoc._id).catch((e) => console.error('[autopilot] carousel:', e.message));
         await Product.updateOne({ shopifyId: p.shopifyId }, { $inc: { generatedCount: 5 }, $set: { lastGeneratedAt: new Date() } });
