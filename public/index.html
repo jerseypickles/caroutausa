@@ -6,10 +6,10 @@
 <title>CAROTA · Ads Engine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&family=Pirata+One&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #0a0b0d; --surface: #131519; --surface2: #181b21; --surface3: #1e222a;
+    --bg: #0a0b0d; --surface: #0c0d10; --card: #131519; --surface2: #181b21; --surface3: #1e222a;
     --border: #24272e; --border2: #30343d;
     --text: #e7e9ee; --muted: #8b909b; --faint: #5b606b;
     --accent: #6d5efc; --accent2: #8b7dff; --accent-soft: rgba(109,94,252,.14);
@@ -27,24 +27,33 @@
   .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar-w); background: var(--surface);
     border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px 14px; z-index: 40; }
   .logo { display: flex; align-items: center; gap: 10px; padding: 4px 10px 22px; }
-  .logo .mark { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent2));
-    display: grid; place-items: center; font-weight: 800; color: #fff; font-size: 15px; flex: none; }
-  .logo .txt b { display: block; font-size: 14px; font-weight: 700; } .logo .txt span { font-size: 11px; color: var(--muted); }
+  .logo .mark { width: 34px; height: 34px; border-radius: 9px; background: #0a0a0b; border: 1px solid #222;
+    display: grid; place-items: center; color: #f4f1ea; font-family: 'Pirata One', serif; font-size: 26px; line-height: 1; padding-bottom: 3px; flex: none; }
+  .logo .txt b { display: block; font-size: 14px; font-weight: 700; letter-spacing: .5px; } .logo .txt span { font-size: 11px; color: var(--muted); }
   .nav { display: flex; flex-direction: column; gap: 2px; }
   .nav a { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 8px; color: var(--muted);
     font-weight: 500; font-size: 13.5px; transition: background .15s, color .15s; cursor: pointer; }
   .nav a:hover { background: var(--surface2); color: var(--text); }
-  .nav a.active { background: var(--accent-soft); color: var(--accent2); }
+  .nav a.active { background: rgba(255,255,255,.10); color: #fff; }
   .nav a svg { width: 18px; height: 18px; flex: none; }
-  .nav a .pill { margin-left: auto; font-size: 10px; font-weight: 700; background: var(--accent); color: #fff;
+  .nav a .pill { margin-left: auto; font-size: 10px; font-weight: 700; background: #f4f1ea; color: #14161a;
     border-radius: 10px; padding: 1px 7px; min-width: 18px; text-align: center; }
   .nav a .pill.zero { display: none; }
   .sidebar .foot { margin-top: auto; padding: 10px; font-size: 11px; color: var(--faint); }
   .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 6px; }
 
-  .main { margin-left: var(--sidebar-w); }
+  /* Tema LIGHT + BLACK en todo el contenido (sidebar queda dark/black). Cascadea via vars. */
+  .main { margin-left: var(--sidebar-w); min-height: 100vh;
+    --bg: #f6f7f9; --surface: #ffffff; --card: #ffffff; --surface2: #eef0f3; --surface3: #e4e7eb;
+    --border: #e6e8ec; --border2: #d8dbe0;
+    --text: #14161a; --muted: #6b7280; --faint: #9aa0ab;
+    --accent: #14161a; --accent2: #2f333b; --accent-soft: rgba(20,22,26,.06);
+    --ok: #0e9f6e; --ok-soft: rgba(14,159,110,.12);
+    --bad: #e02424; --bad-soft: rgba(224,36,36,.10);
+    --warn: #b45309; --warn-soft: rgba(180,83,9,.12);
+    background: var(--bg); color: var(--text); }
   .topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 16px; padding: 16px 28px;
-    background: rgba(10,11,13,.82); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+    background: rgba(246,247,249,.85); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
   .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
   .topbar .sub { color: var(--muted); font-size: 12.5px; }
   .topbar .spacer { flex: 1; }
@@ -214,7 +223,7 @@
   .launchcfg .lfield input { width: 70px; }
   /* Ad Manager hero */
   .admhero { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding: 20px 22px; border-radius: 16px; border: 1px solid var(--border);
-    background: linear-gradient(135deg, rgba(108,99,255,.10), rgba(108,99,255,.02) 60%), var(--card); margin-bottom: 24px; }
+    background: var(--card); box-shadow: 0 1px 2px rgba(16,24,40,.04); margin-bottom: 24px; }
   .admstat { display: flex; align-items: center; gap: 11px; }
   .admdiv { width: 1px; align-self: stretch; background: var(--border); }
   .admdot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 3px rgba(255,255,255,.04); }
@@ -251,15 +260,17 @@
   .lmfoot { display: flex; align-items: center; gap: 10px; padding: 16px 22px; border-top: 1px solid var(--border); }
 
   /* ===== Cola de QC — rediseño claro (galería + modal) ===== */
-  #view-cola, .qcmodal {
-    --bg: #f6f7f9; --surface: #ffffff; --surface2: #eef0f3; --surface3: #e4e7eb;
-    --border: #e6e8ec; --border2: #d7dbe0;
-    --text: #1b1f27; --muted: #6b7280; --faint: #9aa0ab;
+  .qcmodal, .lmodal {
+    --bg: #f6f7f9; --surface: #ffffff; --card: #ffffff; --surface2: #eef0f3; --surface3: #e4e7eb;
+    --border: #e6e8ec; --border2: #d8dbe0;
+    --text: #14161a; --muted: #6b7280; --faint: #9aa0ab;
+    --accent: #14161a; --accent2: #2f333b; --accent-soft: rgba(20,22,26,.06);
     --ok: #0e9f6e; --ok-soft: rgba(14,159,110,.12);
     --bad: #e02424; --bad-soft: rgba(224,36,36,.10);
-    --warn: #c27803; --warn-soft: rgba(194,120,3,.12);
+    --warn: #b45309; --warn-soft: rgba(180,83,9,.12);
     color: var(--text);
   }
+  .lmodal { background: rgba(20,24,31,.55); }
   #view-cola .qbar { background: transparent; border: none; margin-bottom: 18px; }
   #view-cola .qtabs button, #view-cola .qtypes button { background: transparent; border: 1px solid transparent; color: var(--muted);
     padding: 7px 13px; border-radius: 9px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
@@ -452,7 +463,7 @@
 <body>
 
 <aside class="sidebar">
-  <div class="logo"><div class="mark">C</div><div class="txt"><b>CAROTA</b><span>Ads Engine</span></div></div>
+  <div class="logo"><div class="mark">E</div><div class="txt"><b>CAROTA</b><span>Ads Engine</span></div></div>
   <nav class="nav">
     <a data-view="resumen" class="active" onclick="showView('resumen')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Resumen</a>
     <a data-view="productos" onclick="showView('productos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Productos<span class="pill zero" id="pillProd">0</span></a>
