@@ -19,6 +19,7 @@ const creativeSchema = new Schema(
 
     // --- imagenes ---
     sourceImageUrl: { type: String, required: true },
+    sourceBackUrl: { type: String, default: '' }, // 2da foto del producto (espalda) para tomas de movimiento
     referenceImageRef: { type: String, default: null }, // Fase 2: cara/modelo de referencia
     hasReference: { type: Boolean, default: false },     // se genero con referencia de estilo
     referenceId: { type: String, default: null },        // que referencia se uso (para variedad)

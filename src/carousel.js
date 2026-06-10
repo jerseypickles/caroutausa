@@ -51,11 +51,12 @@ ${IPHONE}`;
 
 // Genera un carrusel cohesivo: hero -> N poses + 1 detail, usando el hero como
 // referencia para que compartan modelo/fondo/color. Devuelve [{role,b64}].
-export async function generateCarousel({ imageUrl, productDescription, heroReferenceB64, product, wash, fitSpec = '', cards = 5 }) {
+export async function generateCarousel({ imageUrl, productBackUrl = '', productDescription, heroReferenceB64, product, wash, fitSpec = '', cards = 5 }) {
   // 1. Hero (set el look): el director (Claude) inventa la escena del set; las demas
-  // cards encadenan del hero, asi que la cohesion se mantiene sola.
+  // cards encadenan del hero, asi que la cohesion se mantiene sola. La 2da foto
+  // (espalda) en el hero da el garment completo para las poses de movimiento/espalda.
   const creativeDirection = await directCreative({ product, wash, angle: 'realista', withReference: Boolean(heroReferenceB64), mode: 'carouselHero' });
-  const hero = await generateVariant({ imageUrl, angleId: 'realista', referenceB64: heroReferenceB64, productDescription, creativeDirection, fitSpec });
+  const hero = await generateVariant({ imageUrl, productBackUrl, angleId: 'realista', referenceB64: heroReferenceB64, productDescription, creativeDirection, fitSpec });
   const heroB64 = hero.b64;
 
   // 2. Cards SECUENCIAL (no en paralelo: el plan starter se queda sin RAM y reinicia).
@@ -88,6 +89,7 @@ export async function generateCarouselInBackground(carouselId) {
     const productDescription = [doc.product, prod?.description].filter(Boolean).join('. ');
     cards = await generateCarousel({
       imageUrl: doc.sourceImageUrl,
+      productBackUrl: prod?.images?.[1] || '',
       productDescription,
       heroReferenceB64: doc.referenceImageData,
       product: doc.product,

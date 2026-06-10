@@ -2,7 +2,7 @@
 // texto exacto: cada angulo = garment lock + escena/modelo/luz/mood.
 
 // Bloquea el producto. El jean del MAIN es lo que vendemos: prioridad absoluta.
-export const GARMENT_LOCK = `THE DENIM GARMENT IN THE FIRST IMAGE IS THE PRODUCT WE SELL.
+export const GARMENT_LOCK = `THE DENIM GARMENT IN THE PRODUCT PHOTO(S) IS THE PRODUCT WE SELL.
 It is the #1 priority of this image — reproduce it with 100% fidelity.
 Keep EXACTLY, with zero changes: the precise denim wash and color tone, every
 fade and whiskering pattern, the exact placement, size and shape of every rip,
@@ -10,7 +10,14 @@ tear and distressing, the stitching, the hardware, buttons and rivets, the raw
 cutoff frayed hem, the cut, the length and the fit.
 Do NOT clean up, restyle, lighten, darken, recolor, lengthen, shorten, smooth or
 "improve" the denim in any way. Render it as the exact real photographed product.
-If anything conflicts, the denim from the first image ALWAYS wins.`;
+If anything conflicts, the real photographed product ALWAYS wins.`;
+
+// Cuando hay 2da foto de producto (espalda): el modelo conoce el garment completo y
+// puede renderizar tomas de espalda / movimiento fieles.
+export const BACK_NOTE = `TWO product photos are provided: one shows the shorts from the FRONT
+and the other shows the EXACT SAME shorts from the BACK (back pockets, yoke, rear hem). Use
+BOTH to reproduce the garment accurately from ANY angle — front, side, three-quarter and back —
+so movement and back-facing shots show the real back of these shorts, not an invented one.`;
 
 // Anti-IA: se concatena a cada prompt. Empuja look de iPhone organico, no estudio.
 const ANTI_AI = `Make it look like a REAL, organic iPhone photo — a candid fitpic a
@@ -53,17 +60,17 @@ and editorial, yet unmistakably a real photo.`;
 
 // Referencia de estilo (imagen 2): SUBORDINADA al producto. Solo aporta el resto
 // del look y la escena; jamas toca el jean.
-const STYLE_REFERENCE = `The SECOND image is the OUTFIT REFERENCE. REPLICATE its outfit
-on the model as faithfully as possible: the same top/jacket and layering, the same
+const STYLE_REFERENCE = `The LAST image provided is the OUTFIT / STYLE REFERENCE. REPLICATE its
+outfit on the model as faithfully as possible: the same top/jacket and layering, the same
 footwear/sneakers (same style and colorway), the same accessories (caps, chains, bags,
 socks) and the same way the clothes are worn and styled. The model's outfit should clearly
-read as the SAME look as the second image.
+read as the SAME look as that reference image.
 Do NOT copy its background, location or color grading — place the model in a real, organic
 everyday setting with the natural muted iPhone look described below; the reference is for
 the OUTFIT, not the scene.
-NEVER take the pants, shorts or bottoms from the second image — the bottoms are ALWAYS the
-exact denim garment from the FIRST image, with its wash, rips, hem and length unchanged.
-Do NOT copy the face or identity from the second image.`;
+NEVER take the pants, shorts or bottoms from the reference image — the bottoms are ALWAYS the
+exact denim PRODUCT, with its wash, rips, hem and length unchanged.
+Do NOT copy the face or identity from the reference image.`;
 
 export const ANGLES = {
   realista: {
@@ -145,11 +152,12 @@ export function fitLock(fitSpec = '') {
   return `\n\nEXACT FIT & SILHOUETTE (reproduce precisely — do NOT make the shorts slimmer, wider, longer or shorter than this): ${fitSpec}`;
 }
 
-export function buildPrompt(angleId, { withReference = false, productDescription = '', creativeDirection = '', fitSpec = '', styleMode = 'organic' } = {}) {
+export function buildPrompt(angleId, { withReference = false, productDescription = '', creativeDirection = '', fitSpec = '', styleMode = 'organic', hasBack = false } = {}) {
   const angle = ANGLES[angleId];
   if (!angle && !creativeDirection) {
     throw new Error(`Angulo desconocido: ${angleId}. Validos: ${Object.keys(ANGLES).join(', ')}`);
   }
+  const back = hasBack ? `\n\n${BACK_NOTE}` : '';
   const desc = productDescription
     ? `\n\nThe exact product to preserve (keep faithful to this): ${productDescription}`
     : '';
@@ -158,5 +166,5 @@ export function buildPrompt(angleId, { withReference = false, productDescription
   const scene = creativeDirection || angle.prompt;
   // El riel de produccion depende del modo: organico (iPhone) vs campaña (pulido).
   const look = styleMode === 'campaign' ? CAMPAIGN_LOOK : ANTI_AI;
-  return `${GARMENT_LOCK}${fitLock(fitSpec)}${desc}${ref}\n\n${scene}\n\n${look}`;
+  return `${GARMENT_LOCK}${back}${fitLock(fitSpec)}${desc}${ref}\n\n${scene}\n\n${look}`;
 }

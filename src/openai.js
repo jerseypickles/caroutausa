@@ -34,20 +34,23 @@ async function fetchSourceImage(imageUrl) {
 
 // Genera UNA variante para un angulo. Si viene referenceB64, se pasa como 2da
 // imagen (referencia de estilo). Devuelve { b64 } o lanza error.
-export async function generateVariant({ imageUrl, angleId, referenceB64, productDescription, creativeDirection = '', fitSpec = '', styleMode = 'organic', prompt: promptOverride, size = STORY_SIZE }) {
+export async function generateVariant({ imageUrl, productBackUrl = '', angleId, referenceB64, productDescription, creativeDirection = '', fitSpec = '', styleMode = 'organic', prompt: promptOverride, size = STORY_SIZE }) {
   const productImage = await fetchSourceImage(imageUrl);
   const model = config.imageModel;
 
-  // image puede ser una sola Uploadable o un array [producto, referencia].
-  let image = productImage;
-  if (referenceB64) {
-    const refFile = await toFile(Buffer.from(referenceB64, 'base64'), 'reference.png', { type: 'image/png' });
-    image = [productImage, refFile];
-  }
+  // Orden de imagenes: [producto frente, (producto espalda), (referencia)].
+  // La 2da foto de producto (espalda) le da al modelo el garment completo -> tomas
+  // de movimiento/espalda fieles. Solo se usa en los flujos buildPrompt (no override).
+  const backImage = (productBackUrl && !promptOverride) ? await fetchSourceImage(productBackUrl).catch(() => null) : null;
+  const imgs = [productImage];
+  if (backImage) imgs.push(backImage);
+  if (referenceB64) imgs.push(await toFile(Buffer.from(referenceB64, 'base64'), 'reference.png', { type: 'image/png' }));
+  const image = imgs.length === 1 ? imgs[0] : imgs;
+
   // prompt custom (ej. carrusel/reframe) + fit, o el armado por angulo (ya incluye fit).
   const prompt = promptOverride
     ? `${promptOverride}${fitLock(fitSpec)}`
-    : buildPrompt(angleId, { withReference: Boolean(referenceB64), productDescription, creativeDirection, fitSpec, styleMode });
+    : buildPrompt(angleId, { withReference: Boolean(referenceB64), productDescription, creativeDirection, fitSpec, styleMode, hasBack: Boolean(backImage) });
 
   const params = {
     model, image, prompt, size, quality: QUALITY, n: 1,

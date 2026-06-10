@@ -82,6 +82,7 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
       product: product.title,
       wash: product.wash,
       fitSpec: product.fitSpec || '',
+      sourceBackUrl: product.images?.[1] || '',
     },
   });
 
