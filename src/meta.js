@@ -188,18 +188,40 @@ export async function getInsights(objectId, datePreset = 'maximum') {
   return json.data?.[0] || null;
 }
 
-// Diagnostico: qué puede REALMENTE el token (scopes, validez, acceso a cuenta y página).
+// Diagnostico fino: huella del token (comparar sin exponerlo) + probar CON y SIN
+// appsecret_proof (para aislar si el app_secret esta mal) + debug_token.
 export async function diagnose() {
-  const checks = {};
-  const run = async (key, method, path, params = {}) => {
-    try { checks[key] = { ok: true, data: await graph(method, path, params) }; }
-    catch (e) { checks[key] = { ok: false, error: e.message }; }
+  const token = M.accessToken || '';
+  const fp = token
+    ? { len: token.length, head: token.slice(0, 10), tail: token.slice(-6), hasSpaces: /\s/.test(token), appSecretSet: !!M.appSecret, appSecretLen: (M.appSecret || '').length }
+    : null;
+  const call = async (path, withProof) => {
+    try {
+      const p = new URLSearchParams({ access_token: token, fields: 'id,name,account_status' });
+      if (withProof && M.appSecret) p.append('appsecret_proof', crypto.createHmac('sha256', M.appSecret).update(token).digest('hex'));
+      const r = await fetch(`${BASE}/${path}?${p.toString()}`);
+      const j = await r.json();
+      if (j.error) return { ok: false, error: `${j.error.message} (${j.error.code}/${j.error.error_subcode || 0})` };
+      return { ok: true, data: j };
+    } catch (e) { return { ok: false, error: e.message }; }
   };
-  await run('token', 'GET', 'debug_token', { input_token: M.accessToken });
-  await run('me', 'GET', 'me', { fields: 'id,name' });
-  await run('adAccount', 'GET', acct(), { fields: 'name,account_status,currency' });
-  await run('page', 'GET', M.pageId, { fields: 'name,id' });
-  return checks;
+  const debugTok = async () => {
+    try {
+      const p = new URLSearchParams({ input_token: token, access_token: token });
+      const r = await fetch(`${BASE}/debug_token?${p.toString()}`);
+      const j = await r.json();
+      if (j.error) return { ok: false, error: `${j.error.message} (${j.error.code}/${j.error.error_subcode || 0})` };
+      return { ok: true, data: { type: j.data?.type, valid: j.data?.is_valid, appId: j.data?.app_id, scopes: j.data?.scopes, expires: j.data?.expires_at } };
+    } catch (e) { return { ok: false, error: e.message }; }
+  };
+  return {
+    tokenFingerprint: fp,
+    meWithProof: await call('me', true),
+    meNoProof: await call('me', false),
+    debugToken: await debugTok(),
+    adAccountNoProof: await call(acct(), false),
+    pageNoProof: await call(M.pageId, false),
+  };
 }
 
 // Parsea actions de Meta a ATC / compras.
