@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 
 // Una card del carrusel (imagen cohesiva del set).
 const cardSchema = new Schema({
-  role: { type: String, enum: ['hero', 'pose', 'detail'], default: 'pose' },
+  role: { type: String, enum: ['hero', 'pose', 'detail', 'packshot'], default: 'pose' },
   order: { type: Number, default: 0 },
   imageData: { type: String, select: false }, // base64 webp
   fidelityScore: { type: Number, default: null },

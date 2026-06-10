@@ -1,7 +1,9 @@
 import { Product } from './models/product.js';
 import { Creative } from './models/creative.js';
+import { Carousel } from './models/carousel.js';
 import { Reference } from './models/reference.js';
 import { enqueueJobs, enqueueFlatlay } from './generation.js';
+import { generateCarouselInBackground } from './carousel.js';
 import { logActivity } from './models/activity.js';
 import { config } from './config.js';
 
@@ -30,7 +32,9 @@ export async function runAutopilot({ manual = false } = {}) {
       const fitSpec = p.fitSpec || '';
       const meta = { shopifyProductId: p.shopifyId, product: p.title, wash: p.wash, fitSpec };
 
-      // ¿ya tiene packshot? si no, ese es el siguiente paso.
+      const activeRefs = await Reference.find({ active: true }).select('+imageData').lean();
+
+      // 1) ¿ya tiene packshot? si no, ese es el siguiente paso (rapido, 1 imagen).
       const hasFlatlay = await Creative.countDocuments({ shopifyProductId: p.shopifyId, format: 'flatlay' });
       if (!hasFlatlay) {
         const doc = await enqueueFlatlay({ imageUrl: p.image, productDescription, fitSpec, meta });
@@ -38,8 +42,21 @@ export async function runAutopilot({ manual = false } = {}) {
         return { product: p.title, piece: 'flatlay' };
       }
 
-      // si no, una tanda de singles con referencia (reference-driven).
-      const activeRefs = await Reference.find({ active: true }).select('+imageData').lean();
+      // 2) ¿ya tiene carrusel? si no, generar uno (cohesivo, con referencia).
+      const hasCarousel = await Carousel.countDocuments({ shopifyProductId: p.shopifyId });
+      if (!hasCarousel) {
+        const ref = activeRefs.length ? activeRefs[Math.floor(Math.random() * activeRefs.length)] : null;
+        const cdoc = await Carousel.create({
+          shopifyProductId: p.shopifyId, product: p.title, wash: p.wash, sourceImageUrl: p.image,
+          hasReference: Boolean(ref), referenceImageData: ref?.imageData || null, genStatus: 'generating',
+        });
+        generateCarouselInBackground(cdoc._id).catch((e) => console.error('[autopilot] carousel:', e.message));
+        await Product.updateOne({ shopifyId: p.shopifyId }, { $inc: { generatedCount: 5 }, $set: { lastGeneratedAt: new Date() } });
+        await logActivity('carousel', `Auto: generando carrusel de ${p.title}`, { product: p.title, refId: String(cdoc._id), level: 'ok' });
+        return { product: p.title, piece: 'carousel' };
+      }
+
+      // 3) si no, una tanda de singles con referencia (reference-driven).
       const angle = (p.generatedCount || 0) % 2 === 0 ? 'realista' : 'gancho_click';
       const jobs = [];
       if (activeRefs.length) {

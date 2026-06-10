@@ -1,5 +1,5 @@
 import { generateVariant } from './openai.js';
-import { GARMENT_LOCK } from './angles.js';
+import { GARMENT_LOCK, buildFlatlayPrompt } from './angles.js';
 import { Carousel } from './models/carousel.js';
 import { Product } from './models/product.js';
 import { judgeFidelity } from './judge.js';
@@ -47,22 +47,19 @@ export async function generateCarousel({ imageUrl, productDescription, heroRefer
   const hero = await generateVariant({ imageUrl, angleId: 'realista', referenceB64: heroReferenceB64, productDescription, creativeDirection, fitSpec });
   const heroB64 = hero.b64;
 
-  // 2. Poses + detail en paralelo, cada una con el hero como 2da imagen (cohesion).
-  const poseCount = Math.max(0, cards - 2); // hero + detail + poses
-  const tasks = [];
+  // 2. Cards SECUENCIAL (no en paralelo: el plan starter se queda sin RAM y reinicia).
+  // Set = hero + N poses (encadenadas del hero -> cohesion) + 1 packshot del producto.
+  const out = [{ role: 'hero', b64: heroB64 }];
+  const poseCount = Math.max(0, cards - 2); // hero + packshot + poses
   for (let i = 0; i < poseCount; i++) {
-    tasks.push(
-      generateVariant({ imageUrl, referenceB64: heroB64, productDescription, fitSpec, prompt: posePrompt(productDescription) })
-        .then((r) => ({ role: 'pose', b64: r.b64 }))
-    );
+    const r = await generateVariant({ imageUrl, referenceB64: heroB64, productDescription, fitSpec, prompt: posePrompt(productDescription) });
+    out.push({ role: 'pose', b64: r.b64 });
   }
-  tasks.push(
-    generateVariant({ imageUrl, referenceB64: heroB64, productDescription, fitSpec, prompt: detailPrompt(productDescription) })
-      .then((r) => ({ role: 'detail', b64: r.b64 }))
-  );
-  const rest = await Promise.all(tasks);
+  // Card packshot: el short solo sobre superficie limpia (cierra el set, vendedor).
+  const pk = await generateVariant({ imageUrl, productDescription, prompt: buildFlatlayPrompt(productDescription, fitSpec) });
+  out.push({ role: 'packshot', b64: pk.b64 });
 
-  return [{ role: 'hero', b64: heroB64 }, ...rest];
+  return out;
 }
 
 // Genera el carrusel en background, juzga la fidelidad del jean en cada card,
