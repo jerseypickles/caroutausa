@@ -88,6 +88,36 @@ export function createSingleImageCreative({ name, imageHash, link, message }) {
   });
 }
 
+// Creative de imagen con CUSTOMIZACION POR PLACEMENT: usa el 9:16 (story) en
+// Stories/Reels y el 1:1/4:5 (feed) en el resto. asset_feed_spec = Advantage+ creative.
+export function createPlacementImageCreative({ name, storyHash, feedHash, link, message }) {
+  return graph('POST', `${acct()}/adcreatives`, {
+    name,
+    object_story_spec: { page_id: M.pageId },
+    asset_feed_spec: {
+      images: [
+        { hash: feedHash, adlabels: [{ name: 'feed_img' }] },
+        { hash: storyHash, adlabels: [{ name: 'story_img' }] },
+      ],
+      bodies: [{ text: message || '' }],
+      link_urls: [{ website_url: link }],
+      call_to_action_types: ['SHOP_NOW'],
+      ad_formats: ['SINGLE_IMAGE'],
+      asset_customization_rules: [
+        {
+          customization_spec: { publisher_platforms: ['instagram', 'facebook'], instagram_positions: ['story', 'reels'], facebook_positions: ['story', 'facebook_reels'] },
+          image_label: { name: 'story_img' },
+        },
+        {
+          // default para el resto de placements (feed, explore, etc.)
+          customization_spec: { publisher_platforms: ['instagram', 'facebook'], instagram_positions: ['stream', 'explore'], facebook_positions: ['feed'] },
+          image_label: { name: 'feed_img' },
+        },
+      ],
+    },
+  });
+}
+
 // Creative de carrusel: cards = [{ imageHash, link, name }]
 export function createCarouselCreative({ name, message, link, cards }) {
   return graph('POST', `${acct()}/adcreatives`, {

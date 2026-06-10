@@ -197,6 +197,7 @@
   .eligcard:hover { border-color: var(--muted); }
   .eligcard.sel { border-color: var(--accent); }
   .eligcard img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+  .eligcard .eligtype { position: absolute; top: 6px; left: 6px; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.6); color: #fff; font-size: 11px; }
   .eligcard .eligtick { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; opacity: 0; transition: opacity .15s; }
   .eligcard.sel .eligtick { opacity: 1; background: var(--accent); }
   .eligcard .eliglabel { padding: 6px 8px; font-size: 10.5px; color: var(--muted); text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -446,13 +447,13 @@
       <!-- Compositor de lanzamiento -->
       <div class="secthead"><h2>Lanzar campaña</h2><span class="muted" id="eligCount"></span><span style="flex:1"></span>
         <span class="muted" id="metaStatus" style="font-size:12px"></span></div>
-      <div class="hint">Elegí creatives aprobados, ponele nombre/presupuesto/objetivo y lanzá. Se crea <b>EN PAUSA</b> — no gasta un peso hasta que la actives.</div>
+      <div class="hint">Elegí singles y carruseles aprobados — van todos a UN ad set. El nombre lo arma el sistema y optimiza a <b>Compras</b> por defecto. Cada single se sube en <b>9:16 para Stories/Reels</b> y <b>1:1 para Feed</b>. Se crea <b>EN PAUSA</b> — no gasta hasta que la actives.</div>
       <div id="eligGrid" class="eliggrid"></div>
-      <div class="empty" id="eligEmpty" style="display:none">No hay creatives aprobados. Aprobá algunos en la <b>Cola de QC</b> y aparecen acá.</div>
+      <div class="empty" id="eligEmpty" style="display:none">No hay piezas aprobadas. Aprobá singles o carruseles en la <b>Cola de QC</b> y aparecen acá.</div>
       <div class="launchcfg" id="launchCfg" style="display:none">
-        <input id="campName" placeholder="Nombre de la campaña (ej. SS26 · Onyx test)" />
-        <div class="lfield"><span>$/día</span><input id="campBudget" type="number" value="25" min="1" step="1" /></div>
-        <select id="campOpt"><option value="ADD_TO_CART">Optimizar: Add to Cart</option><option value="PURCHASE">Optimizar: Compras</option></select>
+        <div class="lfield"><span>Presupuesto $/día</span><input id="campBudget" type="number" value="25" min="1" step="1" /></div>
+        <span class="muted" style="font-size:12px">Optimiza a Compras · nombre automático</span>
+        <span style="flex:1"></span>
         <button class="btn" id="launchBtn" onclick="launchCampaign(this)">Lanzar <span id="launchN"></span> (en pausa)</button>
       </div>
 
@@ -1082,44 +1083,48 @@ async function saveCopy(id, field, value) {
 }
 
 /* ===== AD MANAGER (visualizador de campañas de la cuenta) ===== */
-let selectedAds = new Set();
+let selectedAds = new Map(); // id -> 'single' | 'carousel'
 async function loadAdManager() { loadMetaStatus(); loadEligible(); loadLaunched(); loadCampaigns(); }
 
 async function loadEligible() {
-  let creatives = [];
-  try { const d = await (await fetch('/api/meta/eligible')).json(); creatives = d.creatives || []; } catch (e) {}
+  let items = [];
+  try { const d = await (await fetch('/api/meta/eligible')).json(); items = d.items || []; } catch (e) {}
   const grid = document.getElementById('eligGrid'), empty = document.getElementById('eligEmpty'), cfg = document.getElementById('launchCfg');
-  document.getElementById('eligCount').textContent = creatives.length ? `${creatives.length} aprobados listos` : '';
-  empty.style.display = creatives.length ? 'none' : 'block';
-  cfg.style.display = creatives.length ? 'flex' : 'none';
-  const live = new Set(creatives.map(c => c._id)); selectedAds.forEach(id => { if (!live.has(id)) selectedAds.delete(id); });
-  grid.innerHTML = creatives.map(c => `<div class="eligcard ${selectedAds.has(c._id) ? 'sel' : ''}" onclick="toggleElig('${c._id}', this)">
-      <img src="/api/creatives/${c._id}/image?p=square" loading="lazy" onerror="this.onerror=null;this.src='/api/creatives/${c._id}/image'" alt="" />
+  document.getElementById('eligCount').textContent = items.length ? `${items.length} aprobados (${items.filter(i=>i.type==='single').length} singles · ${items.filter(i=>i.type==='carousel').length} carruseles)` : '';
+  empty.style.display = items.length ? 'none' : 'block';
+  cfg.style.display = items.length ? 'flex' : 'none';
+  const live = new Set(items.map(i => i.id)); [...selectedAds.keys()].forEach(id => { if (!live.has(id)) selectedAds.delete(id); });
+  grid.innerHTML = items.map(it => {
+    const img = it.type === 'carousel' ? `/api/carousels/${it.id}/cards/0/image` : `/api/creatives/${it.id}/image?p=square`;
+    const fallback = it.type === 'carousel' ? '' : `onerror="this.onerror=null;this.src='/api/creatives/${it.id}/image'"`;
+    const tag = it.type === 'carousel' ? `carrusel · ${it.cards||0}` : (it.angle || '').replace(/_/g, ' ');
+    return `<div class="eligcard ${selectedAds.has(it.id) ? 'sel' : ''}" onclick="toggleElig('${it.id}','${it.type}', this)">
+      <img src="${img}" loading="lazy" ${fallback} alt="" />
+      ${it.type === 'carousel' ? '<div class="eligtype">▦</div>' : ''}
       <div class="eligtick">✓</div>
-      <div class="eliglabel">${(c.product || '').replace(' Denim Short', '')} · ${(c.angle || '').replace(/_/g, ' ')}</div>
-    </div>`).join('');
+      <div class="eliglabel">${(it.product || '').replace(' Denim Short', '')} · ${tag}</div>
+    </div>`;
+  }).join('');
   updateLaunchN();
 }
-function toggleElig(id, el) {
+function toggleElig(id, type, el) {
   if (selectedAds.has(id)) { selectedAds.delete(id); el.classList.remove('sel'); }
-  else { selectedAds.add(id); el.classList.add('sel'); }
+  else { selectedAds.set(id, type); el.classList.add('sel'); }
   updateLaunchN();
 }
 function updateLaunchN() { const e = document.getElementById('launchN'); if (e) e.textContent = selectedAds.size ? `(${selectedAds.size})` : ''; }
 
 async function launchCampaign(btn) {
-  const ids = [...selectedAds];
-  if (!ids.length) return toast('Elegí al menos un creative');
-  const name = document.getElementById('campName').value.trim();
-  if (!name) return toast('Ponele un nombre a la campaña');
+  if (!selectedAds.size) return toast('Elegí al menos una pieza');
+  const creativeIds = [...selectedAds].filter(([, t]) => t === 'single').map(([id]) => id);
+  const carouselIds = [...selectedAds].filter(([, t]) => t === 'carousel').map(([id]) => id);
   const dailyBudget = Number(document.getElementById('campBudget').value) || 25;
-  const optimizationEvent = document.getElementById('campOpt').value;
-  if (!confirm(`Lanzar "${name}" con ${ids.length} ad(s), $${dailyBudget}/día, optimizando ${optimizationEvent}?\n\nSe crea EN PAUSA — no gasta hasta que la actives.`)) return;
+  if (!confirm(`Lanzar ${creativeIds.length} single(s) + ${carouselIds.length} carrusel(es) en un ad set, $${dailyBudget}/día, optimizando Compras?\n\nSe crea EN PAUSA — no gasta hasta que la actives.`)) return;
   btn.disabled = true; btn.textContent = 'Lanzando…';
   try {
-    const r = await (await fetch('/api/meta/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, dailyBudget, optimizationEvent, creativeIds: ids }) })).json();
+    const r = await (await fetch('/api/meta/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dailyBudget, creativeIds, carouselIds }) })).json();
     if (r.error) toast(r.error);
-    else { toast('Campaña creada en PAUSA ✓'); selectedAds.clear(); document.getElementById('campName').value = ''; loadAdManager(); }
+    else { toast('Campaña creada en PAUSA ✓ · ' + (r.campaign?.name || '')); selectedAds.clear(); loadAdManager(); }
   } catch (e) { toast('Error lanzando la campaña'); }
   finally { btn.disabled = false; btn.innerHTML = 'Lanzar <span id="launchN"></span> (en pausa)'; updateLaunchN(); }
 }

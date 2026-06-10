@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import sharp from 'sharp';
 import { Creative } from '../models/creative.js';
+import { Carousel } from '../models/carousel.js';
 import { Product } from '../models/product.js';
 import { MetaCampaign } from '../models/metaCampaign.js';
 import { config } from '../config.js';
@@ -12,14 +13,14 @@ function productLink(handle) {
   return handle ? `${config.storeUrl}/products/${handle}` : config.storeUrl;
 }
 
-// Meta no acepta WebP -> convertimos a JPG. Elegimos el mejor placement para feed:
-// 1:1 (square) > 4:5 (feed) > 9:16 (story). Devuelve base64 JPG.
-async function creativeJpgB64(c) {
-  const src = c.squareImageData || c.feedImageData || c.imageData;
-  if (!src) throw new Error(`Creative ${c._id} sin imagen`);
+// Meta no acepta WebP -> convertimos a JPG. Devuelve base64 JPG.
+async function toJpgB64(src) {
+  if (!src) throw new Error('Creative sin imagen');
   const jpg = await sharp(Buffer.from(src, 'base64')).flatten({ background: '#ffffff' }).jpeg({ quality: 90 }).toBuffer();
   return jpg.toString('base64');
 }
+const storyB64 = (c) => toJpgB64(c.imageData);                              // 9:16 Stories/Reels
+const feedB64 = (c) => toJpgB64(c.squareImageData || c.feedImageData || c.imageData); // 1:1/4:5 Feed
 
 // Parsea las actions de insights de Meta a numeros utiles.
 function parseActions(row) {
@@ -57,25 +58,43 @@ metaRouter.get('/meta/account-campaigns/:id/ads', async (req, res) => {
   }
 });
 
-// GET /api/meta/eligible -> creatives aprobados listos para anunciar
+// GET /api/meta/eligible -> singles Y carruseles aprobados, listos para anunciar
 metaRouter.get('/meta/eligible', async (_req, res) => {
-  const creatives = await Creative.find({ qcStatus: 'approved', genStatus: 'ready' })
-    .sort({ updatedAt: -1 }).lean();
-  res.json({ creatives });
+  const [singles, carousels] = await Promise.all([
+    Creative.find({ qcStatus: 'approved', genStatus: 'ready' }).sort({ updatedAt: -1 }).lean(),
+    Carousel.find({ qcStatus: 'approved', genStatus: 'ready' }).sort({ updatedAt: -1 }).lean(),
+  ]);
+  const items = [
+    ...singles.map((c) => ({ id: String(c._id), type: 'single', product: c.product, angle: c.angle })),
+    ...carousels.map((c) => ({ id: String(c._id), type: 'carousel', product: c.product, cards: (c.cards || []).length })),
+  ];
+  res.json({ items, creatives: singles });
 });
 
 // POST /api/meta/launch
-// body: { name, dailyBudget, optimizationEvent?, creativeIds: [] }
-// Crea campaña + ad set + 1 ad por creative (imagen sola), todo PAUSED.
+// body: { name?, dailyBudget?, optimizationEvent?, creativeIds?: [], carouselIds?: [] }
+// Nombre AUTO si no viene; optimiza PURCHASE por defecto. Singles (con imagen por
+// placement: 9:16 story / 1:1 feed) + carruseles, todos en UN mismo ad set. PAUSED.
 metaRouter.post('/meta/launch', async (req, res) => {
   if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });
-  const { name, dailyBudget, optimizationEvent, creativeIds } = req.body || {};
-  if (!name) return res.status(400).json({ error: 'Falta name' });
-  if (!Array.isArray(creativeIds) || !creativeIds.length) return res.status(400).json({ error: 'Elegí al menos un creative' });
-  const budget = Number(dailyBudget) || 25;
+  const body = req.body || {};
+  const creativeIds = Array.isArray(body.creativeIds) ? body.creativeIds : [];
+  const carouselIds = Array.isArray(body.carouselIds) ? body.carouselIds : [];
+  if (!creativeIds.length && !carouselIds.length) return res.status(400).json({ error: 'Elegí al menos una pieza' });
+  const budget = Number(body.dailyBudget) || 25;
+  const optimizationEvent = body.optimizationEvent || 'PURCHASE';
 
-  const creatives = await Creative.find({ _id: { $in: creativeIds }, genStatus: 'ready' }).select('+imageData +feedImageData +squareImageData').lean();
-  if (!creatives.length) return res.status(400).json({ error: 'Sin creatives validos' });
+  const singles = creativeIds.length
+    ? await Creative.find({ _id: { $in: creativeIds }, genStatus: 'ready' }).select('+imageData +feedImageData +squareImageData').lean() : [];
+  const carousels = carouselIds.length
+    ? await Carousel.find({ _id: { $in: carouselIds }, genStatus: 'ready' }).select('+cards.imageData').lean() : [];
+  if (!singles.length && !carousels.length) return res.status(400).json({ error: 'Sin piezas validas' });
+
+  // Nombre auto: CAROTA · <wash/o N washes> · YYYY-MM-DD · NS+MC
+  const date = new Date().toISOString().slice(0, 10);
+  const prods = [...new Set([...singles, ...carousels].map((x) => (x.product || '').replace(' Denim Short', '')))].filter(Boolean);
+  const prodPart = prods.length === 1 ? prods[0] : `${prods.length} washes`;
+  const name = (body.name && body.name.trim()) || `CAROTA · ${prodPart} · ${date} · ${singles.length}S+${carousels.length}C`;
 
   try {
     const campaign = await meta.createCampaign({ name });
@@ -83,26 +102,45 @@ metaRouter.post('/meta/launch', async (req, res) => {
       name: `${name} · adset`,
       campaignId: campaign.id,
       dailyBudgetCents: Math.round(budget * 100),
-      optimizationEvent: optimizationEvent || 'ADD_TO_CART',
+      optimizationEvent,
     });
 
     const ads = [];
-    for (const c of creatives) {
+    // Singles -> creative con customizacion por placement (story 9:16 / feed 1:1)
+    for (const c of singles) {
       const prod = c.shopifyProductId ? await Product.findOne({ shopifyId: c.shopifyProductId }).lean() : null;
       const link = productLink(prod?.handle);
-      const hash = await meta.uploadImage(await creativeJpgB64(c));
-      const creative = await meta.createSingleImageCreative({
+      const storyHash = await meta.uploadImage(await storyB64(c));
+      const feedHash = await meta.uploadImage(await feedB64(c));
+      const creative = await meta.createPlacementImageCreative({
         name: `${c.product || 'CAROTA'} · ${c.angle}`,
-        imageHash: hash, link, message: `${c.product || 'CAROTA'} — shop now`,
+        storyHash, feedHash, link, message: c.copy?.primaryText || `${c.product || 'CAROTA'} — shop now`,
       });
       const ad = await meta.createAd({ name: `${c.product} · ${c.angle}`, adsetId: adSet.id, creativeId: creative.id });
       ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: c._id, product: c.product, link, format: 'single' });
     }
+    // Carruseles -> sube cada card (JPG) y crea el creative de carrusel
+    for (const cr of carousels) {
+      const prod = cr.shopifyProductId ? await Product.findOne({ shopifyId: cr.shopifyProductId }).lean() : null;
+      const link = productLink(prod?.handle);
+      const cards = [];
+      for (const card of (cr.cards || [])) {
+        if (!card.imageData) continue;
+        const hash = await meta.uploadImage(await toJpgB64(card.imageData));
+        cards.push({ imageHash: hash, link, name: (cr.product || '').replace(' Denim Short', '') });
+      }
+      if (cards.length < 2) continue; // un carrusel necesita 2+ cards
+      const creative = await meta.createCarouselCreative({
+        name: `${cr.product || 'CAROTA'} · carrusel`,
+        message: cr.copy?.primaryText || `${cr.product || 'CAROTA'} — shop now`, link, cards,
+      });
+      const ad = await meta.createAd({ name: `${cr.product} · carrusel`, adsetId: adSet.id, creativeId: creative.id });
+      ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: cr._id, product: cr.product, link, format: 'carousel' });
+    }
 
     const doc = await MetaCampaign.create({
       name, campaignId: campaign.id, adSetId: adSet.id,
-      optimizationEvent: optimizationEvent || 'ADD_TO_CART',
-      dailyBudget: budget, status: 'PAUSED', ads,
+      optimizationEvent, dailyBudget: budget, status: 'PAUSED', ads,
     });
     res.status(201).json({ campaign: doc });
   } catch (err) {
