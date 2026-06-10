@@ -41,6 +41,28 @@ async function graph(method, path, params = {}) {
 
 const acct = () => M.adAccountId; // ya viene como act_...
 
+// Advantage+ creative SELECTIVO: prendemos solo lo que NO toca la estetica (mejor CTA)
+// y APAGAMOS explicitamente todo lo que altera la foto/copy (Meta los auto-aplica por
+// defecto si no los desactivas). Asi protegemos el look organico de los fitpics.
+function enhancements() {
+  const off = { enroll_status: 'OPT_OUT' };
+  const on = { enroll_status: 'OPT_IN' };
+  return {
+    degrees_of_freedom_spec: {
+      creative_features_spec: {
+        enhance_cta: on,                       // mejora el boton (no toca la imagen)
+        image_touchups: off,                   // retoques de imagen -> NO
+        image_brightness_and_contrast: off,    // brillo/contraste -> NO
+        image_uncrop: off,                     // expansion/relleno de imagen -> NO
+        image_templates: off,                  // plantillas con texto -> NO
+        add_text_overlay: off,                 // texto encima de la foto -> NO
+        text_improvements: off,                // reescribe el copy -> NO (usamos el nuestro)
+        media_liquidity_animated_image: off,   // animar la foto -> NO
+      },
+    },
+  };
+}
+
 // --- creacion ---
 export function createCampaign({ name, objective = 'OUTCOME_SALES' }) {
   return graph('POST', `${acct()}/campaigns`, {
@@ -93,6 +115,7 @@ export function createSingleImageCreative({ name, imageHash, link, message }) {
 export function createPlacementImageCreative({ name, storyHash, feedHash, link, message }) {
   return graph('POST', `${acct()}/adcreatives`, {
     name,
+    ...enhancements(),
     object_story_spec: { page_id: M.pageId },
     asset_feed_spec: {
       images: [
@@ -122,6 +145,7 @@ export function createPlacementImageCreative({ name, storyHash, feedHash, link, 
 export function createCarouselCreative({ name, message, link, cards }) {
   return graph('POST', `${acct()}/adcreatives`, {
     name,
+    ...enhancements(),
     object_story_spec: {
       page_id: M.pageId,
       link_data: {
