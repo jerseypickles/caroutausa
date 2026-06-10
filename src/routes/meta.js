@@ -174,6 +174,35 @@ metaRouter.post('/meta/campaigns/:id/status', async (req, res) => {
   }
 });
 
+// GET /api/meta/campaigns/:id/ads -> ad set + cada creativo con metricas de Meta
+metaRouter.get('/meta/campaigns/:id/ads', async (req, res) => {
+  const doc = await MetaCampaign.findById(req.params.id).lean();
+  if (!doc) return res.status(404).json({ error: 'No encontrada' });
+  try {
+    const ads = await meta.getCampaignAds(doc.campaignId);
+    const byAd = Object.fromEntries((doc.ads || []).map((a) => [a.adId, a]));
+    const out = ads.map((a) => {
+      const ours = byAd[a.id] || null;
+      const i = a.insights || {};
+      const cpa = i.purchases > 0 ? i.spend / i.purchases : null;
+      const cpatc = i.addToCart > 0 ? i.spend / i.addToCart : null;
+      return {
+        adId: a.id, name: a.name, status: a.effectiveStatus,
+        format: ours?.format || 'single',
+        // imagen propia (linda y consistente) si la tenemos; si no, thumb de Meta
+        image: ours?.creativeId
+          ? (ours.format === 'carousel' ? `/api/carousels/${ours.creativeId}/cards/0/image` : `/api/creatives/${ours.creativeId}/image?p=square`)
+          : a.thumbnail,
+        product: ours?.product || '',
+        insights: { ...i, cpa, cpatc },
+      };
+    });
+    res.json({ adSetId: doc.adSetId, adSetName: `${doc.name} · adset`, optimizationEvent: doc.optimizationEvent, dailyBudget: doc.dailyBudget, status: doc.status, ads: out });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 // GET /api/meta/campaigns/:id/insights -> refresca metricas
 metaRouter.get('/meta/campaigns/:id/insights', async (req, res) => {
   const doc = await MetaCampaign.findById(req.params.id);

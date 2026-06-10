@@ -204,6 +204,28 @@
   .campaign .metric .k { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
   .badge.active { background: var(--ok-soft); color: var(--ok); }
   .badge.paused { background: var(--warn-soft); color: var(--warn); }
+  /* Ad set + creativos con métricas */
+  .adset { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .adsethd { display: flex; align-items: center; margin-bottom: 10px; }
+  .adsetlbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  .adsetupd { font-size: 11px; color: var(--faint); }
+  .adrows { display: flex; flex-direction: column; gap: 8px; }
+  .adrow { display: flex; gap: 12px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); align-items: center; }
+  .adrow.best { border-color: rgba(14,159,110,.4); box-shadow: 0 0 0 1px rgba(14,159,110,.18); }
+  .adthumb { position: relative; width: 50px; height: 50px; border-radius: 9px; overflow: hidden; background: var(--surface2); flex: none; }
+  .adthumb img { width: 100%; height: 100%; object-fit: cover; }
+  .adthumb .adcar { position: absolute; top: 2px; left: 2px; font-size: 9px; background: rgba(0,0,0,.6); color: #fff; padding: 0 3px; border-radius: 4px; }
+  .adbody { flex: 1; min-width: 0; }
+  .adname { font-size: 12.5px; font-weight: 600; text-transform: capitalize; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .adbest { font-size: 10px; font-weight: 700; color: var(--ok); background: var(--ok-soft); padding: 1px 6px; border-radius: 5px; text-transform: none; }
+  .adst { font-size: 10px; color: var(--faint); text-transform: capitalize; }
+  .adst.on { color: var(--ok); }
+  .admetrics { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+  .adm { display: flex; flex-direction: column; }
+  .adm .admv { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; }
+  .adm.big .admv { font-size: 16px; }
+  .adm .admk { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-top: 1px; }
+  .adnodata { font-size: 11.5px; color: var(--faint); margin-top: 6px; }
   /* compositor de lanzamiento */
   .hint { font-size: 12.5px; color: var(--muted); margin: -6px 0 14px; }
   .hint b { color: var(--text); }
@@ -656,14 +678,16 @@ const TITLES = {
   ads: ['Ad Manager', 'Lanzá y gestioná campañas de conversión en Meta'],
   motor: ['Motor', 'El engine trabajando solo · qué va desarrollando'],
 };
+let adsPoll = null;
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.view === name));
   document.getElementById('topTitle').textContent = TITLES[name][0];
   document.getElementById('topSub').textContent = TITLES[name][1];
+  clearInterval(adsPoll); adsPoll = null;
   if (name === 'productos') loadProducts();
   if (name === 'referencias') loadReferences();
-  if (name === 'ads') loadAdManager();
+  if (name === 'ads') { loadAdManager(); adsPoll = setInterval(() => { loadLaunched(); loadCampaigns(); }, 90000); } // refresca métricas cada 90s
   if (name === 'motor') loadMotor();
   if (name === 'cola') renderMotorBar();
 }
@@ -1382,7 +1406,7 @@ async function loadLaunched() {
   const lc = document.getElementById('launchedCount'); if (lc) lc.textContent = camps.length;
   empty.style.display = camps.length ? 'none' : 'block';
   list.innerHTML = camps.map(launchedCard).join('');
-  camps.forEach(c => loadLaunchedInsights(c._id));
+  camps.forEach(c => { loadLaunchedInsights(c._id); loadCampaignAds(c._id); });
 }
 function launchedCard(c) {
   const active = c.status === 'ACTIVE';
@@ -1395,6 +1419,40 @@ function launchedCard(c) {
       <button class="btn sm ${active ? 'ghost' : ''}" onclick="toggleCampaign('${c._id}','${active ? 'PAUSED' : 'ACTIVE'}',this)">${active ? 'Pausar' : 'Activar ▶'}</button>
     </div>
     <div class="meta-row" id="ci-${c._id}"><span class="muted" style="font-size:12px">cargando métricas…</span></div>
+    <div class="adset" id="as-${c._id}"><div class="muted" style="font-size:12px;padding:10px 0">cargando ad set…</div></div>
+  </div>`;
+}
+async function loadCampaignAds(id) {
+  let d;
+  try { d = await (await fetch(`/api/meta/campaigns/${id}/ads`)).json(); } catch (e) { return; }
+  const box = document.getElementById('as-' + id); if (!box) return;
+  if (d.error || !d.ads) { box.innerHTML = ''; return; }
+  const ads = d.ads;
+  const bestCtr = Math.max(0, ...ads.map(a => a.insights?.ctr || 0));
+  const now = new Date(); const hh = String(now.getHours()).padStart(2, '0'), mm = String(now.getMinutes()).padStart(2, '0');
+  box.innerHTML = `<div class="adsethd"><span class="adsetlbl">▦ Ad set · ${ads.length} creativos</span><span style="flex:1"></span><span class="adsetupd">actualizado ${hh}:${mm}</span></div>
+    <div class="adrows">${ads.map(a => adRow(a, bestCtr)).join('')}</div>`;
+}
+function adm(label, val, big) { return `<div class="adm ${big ? 'big' : ''}"><span class="admv">${val}</span><span class="admk">${label}</span></div>`; }
+function adRow(a, bestCtr) {
+  const i = a.insights || {};
+  const hasData = (i.impressions || 0) > 0;
+  const best = hasData && i.ctr > 0 && i.ctr === bestCtr;
+  const angle = a.format === 'carousel' ? 'carrusel' : (a.name || '').split('·').pop().trim();
+  return `<div class="adrow ${best ? 'best' : ''}">
+    <div class="adthumb">${a.format === 'carousel' ? '<span class="adcar">▦</span>' : ''}<img src="${a.image}" loading="lazy" onerror="this.style.opacity=.2" alt="" /></div>
+    <div class="adbody">
+      <div class="adname">${(a.product || 'CAROTA').replace(' Denim Short', '')} · <span class="muted">${angle}</span>${best ? '<span class="adbest">★ mejor CTR</span>' : ''}<span class="adst ${(a.status || '').toLowerCase().includes('active') ? 'on' : ''}">${(a.status || '').toLowerCase().replace(/_/g, ' ')}</span></div>
+      ${hasData ? `<div class="admetrics">
+        ${adm('CTR', i.ctr ? i.ctr.toFixed(2) + '%' : '—', true)}
+        ${adm('Gasto', '$' + (Math.round(i.spend || 0)))}
+        ${adm('Impr.', (i.impressions || 0).toLocaleString())}
+        ${adm('Clicks', i.clicks || 0)}
+        ${adm('ATC', i.addToCart || 0)}
+        ${adm('Compras', i.purchases || 0)}
+        ${adm('CPA', i.cpa ? '$' + i.cpa.toFixed(0) : '—')}
+      </div>` : '<div class="adnodata">Sin datos aún — aparecen cuando la campaña corre.</div>'}
+    </div>
   </div>`;
 }
 async function loadLaunchedInsights(id) {
