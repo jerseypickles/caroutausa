@@ -23,15 +23,17 @@ so movement and back-facing shots show the real back of these shorts, not an inv
 const ANTI_AI = `Make it look like a REAL, organic iPhone photo — a candid fitpic a
 normal person would actually post, NOT an ad and NOT a professional shoot.
 Shot on a recent iPhone: natural phone-camera rendering, slightly imperfect and
-casual framing, real available light (window, overcast, golden hour) with real shadows.
+casual framing, real available SOFT, EVEN light (big window light, bright overcast, open shade).
 PHONE-CAMERA COLOR, not professional or cinematic grading: NATURAL, true-to-life color like
 a real recent iPhone photo — real and a little organic, with REAL contrast and clean tones
 (whites stay clean, blacks stay real, a graphic/logo can pop). NOT washed out, dull, flat or
 grey — but also NEVER oversaturated, punchy, HDR, teal-orange graded or glossy. Real natural
-white balance.
+NEUTRAL white balance — NOT a warm orange/golden cast.
+LIGHT: prefer SOFT, EVEN, diffuse light and a clean, fairly neutral palette (soft whites,
+creams, light wood, light grey). AVOID harsh direct sun, hard deep shadows and warm golden walls.
 Natural skin with visible pores and fine grain, real ordinary-looking face, no waxy or
 plastic skin, no over-smoothing, no perfect symmetry, no model-perfect beauty-AI look.
-Real lived-in environment with everyday texture.
+Real, clean lived-in environment with everyday texture.
 
 FRAMING: shoot fairly CLOSE so the MODEL FILLS most of the frame — a tight full-body or
 three-quarter crop where the model is large and prominent and the outfit + the denim shorts

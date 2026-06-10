@@ -35,7 +35,10 @@ OUTPUT: 2-5 sentences of vivid, specific art direction (richer and more detailed
 
 // Produccion segun el modo: organico (fitpic iPhone elevado) o campaña (shoot pulido).
 const MODE_BRIEF = {
-  organic: 'STYLE: organic but elevated — looks like a real, candid iPhone fitpic a stylish person posted (not an ad), but with a genuinely great outfit. Real aspirational-everyday location (clean apartment, nice rooftop, cool café, city street with character), real available light. FRAME FAIRLY CLOSE: the model fills most of the frame (a tight full-body or three-quarter crop), large and prominent — not small and distant.',
+  organic: `STYLE: organic but elevated — a real, candid iPhone fitpic a stylish person posted (not an ad), with a genuinely great outfit.
+LIGHT & PALETTE (important): keep it CLEAN, BRIGHT and AIRY with SOFT, EVEN, DIFFUSE light — big window light, bright overcast, or open shade — and a clean, fairly NEUTRAL palette (soft whites, creams, light wood, light grey, pale neutrals). Settings like a minimal bright apartment with large windows and oak floors, a clean modern interior, a soft-lit café, or a calm street in soft even light.
+AVOID: harsh direct sun, hard deep shadows, warm golden-hour / orange-yellow color casts, and grungy dark or tan walls — that look is NOT wanted.
+FRAME FAIRLY CLOSE: the model fills most of the frame (a tight full-body or three-quarter crop), large and prominent — not small and distant.`,
   campaign: `STYLE: a REAL high-end brand campaign at the caliber of Lorenzo Worldwide — editorial, aspirational, photographed (not a render). Describe the look HEAD TO TOE with SPECIFIC, real, nameable pieces and materials so it renders with true detail:
 - the exact TOP and layering: garment type, cut, fabric and how it sits (e.g. "an open boxy cream heavyweight zip-hoodie with drawcords over a tonal-print tee");
 - the accessories: a specific chain (e.g. silver Cuban link), rings, any hair detail;
@@ -61,7 +64,7 @@ export async function directCreative({ product, wash, angle, refDna = '', seed =
     ? `Design a fresh, cohesive, elevated outfit INSPIRED by this reference style DNA — match its vibe, caliber, the kinds of brands and the footwear/sneaker lane, but do NOT copy it: choose your own specific top/layers, footwear and accessories so this fit is its own (never the bottoms). Reference style DNA: ${refDna}`
     : 'YOU design the full elevated outfit yourself — the TOP and layering, the statement footwear, and accessories (never the bottoms).';
   const heroNote = mode === 'carouselHero'
-    ? '\nThis is the HERO of a carousel and sets the look for the whole set, so keep the composition SIMPLE and clean: a fairly frontal full-body standing pose in calm even light, the full lower body unobstructed and clearly in frame, framed FAIRLY CLOSE so the model fills most of the frame (not small and distant). No motion blur, no busy foreground, no crop at the legs.'
+    ? '\nThis is the HERO of a carousel and sets the look for the whole set, so keep the composition SIMPLE and clean: a fairly frontal full-body standing pose in SOFT, EVEN, BRIGHT light (a clean bright neutral setting — NOT harsh sun or warm walls), the full lower body unobstructed and clearly in frame, framed FAIRLY CLOSE so the model fills most of the frame (not small and distant). No motion blur, no busy foreground, no crop at the legs.'
     : '';
   const user = `Product: ${product || 'denim shorts'}${wash ? ` (wash: ${wash})` : ''}.
 Angle to hit: ${intent}.
