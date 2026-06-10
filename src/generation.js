@@ -1,6 +1,6 @@
 import { Creative } from './models/creative.js';
-import { generateVariant, STORY_SIZE, FEED_SIZE } from './openai.js';
-import { buildFeedReframePrompt, buildFlatlayPrompt } from './angles.js';
+import { generateVariant, STORY_SIZE, FEED_SIZE, SQUARE_SIZE } from './openai.js';
+import { buildFeedReframePrompt, buildSquareReframePrompt, buildFlatlayPrompt } from './angles.js';
 import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
 import { directCreative } from './director.js';
@@ -28,13 +28,18 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     // 9:16 (story/reels) = placement principal. La 2da foto (espalda) habilita
     // tomas de movimiento/espalda fieles.
     ({ b64 } = await generateVariant({ imageUrl, productBackUrl: doc?.sourceBackUrl || '', angleId, productDescription, creativeDirection, fitSpec, styleMode, size: STORY_SIZE }));
-    // 4:5 (feed) = la MISMA foto reframed (usa el 9:16 como referencia)
+    // 4:5 (feed) y 1:1 (square) = la MISMA foto reframed (usa el 9:16 como referencia)
     let feedB64 = null;
     try {
       const feed = await generateVariant({ imageUrl, referenceB64: b64, productDescription, fitSpec, styleMode, prompt: buildFeedReframePrompt(productDescription), size: FEED_SIZE });
       feedB64 = feed.b64;
     } catch (e) { console.error(`[gen] feed 4:5 fallo (${creativeId}):`, e.message); }
-    await Creative.findByIdAndUpdate(creativeId, { imageData: b64, feedImageData: feedB64, genStatus: 'ready', genError: null });
+    let squareB64 = null;
+    try {
+      const sq = await generateVariant({ imageUrl, referenceB64: b64, productDescription, fitSpec, styleMode, prompt: buildSquareReframePrompt(productDescription), size: SQUARE_SIZE });
+      squareB64 = sq.b64;
+    } catch (e) { console.error(`[gen] square 1:1 fallo (${creativeId}):`, e.message); }
+    await Creative.findByIdAndUpdate(creativeId, { imageData: b64, feedImageData: feedB64, squareImageData: squareB64, genStatus: 'ready', genError: null });
     const d = await Creative.findById(creativeId).select('product').lean();
     logActivity('single', `Single listo (${angleId}) de ${d?.product || ''}`, { product: d?.product || '', refId: String(creativeId), level: 'ok' });
   } catch (err) {

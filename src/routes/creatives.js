@@ -42,9 +42,11 @@ creativesRouter.get('/creatives', async (req, res) => {
 
 // GET /api/creatives/:id/image -> sirve el PNG del preview (imageData base64).
 creativesRouter.get('/creatives/:id/image', async (req, res) => {
-  const doc = await Creative.findById(req.params.id).select('+imageData +feedImageData').lean();
-  // p=feed -> 4:5; default -> story 9:16. Fallback al story si falta el feed.
-  const data = req.query.p === 'feed' ? (doc?.feedImageData || doc?.imageData) : doc?.imageData;
+  const doc = await Creative.findById(req.params.id).select('+imageData +feedImageData +squareImageData').lean();
+  // p=feed -> 4:5; p=square -> 1:1; default -> story 9:16. Fallback al story si falta.
+  const data = req.query.p === 'feed' ? (doc?.feedImageData || doc?.imageData)
+    : req.query.p === 'square' ? (doc?.squareImageData || doc?.imageData)
+    : doc?.imageData;
   if (!doc || !data) {
     return res.status(404).json({ error: 'Sin imagen para este creative' });
   }

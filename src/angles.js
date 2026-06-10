@@ -112,20 +112,21 @@ Striking and scroll-stopping while still looking like a real photograph.`,
 
 export const DEFAULT_ANGLE = 'realista';
 
-// Reframe del placement: misma foto (imagen 2 = el 9:16) recompuesta a 4:5 de feed.
-export function buildFeedReframePrompt(productDescription = '') {
+// Reframe del placement: misma foto (imagen 2 = el 9:16) recompuesta a otro frame.
+function reframePrompt(productDescription, frameDesc) {
   return `${GARMENT_LOCK}
 
 The SECOND image is the SAME fitpic shot vertically (9:16). Reproduce the EXACT same
 photo — same real model, same outfit, same location, same pose, same lighting and
-colors — but recomposed for a 4:5 FEED frame (a bit wider, less tall). Keep the full
-denim shorts and the outfit clearly visible. It must read as the same photo, just
-framed for feed, not a new scene.
+colors — but recomposed for ${frameDesc}. Keep the full denim shorts and the outfit
+clearly visible. It must read as the SAME photo, just reframed, not a new scene.
 ${productDescription ? `\nThe product to preserve exactly: ${productDescription}` : ''}
 
 Real organic iPhone photo, phone-camera color (not professional grading), natural
-light, slight grain, candid framing.`;
+light, candid framing.`;
 }
+export const buildFeedReframePrompt = (d = '') => reframePrompt(d, 'a 4:5 FEED frame (a bit wider, less tall)');
+export const buildSquareReframePrompt = (d = '') => reframePrompt(d, 'a 1:1 SQUARE frame (centered, equal width and height)');
 
 // Flat-lay / packshot: el short SOLO sobre superficie solida con sombra real. Sin
 // modelo. Producto como heroe -> formato que convierte mucho en Meta.

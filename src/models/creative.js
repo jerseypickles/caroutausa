@@ -30,6 +30,7 @@ const creativeSchema = new Schema(
     // los listados. imageData = placement story (9:16); feedImageData = feed (4:5).
     imageData: { type: String, default: null, select: false },
     feedImageData: { type: String, default: null, select: false },
+    squareImageData: { type: String, default: null, select: false }, // 1:1 cuadrado
 
     // --- estado de generacion (async) ---
     genStatus: {

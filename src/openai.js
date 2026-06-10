@@ -9,6 +9,7 @@ const client = new OpenAI({ apiKey: config.openaiApiKey, timeout: 150000, maxRet
 // Tamaños nativos por placement (divisibles por 16 para gpt-image-2).
 export const STORY_SIZE = '1024x1824'; // 9:16 Reels/Stories
 export const FEED_SIZE = '1024x1280';  // 4:5 Feed
+export const SQUARE_SIZE = '1024x1024'; // 1:1 Feed cuadrado
 const QUALITY = 'high';
 // WebP comprimido: ~120KB vs ~3MB PNG (carga ~25x mas rapido en el panel).
 const OUTPUT_FORMAT = 'webp';

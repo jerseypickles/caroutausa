@@ -262,6 +262,7 @@
   .ipreview { position: relative; border-radius: 10px; overflow: hidden; background: var(--surface3); }
   .ipreview.ph-story { aspect-ratio: 9/16; max-height: 420px; }
   .ipreview.ph-feed { aspect-ratio: 4/5; max-height: 420px; }
+  .ipreview.ph-square { aspect-ratio: 1/1; max-height: 420px; }
   .ipreview > img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
   .ipreview.cargrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; aspect-ratio: auto; cursor: pointer; }
   .ipreview.cargrid img { width: 100%; aspect-ratio: 3/4; object-fit: cover; }
@@ -846,7 +847,8 @@ function formatPreviews(it) {
   }
   const story = `/api/creatives/${it._id}/image`;
   const feed = `/api/creatives/${it._id}/image?p=feed`;
-  return fmtFrame('9:16 Story', story, 'p916') + fmtFrame('4:5 Feed', feed, 'p45') + fmtFrame('1:1 Square', feed, 'p11');
+  const square = `/api/creatives/${it._id}/image?p=square`;
+  return fmtFrame('9:16 Story', story, 'p916') + fmtFrame('4:5 Feed', feed, 'p45') + fmtFrame('1:1 Square', square, 'p11');
 }
 function renderInspector() {
   const items = qItems();
@@ -864,7 +866,7 @@ function renderInspector() {
       <button class="btn ghost sm" onclick="openCarouselView('${it._id}',${n})" style="margin-top:10px">Ver todas las cards</button>`;
   } else {
     preview = `<div class="ipreview ph-story" id="ipbox"><img src="/api/creatives/${it._id}/image" onclick="openZoom(this.src)" alt="" />
-      <div class="phtoggle"><button class="on" onclick="event.stopPropagation();setInspPlacement(this,'${it._id}','story')">9:16</button><button onclick="event.stopPropagation();setInspPlacement(this,'${it._id}','feed')">4:5</button></div></div>`;
+      <div class="phtoggle"><button class="on" onclick="event.stopPropagation();setInspPlacement(this,'${it._id}','story')">9:16</button><button onclick="event.stopPropagation();setInspPlacement(this,'${it._id}','feed')">4:5</button><button onclick="event.stopPropagation();setInspPlacement(this,'${it._id}','square')">1:1</button></div></div>`;
   }
   const fb = it.fidelityStatus === 'done'
     ? `<div class="fbitem ${it.fidelityVerdict === 'pass' ? 'ok' : 'bad'}"><b>Fidelidad del jean</b><span>${(it.fidelityIssues && it.fidelityIssues.length) ? 'Pierde: ' + it.fidelityIssues.join(' · ') : 'Diseño preservado ✓'}</span></div>`
@@ -994,8 +996,8 @@ function renderFlow(it) {
 }
 function setInspPlacement(btn, id, p) {
   const box = document.getElementById('ipbox');
-  box.classList.remove('ph-story', 'ph-feed'); box.classList.add('ph-' + p);
-  box.querySelector('img').src = p === 'feed' ? `/api/creatives/${id}/image?p=feed` : `/api/creatives/${id}/image`;
+  box.classList.remove('ph-story', 'ph-feed', 'ph-square'); box.classList.add('ph-' + p);
+  box.querySelector('img').src = (p === 'feed' || p === 'square') ? `/api/creatives/${id}/image?p=${p}` : `/api/creatives/${id}/image`;
   box.querySelectorAll('.phtoggle button').forEach(b => b.classList.toggle('on', b === btn));
 }
 function selectItem(type, id) { selectedKey = `${type}:${id}`; renderStrip(); renderInspector(); }
