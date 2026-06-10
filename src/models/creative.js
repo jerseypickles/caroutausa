@@ -15,6 +15,9 @@ const creativeSchema = new Schema(
     angle: { type: String, required: true }, // realista | realismo_completo | gancho_click | llamada_atencion | flatlay
     format: { type: String, enum: ['model', 'flatlay'], default: 'model' }, // foto con modelo vs packshot del producto
     styleMode: { type: String, enum: ['organic', 'campaign'], default: 'organic' }, // look organico vs campaña
+    // --- ADN del creativo (para aprender qué rinde) ---
+    sceneTag: { type: String, default: null, index: true }, // coast | mirror-apt | rooftop | street | interior | pooldeck
+    castTag: { type: String, default: null, index: true },  // fair | olive | moreno | moreno-ink | black | black-ink | latino | mixed | dark-athletic
     hook: { type: String },          // descripcion del primer frame
 
     // --- imagenes ---

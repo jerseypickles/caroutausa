@@ -58,7 +58,8 @@ export async function generateCarousel({ imageUrl, productBackUrl = '', productD
   // 1. Hero (set el look): el director arma un outfit INSPIRADO en el ADN de la
   // referencia (no clon); las demas cards encadenan del hero (cohesion). La 2da foto
   // (espalda) le da el garment completo para las poses de movimiento/espalda.
-  const creativeDirection = await directCreative({ product, wash, angle: 'realista', refDna, mode: 'carouselHero' });
+  const dir = await directCreative({ product, wash, angle: 'realista', refDna, mode: 'carouselHero' });
+  const creativeDirection = dir?.text || '';
   const hero = await generateVariant({ imageUrl, productBackUrl, angleId: 'realista', productDescription, creativeDirection, fitSpec });
   const heroB64 = hero.b64;
 
@@ -75,6 +76,7 @@ export async function generateCarousel({ imageUrl, productBackUrl = '', productD
   const close = await generateVariant({ imageUrl, referenceB64: heroB64, productDescription, fitSpec, prompt: detailPrompt(productDescription) });
   out.push({ role: 'detail', b64: close.b64 });
 
+  out.castTag = dir?.castTag; out.sceneTag = dir?.sceneTag; // ADN para aprendizaje
   return out;
 }
 
@@ -108,6 +110,7 @@ export async function generateCarouselInBackground(carouselId) {
 
   await Carousel.findByIdAndUpdate(carouselId, {
     cards: cards.map((c, i) => ({ role: c.role, order: i, imageData: c.b64 })),
+    castTag: cards.castTag, sceneTag: cards.sceneTag,
     genStatus: 'ready',
   });
 

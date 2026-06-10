@@ -20,6 +20,8 @@ const carouselSchema = new Schema(
     wash: { type: String },
     drop: { type: String },
     sourceImageUrl: { type: String, required: true },
+    sceneTag: { type: String, default: null, index: true }, // ADN: escena del hero
+    castTag: { type: String, default: null, index: true },  // ADN: casting del hero
 
     hasReference: { type: Boolean, default: false },
     referenceId: { type: String, default: null },

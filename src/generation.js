@@ -20,11 +20,14 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     const styleMode = doc?.styleMode || 'organic';
     // La referencia es INSPIRACION (ADN de estilo), no un clon: el director arma un
     // outfit fresco en ese lane. NO mandamos la imagen de referencia a gpt-image.
-    const creativeDirection = await directCreative({
+    const dir = await directCreative({
       product: doc?.product, wash: doc?.wash, angle: angleId,
       refDna: doc?.referenceDna || '', styleMode,
       seed: attempt > 0 ? `retry ${attempt}: try a completely different setting and energy` : '',
     });
+    const creativeDirection = dir?.text || '';
+    // ADN del creativo (para aprender qué rinde): escena + casting elegidos.
+    if (dir) await Creative.findByIdAndUpdate(creativeId, { sceneTag: dir.sceneTag, castTag: dir.castTag });
     // 9:16 (story/reels) = placement principal. La 2da foto (espalda) habilita
     // tomas de movimiento/espalda fieles.
     ({ b64 } = await generateVariant({ imageUrl, productBackUrl: doc?.sourceBackUrl || '', angleId, productDescription, creativeDirection, fitSpec, styleMode, size: STORY_SIZE }));

@@ -65,16 +65,17 @@ const ANGLE_INTENT = {
 // Casting rotativo: cada foto un color de piel / etnia / onda distinto (variedad real,
 // como la gente del tab de Referencias). Peso hacia morenos / piel oscura + algunos con
 // tatuajes y onda mas street/gangster, otros mas clean.
+// Cada casting con un TAG corto (para etiquetar el creativo y poder aprender qué rinde).
 const CASTINGS = [
-  'a fair / light-skinned European young man, clean look',
-  'an olive-skinned Mediterranean young man',
-  'a tanned brown-skinned (moreno) young man with a cool relaxed edge',
-  'a moreno (brown-skinned Latino) young man with visible tattoos and a streetwear-gangster edge',
-  'a Black / dark-skinned young man with a fresh clean look',
-  'a Black / dark-skinned young man with tattoos and a confident street edge',
-  'a Latino young man with light-brown skin and some tattoos',
-  'a mixed-race young man with medium-brown skin',
-  'a dark-skinned young man, athletic, with a bit of attitude',
+  { tag: 'fair', desc: 'a fair / light-skinned European young man, clean look' },
+  { tag: 'olive', desc: 'an olive-skinned Mediterranean young man' },
+  { tag: 'moreno', desc: 'a tanned brown-skinned (moreno) young man with a cool relaxed edge' },
+  { tag: 'moreno-ink', desc: 'a moreno (brown-skinned Latino) young man with visible tattoos and a streetwear-gangster edge' },
+  { tag: 'black', desc: 'a Black / dark-skinned young man with a fresh clean look' },
+  { tag: 'black-ink', desc: 'a Black / dark-skinned young man with tattoos and a confident street edge' },
+  { tag: 'latino', desc: 'a Latino young man with light-brown skin and some tattoos' },
+  { tag: 'mixed', desc: 'a mixed-race young man with medium-brown skin' },
+  { tag: 'dark-athletic', desc: 'a dark-skinned young man, athletic, with a bit of attitude' },
 ];
 
 // Round-robin (no al azar): cada generacion agarra el SIGUIENTE casting -> dos fotos
@@ -87,15 +88,15 @@ function nextCast() {
   return c;
 }
 
-// Escena rotativa: el director se fijaba SIEMPRE en la costa. Forzamos rotacion de
-// locacion+pose para que mezcle de verdad (bahia / espejo / rooftop / calle / interior).
+// Escena rotativa (con TAG) — el director se fijaba SIEMPRE en la costa. Forzamos
+// rotacion de locacion+pose para que mezcle de verdad y poder aprender qué escena gana.
 const SETTINGS = [
-  'an aspirational COASTAL/RIVIERA terrace with REAL context behind him (a Mediterranean hillside town, pastel villas, terracotta rooftops, a marina, the coastline) under soft bright daylight. It is a candid shot TAKEN BY A FRIEND — both hands free, leaning on the stone balustrade or mid-stride, NO phone in hand.',
-  'a MIRROR FITPIC inside a bright minimal apartment (white walls, pale oak floors, a full-length mirror leaning on the wall, soft window light). Here he DOES hold the phone up to the mirror — a real, logical mirror selfie.',
-  'a clean modern ROOFTOP or balcony over a city skyline in soft daylight. Candid shot taken by a friend — hands free, relaxed stance, NO phone in hand.',
-  'a calm, characterful CITY STREET (nice doorway, café front, brick or clean facade) in soft even light. Candid walking or leaning shot taken by a friend — NO phone in hand.',
-  'a bright, airy INTERIOR — a stylish minimal apartment or a cool café with big soft window light and clean neutral tones. Candid shot, relaxed real pose, NO phone unless there is a mirror.',
-  'a sunny POOL DECK / villa terrace with clean modern architecture and a sliver of sea or greenery, soft bright light. Candid shot by a friend — hands free, NO phone in hand.',
+  { tag: 'coast', desc: 'an aspirational COASTAL/RIVIERA terrace with REAL context behind him (a Mediterranean hillside town, pastel villas, terracotta rooftops, a marina, the coastline) under soft bright daylight. It is a candid shot TAKEN BY A FRIEND — both hands free, leaning on the stone balustrade or mid-stride, NO phone in hand.' },
+  { tag: 'mirror-apt', desc: 'a MIRROR FITPIC inside a bright minimal apartment (white walls, pale oak floors, a full-length mirror leaning on the wall, soft window light). Here he DOES hold the phone up to the mirror — a real, logical mirror selfie.' },
+  { tag: 'rooftop', desc: 'a clean modern ROOFTOP or balcony over a city skyline in soft daylight. Candid shot taken by a friend — hands free, relaxed stance, NO phone in hand.' },
+  { tag: 'street', desc: 'a calm, characterful CITY STREET (nice doorway, café front, brick or clean facade) in soft even light. Candid walking or leaning shot taken by a friend — NO phone in hand.' },
+  { tag: 'interior', desc: 'a bright, airy INTERIOR — a stylish minimal apartment or a cool café with big soft window light and clean neutral tones. Candid shot, relaxed real pose, NO phone unless there is a mirror.' },
+  { tag: 'pooldeck', desc: 'a sunny POOL DECK / villa terrace with clean modern architecture and a sliver of sea or greenery, soft bright light. Candid shot by a friend — hands free, NO phone in hand.' },
 ];
 let setCounter = Math.floor(Math.random() * SETTINGS.length);
 function nextSetting() {
@@ -118,8 +119,8 @@ export async function directCreative({ product, wash, angle, refDna = '', seed =
     : '';
   const user = `Product: ${product || 'denim shorts'}${wash ? ` (wash: ${wash})` : ''}.
 Angle to hit: ${intent}.
-Casting for THIS shot: ${cast} — handsome, with a clean current streetwear look.
-SETTING for THIS shot — use EXACTLY this location and shot type (do not default to the coast every time): ${setting}
+Casting for THIS shot: ${cast.desc} — handsome, with a clean current streetwear look.
+SETTING for THIS shot — use EXACTLY this location and shot type (do not default to the coast every time): ${setting.desc}
 ${modeBrief}
 ${styling}${heroNote}
 Invent a fresh, well-styled direction that feels like a real brand campaign — vary the location, time of day, pose and energy.${seed ? ` Creative seed to push somewhere new: ${seed}.` : ''}
@@ -135,8 +136,8 @@ Remember: say NOTHING about the shorts and keep the lower body clearly visible.`
     const text = (msg.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
     if (!text) return null;
     // Garantizamos el casting en lo que llega a gpt-image (el director no siempre lo
-    // repite). Asi el color de piel / etnia rota de verdad foto a foto.
-    return `${text}\n\nThe model is ${cast}.`;
+    // repite). Devolvemos tambien los TAGS (escena + casting) para etiquetar el creativo.
+    return { text: `${text}\n\nThe model is ${cast.desc}.`, castTag: cast.tag, sceneTag: setting.tag };
   } catch (err) {
     console.error('[director] fallo, uso prompt fijo:', err.message);
     return null;

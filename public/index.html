@@ -443,6 +443,8 @@
   .afb.ok { border-left-color: var(--ok); } .afb.warn { border-left-color: var(--warn); } .afb.bad { border-left-color: var(--bad); }
   .ctrnote { font-size: 11px; color: var(--faint); margin-top: 10px; font-style: italic; }
   .stylebadge { font-size: 10px; padding: 2px 8px; border-radius: 6px; margin-left: 8px; font-weight: 600; vertical-align: middle; }
+  .dnarow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .dna { font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 7px; background: var(--surface2); color: var(--muted); text-transform: capitalize; }
   .stylebadge.camp { color: #e8c07a; background: rgba(232,192,122,.14); }
   .stylebadge.org { color: var(--accent2); background: var(--accent-soft); }
   .inputs { display: flex; gap: 8px; margin: 8px 0 2px; }
@@ -1139,6 +1141,7 @@ function renderInspector() {
         <div class="ihead">${typeBadge(it)}<span class="sid">${shortId(it._id)}</span></div>
         ${preview}
         <div class="iprod">${it.product || '—'}<span class="muted"> · ${it.wash || ''}</span>${styleBadge(it)}</div>
+        ${dnaTags(it)}
         ${inputsPanel(it)}
         ${it.copy && (it.copy.primaryText || it.copy.headline) ? copyBox(it, saveFn) : ''}
       </div>
@@ -1169,6 +1172,16 @@ function styleBadge(it) {
   if (!it.styleMode) return '';
   const camp = it.styleMode === 'campaign';
   return `<span class="stylebadge ${camp ? 'camp' : 'org'}">${camp ? '✦ Campaña' : '○ Orgánico'}</span>`;
+}
+// ADN del creativo: escena + casting + ángulo + lane (para ver/aprender qué rinde).
+const SCENE_LBL = { coast: '🌊 costa', 'mirror-apt': '🪞 depto', rooftop: '🏙 rooftop', street: '🧱 calle', interior: '🛋 interior', pooldeck: '🏝 pool' };
+function dnaTags(it) {
+  const chips = [];
+  if (it.sceneTag) chips.push(`<span class="dna">${SCENE_LBL[it.sceneTag] || it.sceneTag}</span>`);
+  if (it.castTag) chips.push(`<span class="dna">🧑 ${it.castTag}</span>`);
+  if (it._type !== 'carousel' && it.angle) chips.push(`<span class="dna">${it.angle.replace(/_/g, ' ')}</span>`);
+  if (it.referenceDna) chips.push(`<span class="dna" title="${escAttr(it.referenceDna.slice(0, 140))}">◆ ref lane</span>`);
+  return chips.length ? `<div class="dnarow">${chips.join('')}</div>` : '';
 }
 function inputsPanel(it) {
   if (it._type === 'carousel') {
