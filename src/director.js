@@ -43,7 +43,7 @@ OUTPUT: 2-5 sentences of vivid, specific art direction (richer and more detailed
 const MODE_BRIEF = {
   organic: `STYLE: organic but ELEVATED & ASPIRATIONAL — a real, candid iPhone fitpic a stylish person posted (not an ad), with a genuinely great designer-streetwear fit (the caliber of Broken Planet, Represent, Corteiz, Essentials).
 LIGHT: keep it CLEAN and BRIGHT with SOFT, EVEN, natural light — big window light, bright overcast, open shade, or clean coastal daylight. AVOID harsh direct sun, hard deep shadows, warm golden-hour / orange-yellow casts, and grungy dark or tan walls.
-SETTING — pick ONE aspirational-but-real location with VARIETY: a minimal bright apartment (large windows, oak floors), a clean modern interior, OR an ASPIRATIONAL COASTAL / RIVIERA scene under soft bright daylight. If coastal, it must show REAL CONTEXT behind him — a Mediterranean hillside town with pastel villas and rooftops, a marina, a coastline curving away, a stone balustrade or pool deck — NOT just an empty flat sea and blank sky (that reads cheap and weird). Think Monaco / Èze / Amalfi terrace. Real, organic — like a stylish friend's vacation fitpic, never a staged studio ad.
+SETTING: honor EXACTLY the per-shot SETTING specified above (it rotates — coast, mirror-apartment, rooftop, street, interior, pool deck — so the feed is varied, not always the coast). Make that location feel real, aspirational and organic, like a stylish friend's fitpic, never a staged studio ad. If it is coastal, show real context (hillside town, villas, rooftops, coastline), never an empty flat sea.
 THE SHORTS ARE THE HERO: compose and light so the DENIM SHORTS are the clear focal point — prominent, well-lit lower body, framed FAIRLY CLOSE so the model fills most of the frame. Do NOT add big handbags, luggage or busy props that steal attention from the shorts.`,
   campaign: `STYLE: a REAL high-end brand campaign at the caliber of Lorenzo Worldwide — editorial, aspirational, photographed (not a render). Describe the look HEAD TO TOE with SPECIFIC, real, nameable pieces and materials so it renders with true detail:
 - the exact TOP and layering: garment type, cut, fabric and how it sits (e.g. "an open boxy cream heavyweight zip-hoodie with drawcords over a tonal-print tee");
@@ -87,10 +87,28 @@ function nextCast() {
   return c;
 }
 
+// Escena rotativa: el director se fijaba SIEMPRE en la costa. Forzamos rotacion de
+// locacion+pose para que mezcle de verdad (bahia / espejo / rooftop / calle / interior).
+const SETTINGS = [
+  'an aspirational COASTAL/RIVIERA terrace with REAL context behind him (a Mediterranean hillside town, pastel villas, terracotta rooftops, a marina, the coastline) under soft bright daylight. It is a candid shot TAKEN BY A FRIEND — both hands free, leaning on the stone balustrade or mid-stride, NO phone in hand.',
+  'a MIRROR FITPIC inside a bright minimal apartment (white walls, pale oak floors, a full-length mirror leaning on the wall, soft window light). Here he DOES hold the phone up to the mirror — a real, logical mirror selfie.',
+  'a clean modern ROOFTOP or balcony over a city skyline in soft daylight. Candid shot taken by a friend — hands free, relaxed stance, NO phone in hand.',
+  'a calm, characterful CITY STREET (nice doorway, café front, brick or clean facade) in soft even light. Candid walking or leaning shot taken by a friend — NO phone in hand.',
+  'a bright, airy INTERIOR — a stylish minimal apartment or a cool café with big soft window light and clean neutral tones. Candid shot, relaxed real pose, NO phone unless there is a mirror.',
+  'a sunny POOL DECK / villa terrace with clean modern architecture and a sliver of sea or greenery, soft bright light. Candid shot by a friend — hands free, NO phone in hand.',
+];
+let setCounter = Math.floor(Math.random() * SETTINGS.length);
+function nextSetting() {
+  const s = SETTINGS[setCounter % SETTINGS.length];
+  setCounter += 1;
+  return s;
+}
+
 export async function directCreative({ product, wash, angle, refDna = '', seed = '', mode = 'single', styleMode = 'organic' }) {
   if (!client) return null;
   const intent = ANGLE_INTENT[angle] || ANGLE_INTENT.realista;
   const cast = nextCast();
+  const setting = nextSetting();
   const modeBrief = MODE_BRIEF[styleMode] || MODE_BRIEF.organic;
   const styling = refDna
     ? `Design a fresh, cohesive, elevated outfit INSPIRED by this reference style DNA — match its vibe, caliber, the kinds of brands and the footwear/sneaker lane, but do NOT copy it: choose your own specific top/layers, footwear and accessories so this fit is its own (never the bottoms). Reference style DNA: ${refDna}`
@@ -101,6 +119,7 @@ export async function directCreative({ product, wash, angle, refDna = '', seed =
   const user = `Product: ${product || 'denim shorts'}${wash ? ` (wash: ${wash})` : ''}.
 Angle to hit: ${intent}.
 Casting for THIS shot: ${cast} — handsome, with a clean current streetwear look.
+SETTING for THIS shot — use EXACTLY this location and shot type (do not default to the coast every time): ${setting}
 ${modeBrief}
 ${styling}${heroNote}
 Invent a fresh, well-styled direction that feels like a real brand campaign — vary the location, time of day, pose and energy.${seed ? ` Creative seed to push somewhere new: ${seed}.` : ''}
