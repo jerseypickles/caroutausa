@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { toFile } from 'openai';
 import { config } from './config.js';
 import { buildPrompt, fitLock } from './angles.js';
+import { realismPass } from './realism.js';
 
 const client = new OpenAI({ apiKey: config.openaiApiKey });
 
@@ -81,5 +82,7 @@ export async function generateVariant({ imageUrl, productBackUrl = '', angleId, 
   if (!b64) {
     throw new Error('La API no devolvio b64_json');
   }
-  return { b64 };
+  // Pase de realismo (grano/tono iPhone) -> menos look IA, mas organico.
+  const finished = config.realismPass === false ? b64 : await realismPass(b64);
+  return { b64: finished };
 }
