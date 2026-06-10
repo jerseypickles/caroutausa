@@ -26,7 +26,7 @@ THE DENIM SHORTS ARE THE PRODUCT AND ARE SACRED. A separate system keeps them pi
 - The shorts must stay CLEARLY VISIBLE and well-lit: choose framing and a pose where the full lower body reads cleanly (no heavy crop at the thighs, no shorts hidden by bags/furniture/crossed legs/deep shadow/motion blur over the legs).
 - Do NOT invent props, layering or poses that would tempt a renderer to re-interpret the bottoms.
 
-CASTING: a young, good-looking male with a clean, current streetwear look. The specific skin tone / ethnicity is given per shot below — ROTATE it across shots for a real, DIVERSE cast (fair, olive/Mediterranean, tanned brown "moreno", Latino, Black, mixed — they ALL look great in this fashion, the morenos especially have a lot of pinta). Do not describe the face in detail beyond the given casting.
+CASTING: a young, good-looking male. The specific skin tone / ethnicity / vibe is given per shot below — ROTATE it across shots for a real, DIVERSE cast (fair, olive/Mediterranean, tanned brown "moreno", Latino, Black, mixed — they ALL look great in this fashion, the morenos and dark-skinned guys especially have a lot of pinta). VARY the vibe too: some clean-cut, others with visible tattoos and a cooler street/gangster edge — like the diverse people in the reference fitpics. Honor the given casting; don't otherwise describe the face in detail.
 
 POSE & SHOT LOGIC — be intelligent and coherent, the pose MUST fit the scene:
 - A "holding the phone up to take the photo" mirror-selfie pose is ONLY allowed when the scene literally has a MIRROR (e.g. inside an apartment with a leaning mirror). NEVER use a phone-held-up pose outdoors or anywhere without a mirror — with no mirror it looks absurd, like an invisible mirror.
@@ -62,14 +62,19 @@ const ANGLE_INTENT = {
 // Devuelve una direccion creativa (string) o null si no hay key / falla (cae al fijo).
 // mode 'carouselHero' = escena mas simple y encuadre frontal claro (el hero define
 // todo el set; si driftea el jean, arrastra a las cards encadenadas).
-// Casting rotativo: cada foto un color de piel / etnia distinto (variedad real).
+// Casting rotativo: cada foto un color de piel / etnia / onda distinto (variedad real,
+// como la gente del tab de Referencias). Peso hacia morenos / piel oscura + algunos con
+// tatuajes y onda mas street/gangster, otros mas clean.
 const CASTINGS = [
-  'a fair / light-skinned European young man',
+  'a fair / light-skinned European young man, clean look',
   'an olive-skinned Mediterranean young man',
-  'a tanned brown-skinned (moreno) young man',
-  'a Latino young man with light-brown skin',
-  'a Black / dark-skinned young man',
+  'a tanned brown-skinned (moreno) young man with a cool relaxed edge',
+  'a moreno (brown-skinned Latino) young man with visible tattoos and a streetwear-gangster edge',
+  'a Black / dark-skinned young man with a fresh clean look',
+  'a Black / dark-skinned young man with tattoos and a confident street edge',
+  'a Latino young man with light-brown skin and some tattoos',
   'a mixed-race young man with medium-brown skin',
+  'a dark-skinned young man, athletic, with a bit of attitude',
 ];
 
 export async function directCreative({ product, wash, angle, refDna = '', seed = '', mode = 'single', styleMode = 'organic' }) {
