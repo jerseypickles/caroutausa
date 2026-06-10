@@ -206,6 +206,43 @@
   .launchcfg input, .launchcfg select { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 11px; font-family: inherit; font-size: 13px; }
   .launchcfg .lfield { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
   .launchcfg .lfield input { width: 70px; }
+  /* Ad Manager hero */
+  .admhero { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding: 20px 22px; border-radius: 16px; border: 1px solid var(--border);
+    background: linear-gradient(135deg, rgba(108,99,255,.10), rgba(108,99,255,.02) 60%), var(--card); margin-bottom: 24px; }
+  .admstat { display: flex; align-items: center; gap: 11px; }
+  .admdiv { width: 1px; align-self: stretch; background: var(--border); }
+  .admdot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 3px rgba(255,255,255,.04); }
+  .admdot.on { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+  .admicon { width: 34px; height: 34px; border-radius: 9px; background: var(--bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--accent); }
+  .admk { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .admv { font-size: 16px; font-weight: 700; margin-top: 1px; }
+  .btn.lg { padding: 12px 20px; font-size: 14px; font-weight: 700; border-radius: 11px; }
+  /* Launch modal */
+  .lmodal { position: fixed; inset: 0; background: rgba(0,0,0,.66); backdrop-filter: blur(3px); z-index: 60; display: none; align-items: center; justify-content: center; padding: 24px; }
+  .lmodal.open { display: flex; }
+  .lmbox { width: 560px; max-width: 100%; max-height: 88vh; overflow: auto; background: var(--card); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+  .lmhead { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 22px 14px; border-bottom: 1px solid var(--border); }
+  .lmhead h3 { margin: 0; font-size: 17px; font-weight: 700; }
+  .lmsub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .lmx { font-size: 26px; line-height: 1; color: var(--muted); cursor: pointer; }
+  .lmx:hover { color: var(--text); }
+  .lmbody { padding: 18px 22px; }
+  .lmdetect { font-size: 13px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; margin-bottom: 18px; }
+  .lmsteps { display: flex; gap: 14px; flex-wrap: wrap; }
+  .lmstep { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 7px; }
+  .lmstep label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .stepper { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+  .stepper button { width: 38px; height: 40px; background: transparent; border: none; color: var(--text); font-size: 19px; cursor: pointer; }
+  .stepper button:hover { background: var(--border); }
+  .stepper input { flex: 1; width: 40px; text-align: center; background: transparent; border: none; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; }
+  .lmmax { font-size: 11px; color: var(--muted); }
+  .lmprevwrap { margin-top: 20px; }
+  .lmprevlbl { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .lmprev { display: flex; gap: 7px; flex-wrap: wrap; }
+  .lmthumb { position: relative; width: 52px; height: 52px; border-radius: 9px; overflow: hidden; border: 1px solid var(--border); }
+  .lmthumb img { width: 100%; height: 100%; object-fit: cover; }
+  .lmthumb .lmcar { position: absolute; top: 2px; left: 2px; font-size: 10px; background: rgba(0,0,0,.6); color: #fff; padding: 0 4px; border-radius: 4px; }
+  .lmfoot { display: flex; align-items: center; gap: 10px; padding: 16px 22px; border-top: 1px solid var(--border); }
   .adsbox:not(:empty) { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
   .adsgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .adcard { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
@@ -444,17 +481,14 @@
 
     <!-- AD MANAGER -->
     <section class="view" id="view-ads">
-      <!-- Compositor de lanzamiento -->
-      <div class="secthead"><h2>Lanzar campaña</h2><span class="muted" id="eligCount"></span><span style="flex:1"></span>
-        <span class="muted" id="metaStatus" style="font-size:12px"></span></div>
-      <div class="hint">Elegí singles y carruseles aprobados — van todos a UN ad set. El nombre lo arma el sistema y optimiza a <b>Compras</b> por defecto. Cada single se sube en <b>9:16 para Stories/Reels</b> y <b>1:1 para Feed</b>. Se crea <b>EN PAUSA</b> — no gasta hasta que la actives.</div>
-      <div id="eligGrid" class="eliggrid"></div>
-      <div class="empty" id="eligEmpty" style="display:none">No hay piezas aprobadas. Aprobá singles o carruseles en la <b>Cola de QC</b> y aparecen acá.</div>
-      <div class="launchcfg" id="launchCfg" style="display:none">
-        <div class="lfield"><span>Presupuesto $/día</span><input id="campBudget" type="number" value="25" min="1" step="1" /></div>
-        <span class="muted" style="font-size:12px">Optimiza a Compras · nombre automático</span>
+      <!-- Hero / control -->
+      <div class="admhero">
+        <div class="admstat"><span class="admdot" id="admDot"></span><div class="admtxt"><div class="admk">Meta Ads</div><div class="admv" id="metaStatus">…</div></div></div>
+        <div class="admdiv"></div>
+        <div class="admstat"><div class="admicon">✓</div><div class="admtxt"><div class="admk">Aprobados listos</div><div class="admv" id="eligCount">0</div></div></div>
+        <div class="admstat"><div class="admicon">◷</div><div class="admtxt"><div class="admk">Campañas lanzadas</div><div class="admv" id="launchedCount">0</div></div></div>
         <span style="flex:1"></span>
-        <button class="btn" id="launchBtn" onclick="launchCampaign(this)">Lanzar <span id="launchN"></span> (en pausa)</button>
+        <button class="btn lg" onclick="openLaunch()">▶&nbsp; Lanzar campaña</button>
       </div>
 
       <!-- Campañas lanzadas por CAROTA -->
@@ -488,6 +522,33 @@
 <div class="toast" id="toast"></div>
 <div class="lightbox" id="lightbox" onclick="closeZoom()"><span class="close">&times;</span><img id="lightboxImg" src="" alt="" /></div>
 <div class="cviewer" id="cviewer" onclick="closeCViewer()"><span class="close">&times;</span><div class="cstrip" id="cstrip" onclick="event.stopPropagation()"></div></div>
+
+<!-- Modal de lanzamiento -->
+<div class="lmodal" id="launchModal" onclick="closeLaunch()">
+  <div class="lmbox" onclick="event.stopPropagation()">
+    <div class="lmhead"><div><h3>Lanzar campaña</h3><div class="lmsub">Se crea EN PAUSA · optimiza Compras · nombre automático</div></div><span class="lmx" onclick="closeLaunch()">&times;</span></div>
+    <div class="lmbody">
+      <div class="lmdetect" id="lmDetect">Detectando piezas aprobadas…</div>
+      <div class="lmsteps">
+        <div class="lmstep"><label>Fotos individuales</label>
+          <div class="stepper"><button onclick="bumpQ('S',-1)">−</button><input id="qSingles" type="number" value="0" min="0" oninput="renderLaunchPrev()"/><button onclick="bumpQ('S',1)">+</button></div>
+          <span class="lmmax" id="maxS"></span></div>
+        <div class="lmstep"><label>Carruseles</label>
+          <div class="stepper"><button onclick="bumpQ('C',-1)">−</button><input id="qCarousels" type="number" value="0" min="0" oninput="renderLaunchPrev()"/><button onclick="bumpQ('C',1)">+</button></div>
+          <span class="lmmax" id="maxC"></span></div>
+        <div class="lmstep"><label>Presupuesto $/día</label>
+          <div class="stepper"><button onclick="bumpB(-5)">−</button><input id="qBudget" type="number" value="25" min="1"/><button onclick="bumpB(5)">+</button></div>
+          <span class="lmmax">por ad set</span></div>
+      </div>
+      <div class="lmprevwrap"><div class="lmprevlbl" id="lmPrevLbl"></div><div class="lmprev" id="lmPrev"></div></div>
+    </div>
+    <div class="lmfoot">
+      <span class="muted" id="lmSummary" style="font-size:12.5px"></span><span style="flex:1"></span>
+      <button class="btn ghost" onclick="closeLaunch()">Cancelar</button>
+      <button class="btn" id="lmLaunch" onclick="launchFromModal(this)">Lanzar en pausa</button>
+    </div>
+  </div>
+</div>
 
 <script>
 let filter = 'generated';
@@ -1082,57 +1143,70 @@ async function saveCopy(id, field, value) {
   toast('Copy guardado');
 }
 
-/* ===== AD MANAGER (visualizador de campañas de la cuenta) ===== */
-let selectedAds = new Map(); // id -> 'single' | 'carousel'
+/* ===== AD MANAGER ===== */
+let eligItems = [];
 async function loadAdManager() { loadMetaStatus(); loadEligible(); loadLaunched(); loadCampaigns(); }
 
 async function loadEligible() {
-  let items = [];
-  try { const d = await (await fetch('/api/meta/eligible')).json(); items = d.items || []; } catch (e) {}
-  const grid = document.getElementById('eligGrid'), empty = document.getElementById('eligEmpty'), cfg = document.getElementById('launchCfg');
-  document.getElementById('eligCount').textContent = items.length ? `${items.length} aprobados (${items.filter(i=>i.type==='single').length} singles · ${items.filter(i=>i.type==='carousel').length} carruseles)` : '';
-  empty.style.display = items.length ? 'none' : 'block';
-  cfg.style.display = items.length ? 'flex' : 'none';
-  const live = new Set(items.map(i => i.id)); [...selectedAds.keys()].forEach(id => { if (!live.has(id)) selectedAds.delete(id); });
-  grid.innerHTML = items.map(it => {
-    const img = it.type === 'carousel' ? `/api/carousels/${it.id}/cards/0/image` : `/api/creatives/${it.id}/image?p=square`;
-    const fallback = it.type === 'carousel' ? '' : `onerror="this.onerror=null;this.src='/api/creatives/${it.id}/image'"`;
-    const tag = it.type === 'carousel' ? `carrusel · ${it.cards||0}` : (it.angle || '').replace(/_/g, ' ');
-    return `<div class="eligcard ${selectedAds.has(it.id) ? 'sel' : ''}" onclick="toggleElig('${it.id}','${it.type}', this)">
-      <img src="${img}" loading="lazy" ${fallback} alt="" />
-      ${it.type === 'carousel' ? '<div class="eligtype">▦</div>' : ''}
-      <div class="eligtick">✓</div>
-      <div class="eliglabel">${(it.product || '').replace(' Denim Short', '')} · ${tag}</div>
-    </div>`;
-  }).join('');
-  updateLaunchN();
+  try { const d = await (await fetch('/api/meta/eligible')).json(); eligItems = d.items || []; } catch (e) { eligItems = []; }
+  const el = document.getElementById('eligCount'); if (el) el.textContent = eligItems.length;
 }
-function toggleElig(id, type, el) {
-  if (selectedAds.has(id)) { selectedAds.delete(id); el.classList.remove('sel'); }
-  else { selectedAds.set(id, type); el.classList.add('sel'); }
-  updateLaunchN();
-}
-function updateLaunchN() { const e = document.getElementById('launchN'); if (e) e.textContent = selectedAds.size ? `(${selectedAds.size})` : ''; }
 
-async function launchCampaign(btn) {
-  if (!selectedAds.size) return toast('Elegí al menos una pieza');
-  const creativeIds = [...selectedAds].filter(([, t]) => t === 'single').map(([id]) => id);
-  const carouselIds = [...selectedAds].filter(([, t]) => t === 'carousel').map(([id]) => id);
-  const dailyBudget = Number(document.getElementById('campBudget').value) || 25;
-  if (!confirm(`Lanzar ${creativeIds.length} single(s) + ${carouselIds.length} carrusel(es) en un ad set, $${dailyBudget}/día, optimizando Compras?\n\nSe crea EN PAUSA — no gasta hasta que la actives.`)) return;
+/* --- modal de lanzamiento --- */
+function singlesElig() { return eligItems.filter(i => i.type === 'single'); }
+function carouselsElig() { return eligItems.filter(i => i.type === 'carousel'); }
+function openLaunch() {
+  if (!eligItems.length) return toast('No hay piezas aprobadas — aprobá en la Cola de QC');
+  const s = singlesElig().length, c = carouselsElig().length;
+  document.getElementById('lmDetect').innerHTML = `Detectados <b>${s}</b> singles y <b>${c}</b> carruseles aprobados. Elegí cuántos incluir en el ad set.`;
+  const qs = document.getElementById('qSingles'), qc = document.getElementById('qCarousels');
+  qs.max = s; qs.value = s; qc.max = c; qc.value = c;
+  document.getElementById('maxS').textContent = `máx ${s}`;
+  document.getElementById('maxC').textContent = `máx ${c}`;
+  document.getElementById('launchModal').classList.add('open');
+  renderLaunchPrev();
+}
+function closeLaunch() { document.getElementById('launchModal').classList.remove('open'); }
+function bumpQ(t, d) { const el = document.getElementById(t === 'S' ? 'qSingles' : 'qCarousels'); el.value = (Number(el.value) || 0) + d; renderLaunchPrev(); }
+function bumpB(d) { const el = document.getElementById('qBudget'); el.value = Math.max(1, (Number(el.value) || 25) + d); renderLaunchPrev(); }
+function pickItems() {
+  const sMax = singlesElig().length, cMax = carouselsElig().length;
+  const ns = Math.max(0, Math.min(sMax, Number(document.getElementById('qSingles').value) || 0));
+  const nc = Math.max(0, Math.min(cMax, Number(document.getElementById('qCarousels').value) || 0));
+  document.getElementById('qSingles').value = ns; document.getElementById('qCarousels').value = nc;
+  return { singles: singlesElig().slice(0, ns), carousels: carouselsElig().slice(0, nc), ns, nc };
+}
+function renderLaunchPrev() {
+  const { singles, carousels, ns, nc } = pickItems();
+  const sel = [...singles, ...carousels];
+  document.getElementById('lmPrevLbl').textContent = sel.length ? `Se van a lanzar:` : 'Elegí al menos una pieza.';
+  document.getElementById('lmPrev').innerHTML = sel.slice(0, 14).map(it => {
+    const img = it.type === 'carousel' ? `/api/carousels/${it.id}/cards/0/image` : `/api/creatives/${it.id}/image?p=square`;
+    return `<div class="lmthumb">${it.type === 'carousel' ? '<span class="lmcar">▦</span>' : ''}<img src="${img}" loading="lazy" alt=""/></div>`;
+  }).join('');
+  const b = Number(document.getElementById('qBudget').value) || 25;
+  document.getElementById('lmSummary').textContent = `${ns + nc} ad(s) en 1 ad set · $${b}/día · Compras`;
+  const lb = document.getElementById('lmLaunch'); if (lb) lb.disabled = !(ns + nc);
+}
+async function launchFromModal(btn) {
+  const { singles, carousels, ns, nc } = pickItems();
+  if (!ns && !nc) return toast('Elegí al menos una pieza');
+  const dailyBudget = Number(document.getElementById('qBudget').value) || 25;
+  if (!confirm(`Lanzar ${ns} single(s) + ${nc} carrusel(es) en un ad set, $${dailyBudget}/día, Compras?\n\nSe crea EN PAUSA — no gasta hasta que la actives.`)) return;
   btn.disabled = true; btn.textContent = 'Lanzando…';
   try {
-    const r = await (await fetch('/api/meta/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dailyBudget, creativeIds, carouselIds }) })).json();
+    const r = await (await fetch('/api/meta/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dailyBudget, creativeIds: singles.map(i => i.id), carouselIds: carousels.map(i => i.id) }) })).json();
     if (r.error) toast(r.error);
-    else { toast('Campaña creada en PAUSA ✓ · ' + (r.campaign?.name || '')); selectedAds.clear(); loadAdManager(); }
+    else { toast('Campaña creada en PAUSA ✓ · ' + (r.campaign?.name || '')); closeLaunch(); loadAdManager(); }
   } catch (e) { toast('Error lanzando la campaña'); }
-  finally { btn.disabled = false; btn.innerHTML = 'Lanzar <span id="launchN"></span> (en pausa)'; updateLaunchN(); }
+  finally { btn.disabled = false; btn.textContent = 'Lanzar en pausa'; }
 }
 
 async function loadLaunched() {
   let camps = [];
   try { const d = await (await fetch('/api/meta/campaigns')).json(); camps = d.campaigns || []; } catch (e) {}
   const list = document.getElementById('launchedList'), empty = document.getElementById('launchedEmpty');
+  const lc = document.getElementById('launchedCount'); if (lc) lc.textContent = camps.length;
   empty.style.display = camps.length ? 'none' : 'block';
   list.innerHTML = camps.map(launchedCard).join('');
   camps.forEach(c => loadLaunchedInsights(c._id));
@@ -1171,7 +1245,8 @@ async function toggleCampaign(id, status, btn) {
 async function loadMetaStatus() {
   try {
     const s = await (await fetch('/api/meta/status')).json();
-    document.getElementById('metaStatus').textContent = s.configured ? `Conectado · ${s.adAccountId}` : 'Meta no configurado';
+    document.getElementById('metaStatus').textContent = s.configured ? `Conectado · ${s.adAccountId}` : 'No configurado';
+    const dot = document.getElementById('admDot'); if (dot) dot.classList.toggle('on', !!s.configured);
   } catch (e) {}
 }
 async function loadCampaigns() {
