@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { Carousel } from '../models/carousel.js';
 import { Product } from '../models/product.js';
-import { Reference } from '../models/reference.js';
+import { pickRefs } from '../refs.js';
 import { generateCarouselInBackground } from '../carousel.js';
 import { analyzeImage } from '../analyzer.js';
 
@@ -36,9 +36,8 @@ carouselsRouter.post('/products/:id/carousel', async (req, res) => {
   if (!product) return res.status(404).json({ error: 'Producto no encontrado' });
   if (!product.image) return res.status(400).json({ error: 'El producto no tiene imagen' });
 
-  // hero usa una referencia activa random (para el vibe)
-  const refs = await Reference.find({ active: true }).select('+imageData').lean();
-  const ref = refs.length ? refs[Math.floor(Math.random() * refs.length)] : null;
+  // hero usa una referencia NUEVA (no usada por el producto) para el vibe del outfit
+  const [ref] = await pickRefs({ shopifyProductId: product.shopifyId, n: 1 });
 
   const doc = await Carousel.create({
     shopifyProductId: product.shopifyId,
@@ -46,7 +45,8 @@ carouselsRouter.post('/products/:id/carousel', async (req, res) => {
     wash: product.wash,
     sourceImageUrl: product.image,
     hasReference: Boolean(ref),
-    referenceImageData: ref?.imageData || null,
+    referenceId: ref?.id || null,
+    referenceImageData: ref?.b64 || null,
     genStatus: 'generating',
   });
 

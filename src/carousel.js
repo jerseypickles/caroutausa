@@ -11,15 +11,26 @@ const IPHONE = `Real organic iPhone photo: phone-camera color (not professional/
 grading), natural available light, slight grain, candid casual framing. Natural skin,
 no waxy plastic look, no HDR glow, no studio polish.`;
 
-// Card de pose: misma escena/modelo/color que el hero (imagen 2), solo cambia la pose.
-function posePrompt(productDescription) {
+// Secuencia de poses: cada card una toma DISTINTA del mismo shoot (no casi iguales),
+// para que el carrusel tenga flujo y se vea como una serie real de fotos.
+const POSE_SEQUENCE = [
+  'a relaxed THREE-QUARTER turn, weight shifted onto one leg, one hand in a pocket, looking slightly off-camera — different angle and stance from the previous frame',
+  'WALKING mid-stride across or toward the camera, a candid step with natural motion and energy, framed full-body',
+  'a SIDE PROFILE or from-behind view that shows how the fit and the shorts sit from another angle, casual and unposed',
+  'a slightly LOWER camera angle looking up, confident full-body stance, a fresh composition from the others',
+];
+
+// Card de pose: misma escena/modelo/color que el hero (imagen 2), pero una pose
+// claramente distinta (poseBrief) -> la secuencia tiene variedad real.
+function posePrompt(productDescription, poseBrief = '') {
   return `${GARMENT_LOCK}
 
 The SECOND image is a previous frame of this EXACT same fitpic session. Keep the SAME
 real model, the SAME location and background, the SAME outfit, and the SAME lighting
-and color grading as the second image. ONLY change the pose and camera angle for
-variety (walking, three-quarter turn, side view, hands in pockets, mid-step) — like
-another photo taken the same minute, same place, same person.
+and color grading as the second image — like another photo taken the same minute, same
+place, same person.
+NOW change to a CLEARLY DIFFERENT shot: ${poseBrief || 'a new pose and camera angle'}.
+It must read as a distinct frame in the sequence, not a near-duplicate of the others.
 ${productDescription ? `\nThe product to preserve exactly: ${productDescription}` : ''}
 
 ${IPHONE}`;
@@ -52,7 +63,8 @@ export async function generateCarousel({ imageUrl, productDescription, heroRefer
   const out = [{ role: 'hero', b64: heroB64 }];
   const poseCount = Math.max(0, cards - 2); // hero + packshot + poses
   for (let i = 0; i < poseCount; i++) {
-    const r = await generateVariant({ imageUrl, referenceB64: heroB64, productDescription, fitSpec, prompt: posePrompt(productDescription) });
+    const poseBrief = POSE_SEQUENCE[i % POSE_SEQUENCE.length];
+    const r = await generateVariant({ imageUrl, referenceB64: heroB64, productDescription, fitSpec, prompt: posePrompt(productDescription, poseBrief) });
     out.push({ role: 'pose', b64: r.b64 });
   }
   // Card packshot: el short solo sobre superficie limpia (cierra el set, vendedor).

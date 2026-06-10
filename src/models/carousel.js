@@ -22,6 +22,7 @@ const carouselSchema = new Schema(
     sourceImageUrl: { type: String, required: true },
 
     hasReference: { type: Boolean, default: false },
+    referenceId: { type: String, default: null },
     referenceImageData: { type: String, default: null, select: false },
 
     genStatus: { type: String, enum: ['generating', 'ready', 'failed'], default: 'generating', index: true },

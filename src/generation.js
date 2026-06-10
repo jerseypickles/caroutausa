@@ -123,6 +123,7 @@ export async function enqueueJobs({ imageUrl, jobs, meta = {}, productDescriptio
       qcStatus: 'generated',
       genStatus: 'generating',
       hasReference: Boolean(ref),
+      referenceId: ref?.id || null,
       referenceImageData: ref?.b64 || null,
     }))
   );

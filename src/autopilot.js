@@ -1,7 +1,7 @@
 import { Product } from './models/product.js';
 import { Creative } from './models/creative.js';
 import { Carousel } from './models/carousel.js';
-import { Reference } from './models/reference.js';
+import { pickRefs } from './refs.js';
 import { enqueueJobs, enqueueFlatlay } from './generation.js';
 import { generateCarouselInBackground } from './carousel.js';
 import { logActivity } from './models/activity.js';
@@ -32,8 +32,6 @@ export async function runAutopilot({ manual = false } = {}) {
       const fitSpec = p.fitSpec || '';
       const meta = { shopifyProductId: p.shopifyId, product: p.title, wash: p.wash, fitSpec };
 
-      const activeRefs = await Reference.find({ active: true }).select('+imageData').lean();
-
       // 1) ¿ya tiene packshot? si no, ese es el siguiente paso (rapido, 1 imagen).
       const hasFlatlay = await Creative.countDocuments({ shopifyProductId: p.shopifyId, format: 'flatlay' });
       if (!hasFlatlay) {
@@ -42,13 +40,13 @@ export async function runAutopilot({ manual = false } = {}) {
         return { product: p.title, piece: 'flatlay' };
       }
 
-      // 2) ¿ya tiene carrusel? si no, generar uno (cohesivo, con referencia).
+      // 2) ¿ya tiene carrusel? si no, generar uno (cohesivo, con referencia NUEVA).
       const hasCarousel = await Carousel.countDocuments({ shopifyProductId: p.shopifyId });
       if (!hasCarousel) {
-        const ref = activeRefs.length ? activeRefs[Math.floor(Math.random() * activeRefs.length)] : null;
+        const [ref] = await pickRefs({ shopifyProductId: p.shopifyId, n: 1 });
         const cdoc = await Carousel.create({
           shopifyProductId: p.shopifyId, product: p.title, wash: p.wash, sourceImageUrl: p.image,
-          hasReference: Boolean(ref), referenceImageData: ref?.imageData || null, genStatus: 'generating',
+          hasReference: Boolean(ref), referenceId: ref?.id || null, referenceImageData: ref?.b64 || null, genStatus: 'generating',
         });
         generateCarouselInBackground(cdoc._id).catch((e) => console.error('[autopilot] carousel:', e.message));
         await Product.updateOne({ shopifyId: p.shopifyId }, { $inc: { generatedCount: 5 }, $set: { lastGeneratedAt: new Date() } });
@@ -56,18 +54,12 @@ export async function runAutopilot({ manual = false } = {}) {
         return { product: p.title, piece: 'carousel' };
       }
 
-      // 3) si no, una tanda de singles con referencia (reference-driven).
+      // 3) si no, una tanda de singles con referencias NUEVAS (no usadas por el producto).
       const angle = (p.generatedCount || 0) % 2 === 0 ? 'realista' : 'gancho_click';
-      const jobs = [];
-      if (activeRefs.length) {
-        const n = Math.min(2, activeRefs.length);
-        for (let k = 0; k < n; k++) {
-          const r = activeRefs[((p.generatedCount || 0) + k) % activeRefs.length];
-          jobs.push({ angleId: angle, ref: { b64: r.imageData }, styleMode: 'organic' });
-        }
-      } else {
-        jobs.push({ angleId: angle, ref: null, styleMode: 'organic' });
-      }
+      const picked = await pickRefs({ shopifyProductId: p.shopifyId, n: 2 });
+      const jobs = picked.length
+        ? picked.map((ref) => ({ angleId: angle, ref, styleMode: 'organic' }))
+        : [{ angleId: angle, ref: null, styleMode: 'organic' }];
       await enqueueJobs({ imageUrl: p.image, jobs, meta, productDescription, fitSpec });
       await Product.updateOne({ shopifyId: p.shopifyId }, { $inc: { generatedCount: jobs.length }, $set: { lastGeneratedAt: new Date() } });
       await logActivity('single', `Auto: ${jobs.length} singles (${angle}) de ${p.title}`, { product: p.title, level: 'ok' });

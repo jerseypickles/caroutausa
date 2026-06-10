@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { Product } from '../models/product.js';
-import { Reference } from '../models/reference.js';
 import { syncProducts } from '../sync.js';
 import { enqueueJobs, enqueueFlatlay } from '../generation.js';
+import { pickRefs } from '../refs.js';
 import { config } from '../config.js';
 
 export const productsRouter = Router();
@@ -59,27 +59,16 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
     ? req.body.angles
     : config.recipeAngles;
 
-  const activeRefs = await Reference.find({ active: true }).select('+imageData').lean();
-  // Barajar (Fisher-Yates) para variar las referencias entre generaciones y usar
-  // todo el pool, no siempre las mismas. La variedad depende de cuantas haya activas.
-  for (let k = activeRefs.length - 1; k > 0; k--) {
-    const j = Math.floor(Math.random() * (k + 1));
-    [activeRefs[k], activeRefs[j]] = [activeRefs[j], activeRefs[k]];
-  }
-
-  // Receta REFERENCE-DRIVEN (look iPhone apagado): cada variante usa una REFERENCIA
-  // (el outfit lo manda la referencia; el director solo dirige la escena). Por angulo,
-  // 2 referencias distintas del pool. Sin referencias activas -> cae a director-styled.
+  // Receta REFERENCE-DRIVEN: 2 referencias por angulo, priorizando las que este
+  // producto NO uso todavia (variedad real, no siempre la misma).
+  const need = angles.length * 2;
+  const picked = await pickRefs({ shopifyProductId: product.shopifyId, n: need });
   const jobs = [];
-  angles.forEach((angleId, i) => {
-    if (activeRefs.length) {
-      const n = Math.min(2, activeRefs.length);
-      for (let k = 0; k < n; k++) {
-        const r = activeRefs[(i * 2 + k) % activeRefs.length];
-        jobs.push({ angleId, ref: { b64: r.imageData }, styleMode: 'organic' });
-      }
-    } else {
-      jobs.push({ angleId, ref: null, styleMode: 'organic' });
+  let pi = 0;
+  angles.forEach((angleId) => {
+    for (let k = 0; k < 2; k++) {
+      const ref = picked.length ? picked[pi++ % picked.length] : null;
+      jobs.push({ angleId, ref, styleMode: 'organic' });
     }
   });
 
