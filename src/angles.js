@@ -119,16 +119,22 @@ light, slight grain, candid framing.`;
 export function buildFlatlayPrompt(productDescription = '', fitSpec = '') {
   return `${GARMENT_LOCK}${fitLock(fitSpec)}${productDescription ? `\n\nThe exact product: ${productDescription}` : ''}
 
-Photograph this exact denim short as a premium STILL-LIFE PACKSHOT — NO model, NO person,
-NO legs, just the garment itself. Lay it flat and neatly arranged (or softly folded once)
-on a clean SOLID surface — warm cream, pale stone, sand or pale concrete — shot from directly
-above or a slight high angle. Use soft natural directional studio-daylight that casts ONE
-gentle, realistic, soft-edged shadow of the shorts onto the surface. Photoreal denim texture
-and stitching, true restrained color (a bit muted, never oversaturated or HDR), clean
-negative space, an elevated editorial e-commerce look — the kind of product shot that sells.
-You may add ONE subtle styling prop beside it (a silver chain or a folded tee), nothing busy.
-It must look like a REAL studio photograph — sharp, tactile, with real soft shadow — never a
-flat, fake or AI-looking render.`;
+Photograph this exact denim short as a raw, authentic STILL-LIFE flat-lay — NO model, NO
+person, NO legs, just the garment itself, laid flat and shot straight from ABOVE (top-down).
+SURFACE: lay it on a real, weathered CONCRETE FLOOR — the kind in a warehouse, garage or
+storage unit: bare polished-but-worn grey concrete with natural cracks, hairline lines,
+stains, scuffs, dust and uneven mottled tones, real industrial texture. NOT a clean studio
+backdrop, NOT a table, NOT a colored paper sweep.
+LIGHT: soft natural diffuse daylight (overcast or open warehouse light) from one side,
+casting ONE gentle, real soft-edged shadow under the garment. MUTED, slightly desaturated,
+true-to-life color — never bright, glossy, HDR, warm-filtered or oversaturated.
+The shorts fill most of the frame, laid out naturally and a little imperfectly (one leg
+slightly turned, soft real fabric folds). Real denim texture, fades, the raw frayed hem,
+pockets and stitching all sharp, tactile and visible.
+This is the gritty vintage-reseller / streetwear-archive look (think Grailed / vintage
+seller listings). It MUST look like a REAL photo someone took of the shorts on a concrete
+floor with a phone — absolutely NOT an AI render, not plastic, not too clean: real grain,
+real concrete, real fabric, real shadow. No props, no text, no hangers.`;
 }
 
 // Arma el prompt final: garment lock + descripcion real del producto + (referencia)
