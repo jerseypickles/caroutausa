@@ -222,6 +222,13 @@
   .nav a .dot { width: 7px; height: 7px; border-radius: 50%; background: transparent; margin-left: auto; }
   .nav a .dot.on { background: var(--ok); box-shadow: 0 0 6px var(--ok); animation: pulse 1.4s infinite; }
   @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  .motorbar { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 11px; padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px; }
+  .motorbar:empty { display: none; }
+  .motorbar b { font-weight: 600; }
+  .mbdot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+  .mbdot.on { background: var(--ok); box-shadow: 0 0 6px var(--ok); animation: pulse 1.4s infinite; }
+  .mbmut { color: var(--muted); }
+  .mbk { color: var(--muted); } .mbk b { color: var(--text); margin-left: 3px; }
   .motorstat { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
   .mstat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
   .mstat .mv { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
@@ -394,6 +401,7 @@
 
     <!-- COLA DE QC -->
     <section class="view" id="view-cola">
+      <div class="motorbar" id="motorBar"></div>
       <div class="qbar">
         <div class="qtabs" id="filters">
           <button data-f="generated" class="on" onclick="setFilter('generated')">Pendientes <span class="cnt" id="cntPend">0</span></button>
@@ -470,6 +478,21 @@ function showView(name) {
   if (name === 'referencias') loadReferences();
   if (name === 'ads') loadAdManager();
   if (name === 'motor') loadMotor();
+  if (name === 'cola') renderMotorBar();
+}
+async function renderMotorBar() {
+  const el = document.getElementById('motorBar'); if (!el) return;
+  try {
+    const st = await fetch('/api/autopilot/status').then(r => r.json());
+    el.innerHTML = `<span class="mbdot ${st.generating ? 'on' : ''}"></span>
+      <b>Motor ${st.enabled ? 'ON' : 'OFF'}</b>${st.enabled ? `<span class="mbmut"> · cada ${st.intervalMin}m</span>` : ''}
+      <span class="mbk">Generando <b>${st.generating}</b></span>
+      <span class="mbk">Pendientes <b>${st.pendientes}</b></span>
+      <span class="mbk">Listos <b>${st.ready}</b></span>
+      <span style="flex:1"></span>
+      <button class="btn ghost sm" onclick="runAutopilot(this)">▶ Correr ahora</button>
+      <button class="btn ghost sm" onclick="showView('motor')">Ver actividad ↗</button>`;
+  } catch (e) { el.innerHTML = ''; }
 }
 /* ===== MOTOR (autopilot + feed) ===== */
 const KIND_ICON = { autopilot: '🤖', single: '🖼️', carousel: '🎞️', flatlay: '📦', sync: '🔄', error: '⚠️' };
@@ -503,7 +526,7 @@ async function runAutopilot(btn) {
     const r = await fetch('/api/autopilot/run', { method: 'POST' });
     const d = await r.json();
     toast(d.ran ? `Motor: ${d.result.piece} de ${d.result.product}` : 'Motor: todo al día');
-    setTimeout(loadMotor, 800);
+    setTimeout(() => { loadMotor(); renderMotorBar(); if (typeof loadQueue === 'function') loadQueue(); }, 800);
   } catch (e) { toast('Error: ' + e.message); }
   finally { btn.disabled = false; btn.textContent = '▶ Correr ahora'; }
 }
