@@ -165,7 +165,7 @@ export function fitLock(fitSpec = '') {
 }
 
 // Brand-safe: nada de logos de OTRAS marcas en la parte de arriba (es un ad de CAROTA).
-const BRAND_SAFE = `BRAND-SAFE TOP: the top / upper clothing (tee, hoodie, knit, jacket) must have NO third-party brand logo, wordmark or recognizable brand graphic on it — no real brand names or famous logos. Keep the top CLEAN and plain, or with only a subtle abstract / tonal design. It is the brand's own apparel. (Real sneakers on the feet are fine.)`;
+const BRAND_SAFE = `TOP GRAPHICS: the top (tee, hoodie, knit) can and often SHOULD carry a bold ORIGINAL graphic / art print / illustration (streetwear graphic energy — a big front print, collage, character or image), not a plain blank. BUT show NO real third-party brand logo, wordmark or famous brand name — the design must be original/generic, the brand's own apparel. (Real sneakers on the feet are fine.)`;
 
 // Instrucción del HOOK para bakearlo EN la misma generación (una sola pasada). El texto
 // va en el espacio negativo, NUNCA sobre la cara ni sobre el short (no lo altera).
