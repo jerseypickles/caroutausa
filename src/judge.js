@@ -33,6 +33,32 @@ ${fitSpec ? `The product's TRUE fit/silhouette (from the brand size guide) is: "
 
 // Compara la imagen original (URL) contra la generada (base64) y devuelve el veredicto
 // en dos ejes: diseño (score) y fit/silueta (fitScore). fitSpec ancla el fit real.
+// Chequeo focalizado para la variante CON HOOK: compara el SHORT entre la version limpia
+// y la del hook, ignorando el texto. Devuelve { same, note }. Si el short cambió -> false.
+export async function judgeHookFidelity(cleanB64, hookB64) {
+  try {
+    const r = await client.chat.completions.create({
+      model: config.judgeModel,
+      response_format: { type: 'json_object' },
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Two versions of the SAME fashion photo. The second has a TEXT OVERLAY added in the empty space. IGNORE the text entirely. Compare ONLY the DENIM SHORTS (the product) and the rest of the photo: are the shorts IDENTICAL in wash/color, fade & whiskering pattern, length, hem and fit? And are the model, pose, outfit and background unchanged (except the added text)? Return JSON {"same": true or false, "note": "if not same, what specifically changed in the shorts or photo"}.' },
+          { type: 'text', text: 'Image 1 — original (no text):' },
+          { type: 'image_url', image_url: { url: toDataUrl(cleanB64) } },
+          { type: 'text', text: 'Image 2 — with text overlay:' },
+          { type: 'image_url', image_url: { url: toDataUrl(hookB64) } },
+        ],
+      }],
+    });
+    const j = JSON.parse(r.choices?.[0]?.message?.content || '{}');
+    return { same: j.same !== false, note: String(j.note || '') };
+  } catch (e) {
+    console.error('[judge] judgeHookFidelity fallo:', e.message);
+    return { same: true, note: 'check failed (no bloquea): ' + e.message }; // best-effort, no bloqueamos por un error del check
+  }
+}
+
 export async function judgeFidelity({ sourceImageUrl, b64, fitSpec = '' }) {
   const dataUrl = toDataUrl(b64);
 

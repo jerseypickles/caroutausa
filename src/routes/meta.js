@@ -227,9 +227,15 @@ metaRouter.post('/meta/campaigns/:id/status', async (req, res) => {
   try {
     await meta.setStatus(doc.campaignId, status);
     await meta.setStatus(doc.adSetId, status);
+    // Los 3 niveles: tambien cada AD (si no, la campaña queda ACTIVE pero no entrega).
+    let ads = 0;
+    for (const a of (doc.ads || [])) {
+      if (!a.adId) continue;
+      try { await meta.setStatus(a.adId, status); ads++; } catch (e) { console.error('[meta] setStatus ad:', e.message); }
+    }
     doc.status = status;
     await doc.save();
-    res.json({ status });
+    res.json({ status, ads });
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
