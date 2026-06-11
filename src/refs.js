@@ -83,7 +83,8 @@ export function washFamily(wash) {
 // prioridad: favorito > MATCHEA el wash (lane↔wash) > no usada por el producto (variedad).
 // Devuelve [{ id, b64, dna, type }].
 export async function pickRefs({ shopifyProductId = null, wash = null, n = 1, type = 'outfit' } = {}) {
-  const refs = await Reference.find({ active: true, avoid: { $ne: true }, type }).select('+imageData').lean();
+  // MULTI-TAG: una ref entra si su array `types` incluye el tipo pedido (compat: o `type`).
+  const refs = await Reference.find({ active: true, avoid: { $ne: true }, $or: [{ types: type }, { type }] }).select('+imageData').lean();
   if (!refs.length) return [];
 
   let usedIds = new Set();
@@ -95,39 +96,53 @@ export async function pickRefs({ shopifyProductId = null, wash = null, n = 1, ty
     usedIds = new Set([...cs, ...ks].map((d) => String(d.referenceId)));
   }
   const fam = type === 'outfit' ? washFamily(wash) : null;
-  // Peso SUAVE -> pick aleatorio ponderado (no determinista) = variedad real, TODAS las refs
-  // entran. La familia es una preferencia LEVE (+1), no un bloqueo (antes +10 fijaba siempre
-  // la misma); no-usada por el producto pesa más (+1.5) para rotar; favorito un empujón (+3).
+  const structOf = (r) => r.dna?.[type] || r.dna || {}; // dna por tipo (o legacy)
+  // Peso SUAVE -> pick aleatorio ponderado (variedad real). Familia = preferencia leve (+1);
+  // no-usada por el producto +1.5; favorito +3.
   const weight = (r) => 1
     + (usedIds.has(String(r._id)) ? 0 : 1.5)
-    + (fam && r.dna?.family === fam ? 1 : 0)
+    + (fam && structOf(r).family === fam ? 1 : 0)
     + (r.favorite ? 3 : 0);
   const chosen = weightedSampleDistinct(refs, weight, Math.min(n, refs.length));
 
   const out = [];
   for (const r of chosen) {
-    let brief = r.styleDna || '';
-    if (!brief) {
-      const ext = await extractRefDna(r.imageData, r.type || 'outfit');
+    let brief = r.briefs?.[type] || (type === 'outfit' ? r.styleDna : '') || '';
+    if (!brief) { // lazy: extrae ese tipo si falta
+      const ext = await extractRefDna(r.imageData, type);
       brief = ext.brief;
-      if (brief) await Reference.updateOne({ _id: r._id }, { $set: { styleDna: brief, dna: ext.struct || {} } });
+      if (brief) await Reference.updateOne({ _id: r._id }, { $set: { [`briefs.${type}`]: brief, [`dna.${type}`]: ext.struct || {} } });
     }
-    out.push({ id: String(r._id), b64: r.imageData, dna: brief, type: r.type || 'outfit' });
+    out.push({ id: String(r._id), b64: r.imageData, dna: brief, type });
   }
   return out;
 }
 
-// Extrae y guarda el ADN de una referencia YA (para mostrarlo al subir / cambiar tipo).
+// Extrae y guarda el ADN de una ref para CADA tipo que tiene (multi-tag).
 export async function extractAndStore(refId) {
   const r = await Reference.findById(refId).select('+imageData').lean();
   if (!r?.imageData) return null;
-  const ext = await extractRefDna(r.imageData, r.type || 'outfit');
-  await Reference.updateOne({ _id: refId }, { $set: { styleDna: ext.brief, dna: ext.struct || {} } });
-  return ext;
+  const types = (r.types?.length ? r.types : [r.type || 'outfit']);
+  const dna = {}, briefs = {};
+  for (const t of types) {
+    const ext = await extractRefDna(r.imageData, t);
+    dna[t] = ext.struct || {};
+    briefs[t] = ext.brief || '';
+  }
+  await Reference.updateOne({ _id: refId }, { $set: {
+    types, type: types[0], dna, briefs, styleDna: briefs.outfit || briefs[types[0]] || '',
+  } });
+  return { types, dna, briefs };
 }
 
 // Una referencia de ESCENA (o null) para que el director la use como locacion.
 export async function pickScene(shopifyProductId = null) {
   const [s] = await pickRefs({ shopifyProductId, n: 1, type: 'scene' });
   return s || null;
+}
+
+// Una referencia de POSE (o null) para que el director la use como pose/encuadre.
+export async function pickPose(shopifyProductId = null) {
+  const [p] = await pickRefs({ shopifyProductId, n: 1, type: 'pose' });
+  return p || null;
 }

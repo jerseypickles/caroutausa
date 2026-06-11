@@ -907,31 +907,40 @@ async function loadReferences() {
   grid.innerHTML = references.length ? references.map(refCard).join('') : '<div class="empty">Sin referencias todavía. Subí tu primer pin arriba.</div>';
   if (refModalId) { const rr = references.find((x) => x._id === refModalId); if (rr) document.getElementById('refModalBody').innerHTML = refModalHtml(rr); else closeRefModal(); }
 }
+// types de una ref (multi-tag, con compat al campo legacy `type`).
+function refTypes(ref) { return (ref.types && ref.types.length) ? ref.types : (ref.type ? [ref.type] : ['outfit']); }
+// struct del ADN para un tipo: soporta el mapa nuevo {outfit:{},pose:{}} y el viejo plano (=outfit).
+function refDnaFor(ref, type) {
+  const d = ref.dna; if (!d || typeof d !== 'object') return {};
+  if (d.outfit || d.pose || d.scene) return d[type] || {};
+  return type === 'outfit' ? d : {};
+}
 function refCard(ref) {
-  const dna = ref.dna || {};
-  const mini = dna.vibe || dna.location || dna.sneakers || dna.stance || 'analizando…';
+  const o = refDnaFor(ref, 'outfit'), p = refDnaFor(ref, 'pose'), s = refDnaFor(ref, 'scene');
+  const mini = o.vibe || o.sneakers || s.location || p.stance || 'analizando…';
+  const types = refTypes(ref);
   return `<div class="refcard ${ref.active ? '' : 'off'} ${ref.avoid ? 'avoidref' : ''}" onclick="openRefModal('${ref._id}')">
     <div class="refimg"><img src="/api/references/${ref._id}/image" loading="lazy" alt="" />
-      <span class="reftb">${RT_LBL[ref.type || 'outfit']}</span>
+      <span class="reftb">${types.map((t) => RT_LBL[t]).join(' · ')}</span>
       ${ref.favorite ? '<span class="refbadge fav">★</span>' : ''}${ref.avoid ? '<span class="refbadge av">⊘</span>' : ''}${!ref.active ? '<span class="refbadge off">off</span>' : ''}
     </div>
     <div class="refcb"><div class="refcl">${esc(ref.label || 'pin')}</div><div class="refcm">${esc(String(mini).slice(0, 60))}</div></div>
   </div>`;
 }
 function refModalHtml(ref) {
-  const t = ref.type || 'outfit';
-  const dna = ref.dna;
-  const rows = (dna && typeof dna === 'object')
-    ? Object.entries(dna).filter(([k, v]) => DNA_LBL[k] && v).map(([k, v]) => `<div class="rmrow"><span class="rmk">${DNA_LBL[k][0]} ${DNA_LBL[k][1]}</span><span class="rmv">${esc(String(v))}</span></div>`).join('')
-    : '';
+  const types = refTypes(ref);
+  const dnaSections = types.map((tp) => {
+    const struct = refDnaFor(ref, tp);
+    const rows = Object.entries(struct).filter(([k, v]) => DNA_LBL[k] && v).map(([k, v]) => `<div class="rmrow"><span class="rmk">${DNA_LBL[k][0]} ${DNA_LBL[k][1]}</span><span class="rmv">${esc(String(v))}</span></div>`).join('');
+    return `<div class="refm-seclbl">${RT_LBL[tp]} — lo que leyó</div><div class="refm-dna">${rows || '<div class="muted" style="font-size:12.5px">Analizando… apretá ↻ Re-analizar.</div>'}</div>`;
+  }).join('');
   return `<div class="refm">
     <div class="refm-img"><img src="/api/references/${ref._id}/image" onclick="openZoom('/api/references/${ref._id}/image')" alt="" /></div>
     <div class="refm-info">
       <div class="refm-title">${esc(ref.label || 'Referencia')}</div>
-      <div class="refm-sub">¿Qué dimensión del creativo inspira esta referencia?</div>
-      <div class="refm-types">${Object.keys(RT_LBL).map((tt) => `<button class="rt ${t === tt ? 'on' : ''}" onclick="setRefType('${ref._id}','${tt}')">${RT_LBL[tt]}</button>`).join('')}</div>
-      <div class="refm-seclbl">Lo que leyó de la referencia</div>
-      <div class="refm-dna">${rows || '<div class="muted" style="font-size:12.5px">Analizando… apretá ↻ Re-analizar.</div>'}</div>
+      <div class="refm-sub">¿Qué aprovechamos de esta referencia? (podés marcar VARIOS)</div>
+      <div class="refm-types">${Object.keys(RT_LBL).map((tt) => `<button class="rt ${types.includes(tt) ? 'on' : ''}" onclick="toggleRefType('${ref._id}','${tt}')">${RT_LBL[tt]}</button>`).join('')}</div>
+      ${dnaSections}
       <div class="refm-acts">
         <button class="btn sm ${ref.favorite ? '' : 'ghost'}" onclick="toggleRefFlag('${ref._id}','favorite',${!ref.favorite})">★ ${ref.favorite ? 'Favorito' : 'Favorito'}</button>
         <button class="btn sm ghost ${ref.avoid ? 'avoidbtn' : ''}" onclick="toggleRefFlag('${ref._id}','avoid',${!ref.avoid})">⊘ ${ref.avoid ? 'Evitando' : 'Evitar'}</button>
@@ -959,9 +968,13 @@ function refDnaHtml(ref) {
     `<div class="rd"><span class="rdk">${DNA_LBL[k][0]} ${DNA_LBL[k][1]}</span><span class="rdv">${esc(String(v))}</span></div>`);
   return rows.length ? `<div class="refdna">${rows.join('')}</div>` : '<div class="refdna pend">analizando…</div>';
 }
-async function setRefType(id, type) {
-  await fetch(`/api/references/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type }) });
-  toast('Tipo: ' + type); loadReferences();
+async function toggleRefType(id, type) {
+  const r = references.find((x) => x._id === id); if (!r) return;
+  let types = refTypes(r);
+  types = types.includes(type) ? types.filter((t) => t !== type) : [...types, type];
+  if (!types.length) types = [type]; // siempre al menos uno
+  await fetch(`/api/references/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ types }) });
+  toast('Re-analizando ' + types.join(' + ') + '…'); loadReferences();
 }
 async function reextractRef(id, btn) {
   btn.disabled = true; btn.textContent = '…';

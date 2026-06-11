@@ -27,12 +27,14 @@ referencesRouter.get('/references', async (_req, res) => {
 
 // POST /api/references  body: { imageB64, label? } -> agrega un pin
 referencesRouter.post('/references', async (req, res) => {
-  const { imageB64, label, type } = req.body || {};
+  const { imageB64, label, type, types } = req.body || {};
   if (!imageB64) return res.status(400).json({ error: 'Falta imageB64' });
-  const t = ['outfit', 'scene', 'pose'].includes(type) ? type : 'outfit';
-  const ref = await Reference.create({ imageData: imageB64, label: label || '', type: t, active: true });
+  const incoming = Array.isArray(types) ? types : (type ? [type] : ['outfit']);
+  const ts = [...new Set(incoming.filter((t) => ['outfit', 'scene', 'pose'].includes(t)))];
+  const finalTypes = ts.length ? ts : ['outfit'];
+  const ref = await Reference.create({ imageData: imageB64, label: label || '', types: finalTypes, type: finalTypes[0], active: true });
   await extractAndStore(ref._id).catch((e) => console.error('[refs] extract on upload:', e.message)); // analiza ya
-  res.status(201).json({ id: ref._id, label: ref.label, active: ref.active, type: ref.type });
+  res.status(201).json({ id: ref._id, label: ref.label, active: ref.active, types: finalTypes });
 });
 
 // POST /api/references/:id/reextract -> re-analiza la referencia (struct nuevo)
@@ -51,7 +53,7 @@ referencesRouter.get('/references/:id/image', async (req, res) => {
   res.send(Buffer.from(doc.imageData, 'base64'));
 });
 
-// PATCH /api/references/:id  body: { active?, label?, type?, favorite?, avoid? }
+// PATCH /api/references/:id  body: { active?, label?, types?: [], favorite?, avoid? }
 referencesRouter.patch('/references/:id', async (req, res) => {
   const b = req.body || {};
   const update = {};
@@ -59,12 +61,17 @@ referencesRouter.patch('/references/:id', async (req, res) => {
   if (typeof b.label === 'string') update.label = b.label;
   if (typeof b.favorite === 'boolean') update.favorite = b.favorite;
   if (typeof b.avoid === 'boolean') update.avoid = b.avoid;
-  const typeChanged = ['outfit', 'scene', 'pose'].includes(b.type);
-  if (typeChanged) { update.type = b.type; update.styleDna = ''; update.dna = null; }
+  // MULTI-TAG: types[] (o type legacy). Al cambiarlos, re-extrae el ADN de cada tipo.
+  let typesChanged = false;
+  const incoming = Array.isArray(b.types) ? b.types : (b.type ? [b.type] : null);
+  if (incoming) {
+    const types = [...new Set(incoming.filter((t) => ['outfit', 'scene', 'pose'].includes(t)))];
+    if (types.length) { update.types = types; update.type = types[0]; update.dna = null; update.briefs = null; update.styleDna = ''; typesChanged = true; }
+  }
   const doc = await Reference.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
   if (!doc) return res.status(404).json({ error: 'Referencia no encontrada' });
-  if (typeChanged) await extractAndStore(doc._id).catch((e) => console.error('[refs] re-extract:', e.message)); // re-analiza con el nuevo tipo
-  res.json({ reference: { _id: doc._id } });
+  if (typesChanged) await extractAndStore(doc._id).catch((e) => console.error('[refs] re-extract:', e.message));
+  res.json({ reference: { _id: doc._id, types: doc.types } });
 });
 
 // DELETE /api/references/:id

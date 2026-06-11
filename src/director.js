@@ -120,7 +120,7 @@ function nextSetting() {
   return s;
 }
 
-export async function directCreative({ product, wash, angle, refDna = '', sceneDna = '', seed = '', mode = 'single', styleMode = 'organic' }) {
+export async function directCreative({ product, wash, angle, refDna = '', sceneDna = '', poseDna = '', seed = '', mode = 'single', styleMode = 'organic' }) {
   if (!client) return null;
   const intent = ANGLE_INTENT[angle] || ANGLE_INTENT.realista;
   const cast = nextCast();
@@ -128,6 +128,8 @@ export async function directCreative({ product, wash, angle, refDna = '', sceneD
   let settingDesc, sceneTag;
   if (sceneDna) { settingDesc = `${sceneDna} (recreate a similar real location/light, NOT a copy; never the product or the person's face)`; sceneTag = 'ref-scene'; }
   else { const s = nextSetting(); settingDesc = s.desc; sceneTag = s.tag; }
+  // Pose: si hay una REFERENCIA de pose, la usamos como base (adaptada a la escena/lógica).
+  const poseNote = poseDna ? `\nPOSE inspiration from a reference (use this stance/energy/framing, ADAPTED so it fits the scene and the pose logic above — keep the full lower body visible): ${poseDna}` : '';
   const modeBrief = MODE_BRIEF[styleMode] || MODE_BRIEF.organic;
   const styling = refDna
     ? `Design a fresh, cohesive, elevated outfit INSPIRED by this reference style DNA — match its overall VIBE, caliber, the FOOTWEAR / sneaker lane (real sneakers on-foot are fine), AND its SILHOUETTE / FIT (if the reference reads fitted/slim, make the top fitted; if oversized/boxy/baggy, make it oversized — follow the reference's proportions). Design your own specific PIECES (never a literal copy, and never the bottoms), but keep the reference's fit.
@@ -141,7 +143,7 @@ Angle to hit: ${intent}.
 Casting for THIS shot: ${cast.desc} — handsome, with a clean current streetwear look.
 SETTING for THIS shot — use EXACTLY this location and shot type (do not default to the coast every time): ${settingDesc}
 ${modeBrief}
-${styling}${heroNote}
+${styling}${poseNote}${heroNote}
 Invent a fresh, well-styled direction that feels like a real brand campaign — vary the location, time of day, pose and energy.${seed ? ` Creative seed to push somewhere new: ${seed}.` : ''}
 Remember: say NOTHING about the shorts and keep the lower body clearly visible.`;
 
