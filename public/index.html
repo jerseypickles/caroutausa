@@ -91,7 +91,7 @@
   .prod .foot .btn { flex: 1; justify-content: center; }
 
   /* REFERENCIAS */
-  .refgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+  .refgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 18px; }
   .ref { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
   .ref.avoidref { opacity: .5; }
   .reftypes { display: flex; gap: 3px; padding: 7px 8px 0; }
@@ -105,17 +105,20 @@
   .rd .rdk { flex: none; color: var(--muted); font-weight: 600; width: 78px; }
   .rd .rdv { color: var(--text); }
   /* Referencias — cards limpias clickeables */
-  .refcard { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; cursor: pointer; box-shadow: 0 1px 2px rgba(16,24,40,.04); transition: box-shadow .16s, transform .16s, border-color .16s; }
-  .refcard:hover { box-shadow: 0 10px 26px rgba(16,24,40,.10); transform: translateY(-2px); border-color: var(--border2); }
-  .refcard.off { opacity: .55; } .refcard.avoidref { opacity: .45; }
-  .refimg { position: relative; aspect-ratio: 3/4; background: var(--surface2); }
-  .refimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .reftb { position: absolute; top: 8px; left: 8px; padding: 3px 8px; border-radius: 7px; background: rgba(255,255,255,.92); color: #14161a; font-size: 10.5px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
-  .refbadge { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
-  .refbadge.fav { background: #f5a623; color: #fff; } .refbadge.av { background: var(--bad); color: #fff; } .refbadge.off { background: rgba(0,0,0,.6); color: #fff; width: auto; padding: 0 7px; border-radius: 7px; font-size: 10px; }
-  .refcb { padding: 10px 12px; }
-  .refcl { font-size: 12.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .refcm { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .refcard { border-radius: 16px; overflow: hidden; cursor: pointer; box-shadow: 0 1px 3px rgba(16,24,40,.06); transition: box-shadow .18s, transform .18s; position: relative; }
+  .refcard:hover { box-shadow: 0 16px 34px rgba(16,24,40,.16); transform: translateY(-3px); }
+  .refcard.off { opacity: .5; } .refcard.avoidref { opacity: .4; }
+  .refimg { position: relative; aspect-ratio: 4/5; background: var(--surface2); overflow: hidden; }
+  .refimg img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s ease; }
+  .refcard:hover .refimg img { transform: scale(1.06); }
+  .reftags { position: absolute; top: 9px; left: 9px; display: flex; gap: 4px; flex-wrap: wrap; max-width: 84%; z-index: 2; }
+  .reftag { padding: 3px 8px; border-radius: 7px; background: rgba(255,255,255,.94); color: #14161a; font-size: 10px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.18); backdrop-filter: blur(4px); }
+  .refmk { position: absolute; top: 9px; right: 9px; display: flex; gap: 4px; z-index: 2; }
+  .refbadge { position: static; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .refbadge.fav { background: #f5a623; color: #fff; } .refbadge.av { background: var(--bad); color: #fff; } .refbadge.off { background: rgba(0,0,0,.65); color: #fff; width: auto; padding: 0 7px; border-radius: 7px; font-size: 10px; }
+  .refgrad { position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 12px 11px; background: linear-gradient(to top, rgba(0,0,0,.82), rgba(0,0,0,.38) 55%, transparent); color: #fff; z-index: 1; }
+  .refgrad .refcl { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .refgrad .refcm { font-size: 11px; opacity: .85; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* Referencias — modal */
   .refmbox { width: 760px; }
   .refm { display: grid; grid-template-columns: 300px 1fr; gap: 22px; }
@@ -942,14 +945,14 @@ function refDnaFor(ref, type) {
 }
 function refCard(ref) {
   const o = refDnaFor(ref, 'outfit'), p = refDnaFor(ref, 'pose'), s = refDnaFor(ref, 'scene');
-  const mini = o.vibe || o.sneakers || s.location || p.stance || 'analizando…';
+  const mini = o.vibe || o.fit || s.location || p.stance || 'analizando…';
   const types = refTypes(ref);
   return `<div class="refcard ${ref.active ? '' : 'off'} ${ref.avoid ? 'avoidref' : ''}" onclick="openRefModal('${ref._id}')">
     <div class="refimg"><img src="/api/references/${ref._id}/image" loading="lazy" alt="" />
-      <span class="reftb">${types.map((t) => RT_LBL[t]).join(' · ')}</span>
-      ${ref.favorite ? '<span class="refbadge fav">★</span>' : ''}${ref.avoid ? '<span class="refbadge av">⊘</span>' : ''}${!ref.active ? '<span class="refbadge off">off</span>' : ''}
+      <div class="reftags">${types.map((t) => `<span class="reftag">${RT_LBL[t]}</span>`).join('')}</div>
+      <div class="refmk">${ref.favorite ? '<span class="refbadge fav">★</span>' : ''}${ref.avoid ? '<span class="refbadge av">⊘</span>' : ''}${!ref.active ? '<span class="refbadge off">off</span>' : ''}</div>
+      <div class="refgrad"><div class="refcl">${esc(ref.label || 'pin')}</div><div class="refcm">${esc(String(mini).slice(0, 52))}</div></div>
     </div>
-    <div class="refcb"><div class="refcl">${esc(ref.label || 'pin')}</div><div class="refcm">${esc(String(mini).slice(0, 60))}</div></div>
   </div>`;
 }
 function refModalHtml(ref) {
