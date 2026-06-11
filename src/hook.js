@@ -7,10 +7,10 @@ import { judgeHookFidelity } from './judge.js';
 // Estilos de fuente/diseño BASE — alineados a la identidad CAROTA (blackletter/gótico,
 // como el wordmark). El director explora nuevos PERO siempre on-brand (street/gótico).
 const FONT_STYLES = [
-  { tag: 'blackletter', desc: 'a bold BLACKLETTER / Old-English gothic typeface exactly like the CAROTA wordmark — medieval, sharp pointed serifs, dense and premium streetwear' },
-  { tag: 'gothic-tattoo', desc: 'a gothic TATTOO-style blackletter, spiky and edgy street energy, hand-inked feel but perfectly legible' },
-  { tag: 'condensed-bold', desc: 'a HEAVY CONDENSED SANS-SERIF UPPERCASE (Anton / Archivo Black), bold streetwear impact — pairs with the gothic logo' },
-  { tag: 'blackletter-outline', desc: 'a BLACKLETTER gothic display rendered as a clean outline / hollow stroke, modern street take on the medieval CAROTA wordmark' },
+  { tag: 'blackletter', desc: 'a CLEAN classic BLACKLETTER / Old-English typeface exactly like the elegant CAROTA wordmark — solid, balanced, refined and legible (NOT a spiky death-metal gothic)' },
+  { tag: 'condensed-bold', desc: 'a HEAVY CONDENSED SANS-SERIF UPPERCASE (Anton / Archivo Black), bold confident streetwear impact' },
+  { tag: 'wide-heavy', desc: 'a bold WIDE / EXTENDED heavy grotesque sans-serif, modern premium streetwear, strong presence' },
+  { tag: 'varsity', desc: 'a collegiate VARSITY block-letter style with a subtle outline, clean street energy' },
 ];
 // round-robin con arranque aleatorio; cada 5ta vez explora un estilo NUEVO (inventado).
 let _fontIdx = Math.floor(Math.random() * FONT_STYLES.length);

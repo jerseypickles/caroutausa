@@ -66,8 +66,8 @@ export async function inventFontStyle() {
       model: config.judgeModel,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: 'You are an art director for CAROTA, a streetwear brand whose logo is a bold BLACKLETTER / Old-English gothic wordmark. Invent fresh TYPOGRAPHY treatments for ad text-overlays that stay ON-BRAND: gothic, blackletter, tattoo, heavy street display. NEVER corporate serif, thin, script-cursive or soft. Renderable by an image model and legible.' },
-        { role: 'user', content: 'Invent ONE distinctive ON-BRAND font/design treatment for the ad hook (a fresh take within the gothic/blackletter/heavy-street family — e.g. chrome blackletter, distressed gothic, varsity-gothic mix, sprayed stencil gothic). Return ONLY JSON {"tag":"short-kebab-slug","desc":"one concrete sentence: the typeface style, weight, case and treatment — gothic/street, legible, premium"}.' },
+        { role: 'system', content: 'You are an art director for CAROTA, a streetwear brand whose logo is a CLEAN classic BLACKLETTER / Old-English wordmark. Invent fresh TYPOGRAPHY treatments for ad text-overlays that stay ON-BRAND and PREMIUM: refined blackletter, heavy condensed sans, wide heavy grotesque, collegiate varsity, clean street display. NEVER spiky death-metal gothic, NEVER thin corporate serif, NEVER script-cursive or soft. Must be legible and look designer-made.' },
+        { role: 'user', content: 'Invent ONE distinctive ON-BRAND, PREMIUM font/design treatment for the ad hook (within the refined-blackletter / heavy-street-display family — e.g. chrome heavy display, clean stencil, embossed varsity, condensed gothic-serif). Return ONLY JSON {"tag":"short-kebab-slug","desc":"one concrete sentence: typeface style, weight, case and treatment — premium street, legible, NOT spiky/death-metal"}.' },
       ],
     });
     const j = JSON.parse(r.choices?.[0]?.message?.content || '{}');

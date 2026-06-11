@@ -15,9 +15,12 @@ export function directorEnabled() {
 const SYSTEM = `You are the creative director for CAROTA, a US streetwear brand whose product is denim shorts. Think at the level of a real brand campaign (à la Lorenzo, Represent, Fear of God Essentials).
 Your job: invent ONE fresh, specific creative direction for a SINGLE paid-social ad (Meta Reels/Feed) for a young US streetwear audience.
 
-ELEVATED STYLING IS THE POINT — the model must be EXQUISITELY DRESSED, never random:
-- Build ONE cohesive, aspirational, on-trend fit around the shorts: considered layering (e.g. a clean zip hoodie over a tee, a boxy knit, a light jacket), a tonal/neutral or well-judged palette, ONE statement element, fresh STATEMENT sneakers, and subtle jewelry (a silver chain, rings). It should look styled by a brand, not thrown on.
-- Quality over quirk: cream/bone/stone/charcoal tones read premium; avoid clashing, cheap or costumey looks.
+ELEVATED STYLING IS THE POINT — the model must be EXQUISITELY DRESSED, never random, and VARIED across shots:
+- Build ONE cohesive, aspirational, on-trend fit around the shorts. VARY it hard shot to shot — do NOT default to a plain cream tee every time. Mix it up: hoodies (zip or pullover), boxy knits, jerseys, graphic-ish tees, varsity/work jackets, vests, layered pieces.
+- VARY THE COLOR PALETTE boldly: not always cream/beige. Use real streetwear color — washed black, faded reds, forest/olive green, navy, brown, burgundy, mustard, grey, the occasional bold pop. Tonal looks are fine sometimes, but the FEED must look colorful and diverse overall, not monochrome cream.
+- ACCESSORIES matter A LOT (this is streetwear): rotate and STACK them like the reference fitpics — a fitted cap or beanie (often backwards), a gold or silver watch, LAYERED gold/silver chains, rings on multiple fingers, sunglasses, a small crossbody/sling bag worn across the chest — often in a BOLD POP COLOR (red, etc.) against a neutral fit — and a wallet chain clipped to a belt loop. Small bags only, never big luggage, and never covering the shorts. Real, current, flexed.
+- LAYERING like the reference: e.g. an open washed-black zip hoodie over a white ribbed tank, statement Jordan-style sneakers, leg/arm tattoos showing. Aim for that elevated-but-street energy.
+- Quality over quirk: it should look styled by a brand and current to the culture, never clashing, cheap or costumey.
 - BRAND-SAFE TOP: the TOP / apparel (tee, hoodie, knit, jacket) must NEVER show a recognizable third-party brand logo, wordmark or signature graphic (no Stüssy, Supreme, Nike apparel, BBC, Icecream, Broken Planet, Pleasures, Corteiz, Carhartt, Fear of God, etc.). Reference brands only set the caliber/vibe — render the top CLEAN and premium (blank, tonal texture, or a subtle in-house-style graphic that could be CAROTA's own). This is a CAROTA ad — keep the brand attention on us. (Real sneakers on-foot are fine.)
 
 YOU ALWAYS DESIGN THE OUTFIT. When a reference STYLE DNA is provided, treat it as INSPIRATION — match its vibe, caliber, the kinds of brands and the footwear/sneaker lane — but design a FRESH outfit, never a copy; vary the specific pieces so each fit is its own. When there is no DNA, design freely. Either way, follow the elevated-styling guidance below.
@@ -27,7 +30,7 @@ THE DENIM SHORTS ARE THE PRODUCT AND ARE SACRED. A separate system keeps them pi
 - The shorts must stay CLEARLY VISIBLE and well-lit: choose framing and a pose where the full lower body reads cleanly (no heavy crop at the thighs, no shorts hidden by bags/furniture/crossed legs/deep shadow/motion blur over the legs).
 - Do NOT invent props, layering or poses that would tempt a renderer to re-interpret the bottoms.
 
-CASTING: a young, good-looking male. The specific skin tone / ethnicity / vibe is given per shot below — ROTATE it across shots for a real, DIVERSE cast (fair, olive/Mediterranean, tanned brown "moreno", Latino, Black, mixed — they ALL look great in this fashion, the morenos and dark-skinned guys especially have a lot of pinta). VARY the vibe too: some clean-cut, others with visible tattoos and a cooler street/gangster edge — like the diverse people in the reference fitpics. Honor the given casting; don't otherwise describe the face in detail.
+CASTING: a young, good-looking male. The exact skin tone / ethnicity / tattoos / vibe is GIVEN per shot below — honor it EXACTLY. CAROTA's market is young urban streetwear, which skews MORENO (brown-skinned), BLACK and LATINO, MANY with visible tattoos and a street/gangster edge — that is the look that sets the trends, so it dominates the cast. CRITICAL: render the given dark/brown skin tone FAITHFULLY (do NOT lighten, whitewash or default to a generic light-skinned model) and KEEP the specified tattoos visible. Don't otherwise describe the face in detail.
 
 POSE & SHOT LOGIC — be intelligent and coherent, the pose MUST fit the scene:
 - A "holding the phone up to take the photo" mirror-selfie pose is ONLY allowed when the scene literally has a MIRROR (e.g. inside an apartment with a leaning mirror). NEVER use a phone-held-up pose outdoors or anywhere without a mirror — with no mirror it looks absurd, like an invisible mirror.
@@ -42,10 +45,10 @@ OUTPUT: 2-5 sentences of vivid, specific art direction (richer and more detailed
 
 // Produccion segun el modo: organico (fitpic iPhone elevado) o campaña (shoot pulido).
 const MODE_BRIEF = {
-  organic: `STYLE: organic but ELEVATED & ASPIRATIONAL — a real, candid iPhone fitpic a stylish person posted (not an ad), with a genuinely great designer-streetwear fit (the caliber of Broken Planet, Represent, Corteiz, Essentials).
-LIGHT: keep it CLEAN and BRIGHT with SOFT, EVEN, natural light — big window light, bright overcast, open shade, or clean coastal daylight. AVOID harsh direct sun, hard deep shadows, warm golden-hour / orange-yellow casts, and grungy dark or tan walls.
-SETTING: honor EXACTLY the per-shot SETTING specified above (it rotates — coast, mirror-apartment, rooftop, street, interior, pool deck — so the feed is varied, not always the coast). Make that location feel real, aspirational and organic, like a stylish friend's fitpic, never a staged studio ad. If it is coastal, show real context (hillside town, villas, rooftops, coastline), never an empty flat sea.
-THE SHORTS ARE THE HERO: compose and light so the DENIM SHORTS are the clear focal point — prominent, well-lit lower body, framed FAIRLY CLOSE so the model fills most of the frame. Do NOT add big handbags, luggage or busy props that steal attention from the shorts.`,
+  organic: `STYLE: organic but ELEVATED — a real, candid iPhone fitpic a stylish person posted (not an ad), with a genuinely great designer-streetwear fit (caliber of Broken Planet, Represent, Corteiz, Essentials, Hellstar).
+LIGHT: the shorts must stay clearly VISIBLE and legible, but VARY the mood across shots — clean bright window light, OR moody overcast, OR warm golden city light, OR cool neon/dusk glow. Avoid only: blowing out detail or hiding the lower body in deep shadow/blur. Some grit and real texture is GOOD.
+SETTING: honor EXACTLY the per-shot SETTING specified above (it rotates across many vibes — coast, mirror-apartment, graffiti wall, basketball court, parking garage, rooftop, bodega, street, loft, pool deck — so the feed is DIVERSE, never the same place twice). Make it feel real and organic, like a stylish friend's fitpic, never a staged studio ad.
+THE SHORTS ARE THE HERO: compose so the DENIM SHORTS are the clear focal point — prominent, well-lit lower body, framed FAIRLY CLOSE so the model fills most of the frame. A small crossbody bag worn on the chest is great styling; just never let a bag, prop or pose cover or hide the shorts.`,
   campaign: `STYLE: a REAL high-end brand campaign at the caliber of Lorenzo Worldwide — editorial, aspirational, photographed (not a render). Describe the look HEAD TO TOE with SPECIFIC, real, nameable pieces and materials so it renders with true detail:
 - the exact TOP and layering: garment type, cut, fabric and how it sits (e.g. "an open boxy cream heavyweight zip-hoodie with drawcords over a tonal-print tee");
 - the accessories: a specific chain (e.g. silver Cuban link), rings, any hair detail;
@@ -67,16 +70,22 @@ const ANGLE_INTENT = {
 // como la gente del tab de Referencias). Peso hacia morenos / piel oscura + algunos con
 // tatuajes y onda mas street/gangster, otros mas clean.
 // Cada casting con un TAG corto (para etiquetar el creativo y poder aprender qué rinde).
+// Lista PESADA hacia el market real de CAROTA: morenos, negros y latinos, MUCHOS con
+// tatuajes y onda street/gangster (los morenos imponen moda en lo juvenil). Los claros
+// son raros. Tags repetidos a propósito = peso en la rotación (el learning agrupa por tag).
 const CASTINGS = [
-  { tag: 'fair', desc: 'a fair / light-skinned European young man, clean look' },
-  { tag: 'olive', desc: 'an olive-skinned Mediterranean young man' },
-  { tag: 'moreno', desc: 'a tanned brown-skinned (moreno) young man with a cool relaxed edge' },
-  { tag: 'moreno-ink', desc: 'a moreno (brown-skinned Latino) young man with visible tattoos and a streetwear-gangster edge' },
-  { tag: 'black', desc: 'a Black / dark-skinned young man with a fresh clean look' },
-  { tag: 'black-ink', desc: 'a Black / dark-skinned young man with tattoos and a confident street edge' },
-  { tag: 'latino', desc: 'a Latino young man with light-brown skin and some tattoos' },
-  { tag: 'mixed', desc: 'a mixed-race young man with medium-brown skin' },
-  { tag: 'dark-athletic', desc: 'a dark-skinned young man, athletic, with a bit of attitude' },
+  { tag: 'moreno-ink', desc: 'a brown-skinned (moreno) young man with FULL sleeve tattoos and a cool street/gangster edge, curls or a low fade, silver chains' },
+  { tag: 'black-ink', desc: 'a dark-skinned Black young man with neck and arm tattoos, dreads or a fresh fade, confident street energy' },
+  { tag: 'moreno', desc: 'a tanned brown-skinned (moreno) young man, relaxed cool, some tattoos, modern street haircut' },
+  { tag: 'latino-ink', desc: 'a Latino young man with light-brown skin, hand and arm tattoos, slicked or curly hair, gangster-chic energy' },
+  { tag: 'black', desc: 'a dark-skinned Black young man, clean fresh look, athletic, sharp lineup' },
+  { tag: 'moreno-ink', desc: 'a moreno young man covered in tattoos, durag or buzz cut, hard street attitude' },
+  { tag: 'mixed', desc: 'a mixed-race young man with medium-brown skin, textured curls, a few tattoos' },
+  { tag: 'black-ink', desc: 'a very dark-skinned Black young man with bold tattoos, twists or braids, magnetic street presence' },
+  { tag: 'moreno', desc: 'a moreno young man, sun-kissed brown skin, effortless cool, gold jewelry' },
+  { tag: 'dark-athletic', desc: 'a dark-skinned athletic young man with attitude and visible tattoos' },
+  { tag: 'olive', desc: 'an olive-skinned Mediterranean/Latino young man, light stubble, some ink' },
+  { tag: 'fair', desc: 'a light-skinned young man with tattoos and a gritty street edge (rare in the mix)' },
 ];
 
 // Round-robin (no al azar): cada generacion agarra el SIGUIENTE casting -> dos fotos
@@ -92,12 +101,16 @@ function nextCast() {
 // Escena rotativa (con TAG) — el director se fijaba SIEMPRE en la costa. Forzamos
 // rotacion de locacion+pose para que mezcle de verdad y poder aprender qué escena gana.
 const SETTINGS = [
-  { tag: 'coast', desc: 'an aspirational COASTAL/RIVIERA terrace with REAL context behind him (a Mediterranean hillside town, pastel villas, terracotta rooftops, a marina, the coastline) under soft bright daylight. It is a candid shot TAKEN BY A FRIEND — both hands free, leaning on the stone balustrade or mid-stride, NO phone in hand.' },
-  { tag: 'mirror-apt', desc: 'a MIRROR FITPIC inside a bright minimal apartment (white walls, pale oak floors, a full-length mirror leaning on the wall, soft window light). Here he DOES hold the phone up to the mirror — a real, logical mirror selfie.' },
-  { tag: 'rooftop', desc: 'a clean modern ROOFTOP or balcony over a city skyline in soft daylight. Candid shot taken by a friend — hands free, relaxed stance, NO phone in hand.' },
-  { tag: 'street', desc: 'a calm, characterful CITY STREET (nice doorway, café front, brick or clean facade) in soft even light. Candid walking or leaning shot taken by a friend — NO phone in hand.' },
-  { tag: 'interior', desc: 'a bright, airy INTERIOR — a stylish minimal apartment or a cool café with big soft window light and clean neutral tones. Candid shot, relaxed real pose, NO phone unless there is a mirror.' },
-  { tag: 'pooldeck', desc: 'a sunny POOL DECK / villa terrace with clean modern architecture and a sliver of sea or greenery, soft bright light. Candid shot by a friend — hands free, NO phone in hand.' },
+  { tag: 'coast', desc: 'an aspirational COASTAL/RIVIERA terrace with REAL context behind him (a Mediterranean hillside town, pastel villas, terracotta rooftops, a marina, the coastline). Candid shot TAKEN BY A FRIEND — hands free, leaning on the balustrade or mid-stride, NO phone in hand.' },
+  { tag: 'mirror-apt', desc: 'a MIRROR FITPIC inside a stylish apartment (a full-length mirror leaning on the wall, real lived-in decor, window light). He DOES hold the phone up to the mirror — a real, logical mirror selfie.' },
+  { tag: 'graffiti', desc: 'a gritty urban wall covered in colorful GRAFFITI / a mural, raw street culture vibe, bold colors behind him. Candid shot by a friend — hands free, attitude in the stance, NO phone in hand.' },
+  { tag: 'court', desc: 'an outdoor BASKETBALL COURT (chain-link fence, painted lines, city behind). Candid street shot — leaning on the fence or mid-stride, NO phone in hand.' },
+  { tag: 'garage', desc: 'a concrete PARKING GARAGE / underground with moody overhead light and a clean car nearby, cinematic street energy. Candid shot by a friend — NO phone in hand.' },
+  { tag: 'rooftop', desc: 'a modern ROOFTOP over a city skyline, golden-hour or moody dusk light, neon glow from the city. Candid shot by a friend — relaxed stance, NO phone in hand.' },
+  { tag: 'bodega', desc: 'outside a NYC-style BODEGA / corner store at night, warm storefront and neon signage glow, classic street culture. Candid shot by a friend — NO phone in hand.' },
+  { tag: 'street', desc: 'a characterful CITY STREET (brownstone stoop, café front, brick) with real grit and texture. Candid walking or leaning shot by a friend — NO phone in hand.' },
+  { tag: 'loft', desc: 'an industrial LOFT / studio — exposed brick, concrete, big windows, raw creative-space vibe. Candid shot, relaxed real pose, NO phone unless there is a mirror.' },
+  { tag: 'pooldeck', desc: 'a POOL DECK / villa terrace with modern architecture and a sliver of sea or palms, warm light. Candid shot by a friend — hands free, NO phone in hand.' },
 ];
 let setCounter = Math.floor(Math.random() * SETTINGS.length);
 function nextSetting() {
