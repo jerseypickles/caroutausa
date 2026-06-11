@@ -12,7 +12,7 @@ const openai = new OpenAI({ apiKey: config.openaiApiKey });
 const EXTRACT = {
   outfit: {
     sys: `You are a streetwear stylist for a youth/street brand. Look at this fitpic and extract its STYLE DNA as GUIDANCE (not a literal copy). Capture what makes the look — the lane/vibe, the top type, the SNEAKERS, the ACCESSORIES, the model's vibe/energy (e.g. moreno street, clean prep), and the palette. Ignore the bottoms (we use our own denim shorts) and the background.`,
-    ask: 'Return ONLY JSON with short values: {"lane":"the vibe/caliber + the kinds of brands","top":"top/layer type (no need to copy logos)","sneakers":"the sneakers you see (brand+colorway)","accessories":"caps, chains, socks, watch, etc.","vibe":"the model energy/casting vibe (e.g. moreno youthful street, clean minimal)","palette":"main colors"}',
+    ask: 'Return ONLY JSON with short values: {"lane":"the vibe/caliber + the kinds of brands","top":"top/layer type (no need to copy logos)","sneakers":"the sneakers you see (brand+colorway)","accessories":"caps, chains, socks, watch, etc.","vibe":"the model energy/casting vibe (e.g. moreno youthful street, clean minimal)","palette":"main colors","family":"classify the lane into ONE word: edge (grunge/street/gangster/tattoo/Y2K-skater), clean (luxury-street/prep/minimal/elevated), or versatile (mid casual everyday)"}',
     fields: ['lane', 'top', 'sneakers', 'accessories', 'vibe', 'palette'],
   },
   scene: {
@@ -57,25 +57,31 @@ function shuffle(a) {
   return a;
 }
 
-// Elige n referencias activas de un TIPO para un producto. Excluye las marcadas
-// "evitar", pone los favoritos primero, y para OUTFIT prioriza las no usadas por ese
-// producto (variedad). Devuelve [{ id, b64, dna, type }].
-export async function pickRefs({ shopifyProductId = null, n = 1, type = 'outfit' } = {}) {
+// Familia de vibe por WASH (matching ref↔producto): oscuros->edge, claros->clean, medios->versatile.
+const WASH_FAMILY = { onyx: 'edge', storm: 'edge', smoke: 'edge', bone: 'clean', ice: 'clean', salt: 'clean', fog: 'versatile', dusk: 'versatile' };
+export function washFamily(wash) {
+  if (!wash) return null;
+  return WASH_FAMILY[String(wash).toLowerCase().trim()] || 'versatile';
+}
+
+// Elige n referencias activas de un TIPO para un producto. Excluye "evitar"; ordena por
+// prioridad: favorito > MATCHEA el wash (lane↔wash) > no usada por el producto (variedad).
+// Devuelve [{ id, b64, dna, type }].
+export async function pickRefs({ shopifyProductId = null, wash = null, n = 1, type = 'outfit' } = {}) {
   const refs = await Reference.find({ active: true, avoid: { $ne: true }, type }).select('+imageData').lean();
   if (!refs.length) return [];
 
-  let ordered;
+  let usedIds = new Set();
   if (type === 'outfit' && shopifyProductId != null) {
     const [cs, ks] = await Promise.all([
       Creative.find({ shopifyProductId, referenceId: { $nin: [null, ''] } }).select('referenceId').lean(),
       Carousel.find({ shopifyProductId, referenceId: { $nin: [null, ''] } }).select('referenceId').lean(),
     ]);
-    const usedIds = new Set([...cs, ...ks].map((d) => String(d.referenceId)));
-    ordered = [...shuffle(refs.filter((r) => !usedIds.has(String(r._id)))), ...shuffle(refs.filter((r) => usedIds.has(String(r._id))))];
-  } else {
-    ordered = shuffle(refs);
+    usedIds = new Set([...cs, ...ks].map((d) => String(d.referenceId)));
   }
-  ordered.sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0)); // favoritos primero
+  const fam = type === 'outfit' ? washFamily(wash) : null;
+  const score = (r) => (r.favorite ? 100 : 0) + (fam && r.dna?.family === fam ? 10 : 0) + (usedIds.has(String(r._id)) ? 0 : 1) + Math.random();
+  const ordered = [...refs].sort((a, b) => score(b) - score(a));
   const chosen = ordered.slice(0, Math.min(n, ordered.length));
 
   const out = [];

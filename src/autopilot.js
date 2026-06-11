@@ -43,7 +43,7 @@ export async function runAutopilot({ manual = false } = {}) {
       // 2) ¿ya tiene carrusel? si no, generar uno (cohesivo, con referencia NUEVA).
       const hasCarousel = await Carousel.countDocuments({ shopifyProductId: p.shopifyId });
       if (!hasCarousel) {
-        const [ref] = await pickRefs({ shopifyProductId: p.shopifyId, n: 1 });
+        const [ref] = await pickRefs({ shopifyProductId: p.shopifyId, wash: p.wash, n: 1 });
         const cdoc = await Carousel.create({
           shopifyProductId: p.shopifyId, product: p.title, wash: p.wash, sourceImageUrl: p.image,
           hasReference: Boolean(ref), referenceId: ref?.id || null, referenceDna: ref?.dna || '', referenceImageData: ref?.b64 || null, genStatus: 'generating',
@@ -56,7 +56,7 @@ export async function runAutopilot({ manual = false } = {}) {
 
       // 3) si no, una tanda de singles con referencias NUEVAS (no usadas por el producto).
       const angle = (p.generatedCount || 0) % 2 === 0 ? 'realista' : 'gancho_click';
-      const picked = await pickRefs({ shopifyProductId: p.shopifyId, n: 2 });
+      const picked = await pickRefs({ shopifyProductId: p.shopifyId, wash: p.wash, n: 2 });
       const jobs = picked.length
         ? picked.map((ref) => ({ angleId: angle, ref, styleMode: 'organic' }))
         : [{ angleId: angle, ref: null, styleMode: 'organic' }];

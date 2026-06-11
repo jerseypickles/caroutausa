@@ -62,7 +62,7 @@ productsRouter.post('/products/:id/generate', async (req, res) => {
   // Receta REFERENCE-DRIVEN: 2 referencias por angulo, priorizando las que este
   // producto NO uso todavia (variedad real, no siempre la misma).
   const need = angles.length * 2;
-  const picked = await pickRefs({ shopifyProductId: product.shopifyId, n: need });
+  const picked = await pickRefs({ shopifyProductId: product.shopifyId, wash: product.wash, n: need });
   const jobs = [];
   let pi = 0;
   angles.forEach((angleId) => {

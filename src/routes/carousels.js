@@ -38,7 +38,7 @@ carouselsRouter.post('/products/:id/carousel', async (req, res) => {
   if (!product.image) return res.status(400).json({ error: 'El producto no tiene imagen' });
 
   // hero usa una referencia NUEVA (no usada por el producto) para el vibe del outfit
-  const [ref] = await pickRefs({ shopifyProductId: product.shopifyId, n: 1 });
+  const [ref] = await pickRefs({ shopifyProductId: product.shopifyId, wash: product.wash, n: 1 });
 
   const doc = await Carousel.create({
     shopifyProductId: product.shopifyId,
