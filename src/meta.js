@@ -41,6 +41,18 @@ async function graph(method, path, params = {}) {
 
 const acct = () => M.adAccountId; // ya viene como act_...
 
+// Cuenta de Instagram de la pagina (necesaria cuando el ad va a placements de IG).
+// Se cachea a nivel modulo. Devuelve '' si no hay (cae a page-backed).
+let _igActorId;
+export async function getIgActorId() {
+  if (_igActorId !== undefined) return _igActorId;
+  try {
+    const j = await graph('GET', M.pageId, { fields: 'instagram_business_account,connected_instagram_account,instagram_accounts' });
+    _igActorId = j.instagram_business_account?.id || j.connected_instagram_account?.id || j.instagram_accounts?.data?.[0]?.id || '';
+  } catch { _igActorId = ''; }
+  return _igActorId;
+}
+
 // Advantage+ creative SELECTIVO: prendemos solo lo que NO toca la estetica (mejor CTA)
 // y APAGAMOS explicitamente todo lo que altera la foto/copy (Meta los auto-aplica por
 // defecto si no los desactivas). Asi protegemos el look organico de los fitpics.
@@ -103,11 +115,12 @@ export async function uploadImage(b64) {
 }
 
 // Creative de imagen sola.
-export function createSingleImageCreative({ name, imageHash, link, message }) {
+export function createSingleImageCreative({ name, imageHash, link, message, igActorId = '' }) {
   return graph('POST', `${acct()}/adcreatives`, {
     name,
     object_story_spec: {
       page_id: M.pageId,
+      ...(igActorId ? { instagram_actor_id: igActorId } : {}),
       link_data: {
         image_hash: imageHash,
         link,
@@ -120,12 +133,12 @@ export function createSingleImageCreative({ name, imageHash, link, message }) {
 
 // Creative de imagen con CUSTOMIZACION POR PLACEMENT: usa el 9:16 (story) en
 // Stories/Reels y el 1:1/4:5 (feed) en el resto. asset_feed_spec = Advantage+ creative.
-export function createPlacementImageCreative({ name, storyHash, feedHash, link, messages = [], titles = [] }) {
+export function createPlacementImageCreative({ name, storyHash, feedHash, link, messages = [], titles = [], igActorId = '' }) {
   const bodies = (messages.length ? messages : ['']).slice(0, 5).map((t) => ({ text: t }));
   const titleSpec = titles.filter(Boolean).slice(0, 5).map((t) => ({ text: t }));
   return graph('POST', `${acct()}/adcreatives`, {
     name,
-    object_story_spec: { page_id: M.pageId },
+    object_story_spec: { page_id: M.pageId, ...(igActorId ? { instagram_actor_id: igActorId } : {}) },
     asset_feed_spec: {
       images: [
         { hash: feedHash, adlabels: [{ name: 'feed_img' }] },
@@ -152,11 +165,12 @@ export function createPlacementImageCreative({ name, storyHash, feedHash, link, 
 }
 
 // Creative de carrusel: cards = [{ imageHash, link, name }]
-export function createCarouselCreative({ name, message, link, cards }) {
+export function createCarouselCreative({ name, message, link, cards, igActorId = '' }) {
   return graph('POST', `${acct()}/adcreatives`, {
     name,
     object_story_spec: {
       page_id: M.pageId,
+      ...(igActorId ? { instagram_actor_id: igActorId } : {}),
       link_data: {
         message: message || '',
         link,

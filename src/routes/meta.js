@@ -78,10 +78,11 @@ metaRouter.post('/meta/test-placement', async (_req, res) => {
     if (!c) return res.status(404).json({ error: 'No hay single aprobado para testear' });
     const prod = c.shopifyProductId ? await Product.findOne({ shopifyId: c.shopifyProductId }).lean() : null;
     const link = productLink(prod?.handle);
+    const igActorId = await meta.getIgActorId();
     const storyHash = await meta.uploadImage(await storyB64(c));
     const feedHash = await meta.uploadImage(await feedB64(c));
-    const creative = await meta.createPlacementImageCreative({ name: 'TEST · placement (borrable)', storyHash, feedHash, link, messages: ['test'] });
-    res.json({ ok: true, creativeId: creative.id, product: c.product });
+    const creative = await meta.createPlacementImageCreative({ name: 'TEST · placement (borrable)', storyHash, feedHash, link, messages: ['test'], igActorId });
+    res.json({ ok: true, creativeId: creative.id, product: c.product, igActorId: igActorId || '(ninguna)' });
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
@@ -145,6 +146,8 @@ metaRouter.post('/meta/launch', async (req, res) => {
     });
 
     const ads = [];
+    // Cuenta de Instagram (requerida porque vamos a placements de IG).
+    const igActorId = await meta.getIgActorId();
     // Agrega la promo activa (SUMMER25, etc.) al final de cada copy.
     const withPromo = (msg) => (config.metaPromo ? `${msg}\n\n${config.metaPromo}` : msg);
     // Singles -> customizacion por placement: story 9:16 en Stories/Reels, feed 1:1 en el resto.
@@ -158,7 +161,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
       const message = withPromo(c.copy?.primaryTexts?.[0] || c.copy?.primaryText || `${c.product || 'CAROTA'} — shop now`);
       const titles = c.copy?.headlines?.[0] ? [c.copy.headlines[0]] : (c.copy?.headline ? [c.copy.headline] : []);
       const creative = await meta.createPlacementImageCreative({
-        name: `${c.product || 'CAROTA'} · ${c.angle}`, storyHash, feedHash, link, messages: [message], titles,
+        name: `${c.product || 'CAROTA'} · ${c.angle}`, storyHash, feedHash, link, messages: [message], titles, igActorId,
       });
       const ad = await meta.createAd({ name: `${c.product} · ${c.angle}`, adsetId: adSet.id, creativeId: creative.id });
       ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: c._id, product: c.product, link, format: 'single' });
@@ -176,7 +179,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
       if (cards.length < 2) continue; // un carrusel necesita 2+ cards
       const creative = await meta.createCarouselCreative({
         name: `${cr.product || 'CAROTA'} · carrusel`,
-        message: withPromo(cr.copy?.primaryTexts?.[0] || cr.copy?.primaryText || `${cr.product || 'CAROTA'} — shop now`), link, cards,
+        message: withPromo(cr.copy?.primaryTexts?.[0] || cr.copy?.primaryText || `${cr.product || 'CAROTA'} — shop now`), link, cards, igActorId,
       });
       const ad = await meta.createAd({ name: `${cr.product} · carrusel`, adsetId: adSet.id, creativeId: creative.id });
       ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: cr._id, product: cr.product, link, format: 'carousel' });
