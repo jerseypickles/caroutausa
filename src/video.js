@@ -19,11 +19,13 @@ export const MOTION_PRESETS = {
 };
 const MOTION_GUARD = ' NO walking, NO big movements, NO morphing. The denim shorts keep the EXACT same shape, wash, rips, hem and length the whole time. Hands and face stay stable and natural.';
 
-// Frame "last": el MISMO instante ~1s después (delta chico) para que Seedance interpole fiel.
+// Frame "last": el SIGUIENTE BEAT del fit-check (~1-2s) con un CAMBIO DE POSE claro pero
+// natural -> Seedance tiene movimiento real para interpolar (no dos frames iguales).
 function lastFramePrompt(productDescription = '') {
   return `${GARMENT_LOCK}
-The SECOND image is a frame of this EXACT fitpic session. Generate the very NEXT frame about one second later: the SAME real person, SAME face, SAME outfit and graphic, SAME sneakers, SAME location, SAME lighting and color grading, SAME framing — with only a TINY natural change (a slight weight shift, a small head turn, the fabric settling, a subtle hand move). It must read as the immediate next moment of the same clip, NOT a different pose or camera angle. Keep the denim shorts EXACTLY the same. NO text overlay anywhere.${productDescription ? `\nProduct to preserve exactly: ${productDescription}` : ''}
-Make it a REAL candid iPhone photo — natural grain and light, never an AI render.`;
+The SECOND image is a frame of the SAME mirror fit-check. Generate the NEXT POSE of the same clip, about 1-2 seconds later — it must be a CLEARLY DIFFERENT pose from the second image, the kind of natural movement you do between two beats of a mirror outfit-check. Pick ONE clear change: shift the weight onto the OTHER leg and turn the body slightly to a 3/4 angle, OR move the free hand into a pocket / down to the side, OR angle the torso and tilt the head. It must read as the same person mid-movement, NOT a frozen copy of the first frame.
+KEEP IDENTICAL: the SAME real person and face, the SAME outfit and graphic, the SAME sneakers, the SAME denim shorts (exact wash, rips, hem, length), the SAME room, lighting and color grading, the SAME mirror-selfie framing (full body, phone up). Only the POSE changes. NO text overlay.${productDescription ? `\nProduct to preserve exactly: ${productDescription}` : ''}
+Make it a REAL candid iPhone mirror photo — natural grain and light, never an AI render.`;
 }
 
 // 1) FRAMES: genera start + last (ambos fieles a ref + producto), SIN hook bakeado.
