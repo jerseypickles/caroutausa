@@ -10,7 +10,8 @@ const referenceSchema = new mongoose.Schema(
     favorite: { type: Boolean, default: false }, // se usa mas seguido
     avoid: { type: Boolean, default: false },     // nunca usar (vibe a evitar)
     imageData: { type: String, required: true, select: false }, // base64
-    styleDna: { type: String, default: '' }, // ADN extraido segun el tipo, para INSPIRAR (no copiar)
+    styleDna: { type: String, default: '' }, // brief para el director
+    dna: { type: mongoose.Schema.Types.Mixed, default: null }, // ADN estructurado (lo que captó: zapas/accesorios/pose/vibe/paleta) para mostrar
   },
   { timestamps: true }
 );

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { Reference } from '../models/reference.js';
+import { extractAndStore } from '../refs.js';
 
 export const referencesRouter = Router();
 
@@ -16,7 +17,15 @@ referencesRouter.post('/references', async (req, res) => {
   if (!imageB64) return res.status(400).json({ error: 'Falta imageB64' });
   const t = ['outfit', 'scene', 'pose'].includes(type) ? type : 'outfit';
   const ref = await Reference.create({ imageData: imageB64, label: label || '', type: t, active: true });
+  await extractAndStore(ref._id).catch((e) => console.error('[refs] extract on upload:', e.message)); // analiza ya
   res.status(201).json({ id: ref._id, label: ref.label, active: ref.active, type: ref.type });
+});
+
+// POST /api/references/:id/reextract -> re-analiza la referencia (struct nuevo)
+referencesRouter.post('/references/:id/reextract', async (req, res) => {
+  const ext = await extractAndStore(req.params.id).catch(() => null);
+  if (!ext) return res.status(404).json({ error: 'No se pudo analizar' });
+  res.json({ dna: ext.struct, brief: ext.brief });
 });
 
 // GET /api/references/:id/image -> sirve el pin
@@ -36,10 +45,12 @@ referencesRouter.patch('/references/:id', async (req, res) => {
   if (typeof b.label === 'string') update.label = b.label;
   if (typeof b.favorite === 'boolean') update.favorite = b.favorite;
   if (typeof b.avoid === 'boolean') update.avoid = b.avoid;
-  if (['outfit', 'scene', 'pose'].includes(b.type)) { update.type = b.type; update.styleDna = ''; } // re-extrae con el prompt del nuevo tipo
+  const typeChanged = ['outfit', 'scene', 'pose'].includes(b.type);
+  if (typeChanged) { update.type = b.type; update.styleDna = ''; update.dna = null; }
   const doc = await Reference.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
   if (!doc) return res.status(404).json({ error: 'Referencia no encontrada' });
-  res.json({ reference: { _id: doc._id, label: doc.label, active: doc.active, type: doc.type, favorite: doc.favorite, avoid: doc.avoid } });
+  if (typeChanged) await extractAndStore(doc._id).catch((e) => console.error('[refs] re-extract:', e.message)); // re-analiza con el nuevo tipo
+  res.json({ reference: { _id: doc._id } });
 });
 
 // DELETE /api/references/:id

@@ -99,6 +99,11 @@
   .reftypes .rt.on { background: var(--accent); color: #fff; }
   .iconbtn.fav { color: #f5a623; border-color: #f5a623; }
   .iconbtn.avoidon { color: var(--bad); border-color: var(--bad); }
+  .refdna { padding: 8px 10px 2px; display: flex; flex-direction: column; gap: 5px; }
+  .refdna.pend { color: var(--faint); font-size: 11px; padding: 9px 10px; }
+  .rd { display: flex; gap: 7px; font-size: 11px; line-height: 1.35; }
+  .rd .rdk { flex: none; color: var(--muted); font-weight: 600; width: 78px; }
+  .rd .rdv { color: var(--text); }
   .ref.inactive { opacity: .5; }
   .ref img { width: 100%; aspect-ratio: 3/4; object-fit: cover; background: var(--surface3); cursor: zoom-in; }
   .ref .body { padding: 11px 12px; display: flex; align-items: center; gap: 8px; }
@@ -835,9 +840,11 @@ async function loadReferences() {
       <div class="reftypes">
         ${Object.keys(RT).map(t => `<button class="rt ${(ref.type || 'outfit') === t ? 'on' : ''}" onclick="setRefType('${ref._id}','${t}')">${RT[t]}</button>`).join('')}
       </div>
+      ${refDnaHtml(ref)}
       <div class="body">
         <span class="label">${ref.label || 'pin'}</span>
         <span style="flex:1"></span>
+        <button class="iconbtn" title="Re-analizar (ver qué capta)" onclick="reextractRef('${ref._id}', this)">↻</button>
         <button class="iconbtn ${ref.favorite ? 'fav' : ''}" title="Favorito (se usa más)" onclick="toggleRefFlag('${ref._id}','favorite',${!ref.favorite})">★</button>
         <button class="iconbtn ${ref.avoid ? 'avoidon' : ''}" title="Evitar (nunca usar)" onclick="toggleRefFlag('${ref._id}','avoid',${!ref.avoid})">⊘</button>
         <label class="switch" title="Activa para generación">
@@ -847,9 +854,28 @@ async function loadReferences() {
       </div>
     </div>`).join('') : '<div class="empty">Sin referencias todavía. Subí tu primer pin arriba.</div>';
 }
+// Muestra QUÉ captó la referencia (zapas, accesorios, pose, vibe, paleta…).
+const DNA_LBL = {
+  lane: ['◆', 'lane'], top: ['👕', 'top'], sneakers: ['👟', 'zapas'], accessories: ['⛓', 'accesorios'],
+  vibe: ['🧑', 'vibe'], palette: ['🎨', 'paleta'],
+  location: ['📍', 'lugar'], elements: ['🏛', 'elementos'], light: ['💡', 'luz'], mood: ['🎭', 'mood'],
+  stance: ['🧍', 'postura'], framing: ['🎬', 'encuadre'], energy: ['⚡', 'energía'],
+};
+function refDnaHtml(ref) {
+  const dna = ref.dna;
+  if (!dna || typeof dna !== 'object') return '<div class="refdna pend">analizando…</div>';
+  const rows = Object.entries(dna).filter(([k, v]) => DNA_LBL[k] && v).map(([k, v]) =>
+    `<div class="rd"><span class="rdk">${DNA_LBL[k][0]} ${DNA_LBL[k][1]}</span><span class="rdv">${esc(String(v))}</span></div>`);
+  return rows.length ? `<div class="refdna">${rows.join('')}</div>` : '<div class="refdna pend">analizando…</div>';
+}
 async function setRefType(id, type) {
   await fetch(`/api/references/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type }) });
   toast('Tipo: ' + type); loadReferences();
+}
+async function reextractRef(id, btn) {
+  btn.disabled = true; btn.textContent = '…';
+  try { await fetch(`/api/references/${id}/reextract`, { method: 'POST' }); toast('Re-analizado'); loadReferences(); }
+  catch (e) { toast('Error'); } finally { btn.disabled = false; }
 }
 async function toggleRefFlag(id, flag, val) {
   await fetch(`/api/references/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [flag]: val }) });
