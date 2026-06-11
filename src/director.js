@@ -138,6 +138,8 @@ TOP GRAPHIC: reproduce the reference graphic's STYLE and layout closely — same
     : 'YOU design the full elevated outfit yourself — the TOP and layering (give the top a bold ORIGINAL graphic, not blank), the statement footwear, and accessories (never the bottoms). The TOP graphic must be original, NEVER a recognizable third-party brand logo/wordmark.';
   const heroNote = mode === 'carouselHero'
     ? '\nThis is the HERO of a carousel and sets the look for the whole set, so keep the composition SIMPLE and clean: a fairly frontal full-body standing pose in SOFT, EVEN, BRIGHT light (a clean bright neutral setting — NOT harsh sun or warm walls), the full lower body unobstructed and clearly in frame, framed FAIRLY CLOSE so the model fills most of the frame (not small and distant). No motion blur, no busy foreground, no crop at the legs.'
+    : mode === 'video'
+    ? '\nThis still will be ANIMATED into a short video, so keep it VIDEO-READY: a full-body, fairly frontal STANDING pose, the model calm and mostly STILL (no mid-action), hands relaxed at the sides or one in a pocket (never mid-gesture), face calm or partly hidden (a mirror-selfie phone pose works great). Full lower body clearly in frame, a setting with some depth behind for natural parallax. No motion blur, no crop at the legs.'
     : '';
   const user = `Product: ${product || 'denim shorts'}${wash ? ` (wash: ${wash})` : ''}.
 Angle to hit: ${intent}.

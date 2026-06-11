@@ -15,6 +15,8 @@ export const config = {
   imageModel: process.env.IMAGE_MODEL || 'gpt-image-2',
   realismPass: process.env.REALISM_PASS !== 'false', // pase de grano/tono organico (default ON)
   hookAuto: process.env.HOOK_AUTO !== 'false', // genera la variante con hook auto en cada creativo (default ON)
+  piapiKey: process.env.PIAPI_KEY || '', // PiAPI -> Seedance 2.0 (image-to-video). Opcional.
+  publicBaseUrl: process.env.PUBLIC_BASE_URL || 'https://carota-ad-engine.onrender.com', // URLs públicas para PiAPI
   judgeModel: process.env.JUDGE_MODEL || 'gpt-5.1',
   // Director creativo (Anthropic): genera los prompts de imagen dinamicamente.
   // Las imagenes las sigue haciendo gpt-image. Opcional: sin key, cae al prompt fijo.

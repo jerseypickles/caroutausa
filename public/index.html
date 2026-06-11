@@ -119,6 +119,22 @@
   .refgrad { position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 12px 11px; background: linear-gradient(to top, rgba(0,0,0,.82), rgba(0,0,0,.38) 55%, transparent); color: #fff; z-index: 1; }
   .refgrad .refcl { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .refgrad .refcm { font-size: 11px; opacity: .85; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vboard { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 14px; align-items: start; }
+  .vcol { background: var(--surface2); border-radius: 12px; padding: 10px; min-height: 120px; }
+  .vcolh { font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .vcolh .vcount { background: var(--surface); border-radius: 20px; padding: 1px 8px; font-size: 10.5px; }
+  .vcard { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
+  .vcard .vimg { aspect-ratio: 9/16; background: var(--surface2); position: relative; }
+  .vcard .vimg img, .vcard .vimg video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .vfid { position: absolute; bottom: 6px; left: 6px; display: flex; gap: 4px; }
+  .vfid span { background: rgba(0,0,0,.7); color: #fff; font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
+  .vfid span.bad { background: var(--bad); } .vfid span.ok { background: #1a8f4a; }
+  .vb { padding: 7px 9px; font-size: 11px; }
+  .vb .vt { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vb .vm { color: var(--muted); font-size: 10.5px; margin-top: 1px; }
+  .vacts { display: flex; gap: 6px; padding: 0 9px 9px; }
+  .vacts .btn { flex: 1; padding: 5px 4px; font-size: 11px; }
+  .vspin { font-size: 11px; color: var(--muted); padding: 7px 9px; }
   /* Referencias — modal */
   .refmbox { width: 760px; }
   .refm { display: grid; grid-template-columns: 300px 1fr; gap: 22px; }
@@ -569,6 +585,7 @@
     <a data-view="ads" onclick="showView('ads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-5"/></svg>Ad Manager<span class="pill zero" id="pillAds">0</span></a>
     <a data-view="motor" onclick="showView('motor')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5L19 19M19 5l-2.5 2.5M7.5 16.5L5 19"/></svg>Motor<span class="dot" id="motorDot"></span></a>
     <a data-view="aprendizaje" onclick="showView('aprendizaje')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-3-3-4 4"/></svg>Aprendizaje</a>
+    <a data-view="video" onclick="showView('video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Video<span class="pill zero" id="pillVideo">0</span></a>
   </nav>
   <div class="foot"><span class="dot"></span>Cron Shopify activo</div>
 </aside>
@@ -693,6 +710,16 @@
       <div id="learnGrid"></div>
     </section>
 
+    <section class="view" id="view-video">
+      <div class="secthead">
+        <div><h2>Video Sourcing</h2><span class="muted">gpt crea 2 frames (start+last) fieles → Seedance los anima → QC del short → export. <b id="videoApi"></b></span></div>
+        <span style="flex:1"></span>
+        <button class="btn ghost sm" onclick="loadVideo()">↻ Actualizar</button>
+        <button class="btn sm" onclick="newVideoClip(this)">+ Nuevo clip</button>
+      </div>
+      <div class="vboard" id="vboard"></div>
+    </section>
+
   </div>
 </div>
 
@@ -766,8 +793,10 @@ const TITLES = {
   ads: ['Ad Manager', 'Lanzá y gestioná campañas de conversión en Meta'],
   motor: ['Motor', 'El engine trabajando solo · qué va desarrollando'],
   aprendizaje: ['Aprendizaje', 'Qué ADN (escena/casting/ángulo/wash) rinde mejor en Meta'],
+  video: ['Video Sourcing', 'Frames con gpt → Seedance los anima → QC → export'],
 };
 let adsPoll = null;
+let videoPoll = null;
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.view === name));
@@ -775,12 +804,14 @@ function showView(name) {
   document.getElementById('topSub').textContent = TITLES[name][1];
   clearInterval(adsPoll); adsPoll = null;
   clearInterval(learnPoll); learnPoll = null;
+  clearInterval(videoPoll); videoPoll = null;
   if (name === 'productos') loadProducts();
   if (name === 'referencias') loadReferences();
   if (name === 'ads') { loadAdManager(); adsPoll = setInterval(() => { loadLaunched(); loadCampaigns(); }, 90000); } // refresca métricas cada 90s
   if (name === 'motor') loadMotor();
   if (name === 'aprendizaje') openLearning();
   if (name === 'cola') renderMotorBar();
+  if (name === 'video') { loadVideo(); videoPoll = setInterval(loadVideo, 30000); }
 }
 async function renderMotorBar() {
   const el = document.getElementById('motorBar'); if (!el) return;
@@ -901,6 +932,41 @@ async function syncNow() {
     toast(`Shopify sincronizado: ${d.count} productos`); products = d.products || []; loadProducts();
   } catch (e) { toast('Error al sincronizar'); } finally { b.disabled = false; }
 }
+
+/* ===== VIDEO SOURCING ===== */
+const VSTAGES = [['frames', '📸 Frames'], ['curated', '⭐ Curados'], ['animating', '🎬 Animando'], ['qc', '🔍 QC Video'], ['ready', '✅ Listos']];
+let videoPresets = ['mirror-sway'];
+async function loadVideo() {
+  const r = await fetch('/api/video').then((x) => x.json()).catch(() => ({ clips: [] }));
+  const clips = r.clips || [];
+  videoPresets = r.presets && r.presets.length ? r.presets : videoPresets;
+  document.getElementById('videoApi').textContent = r.piapi ? '' : '⚠️ PIAPI_KEY no configurada en Render';
+  const pill = document.getElementById('pillVideo'); pill.textContent = clips.length; pill.classList.toggle('zero', clips.length === 0);
+  document.getElementById('vboard').innerHTML = VSTAGES.map(([st, lbl]) => {
+    const items = clips.filter((c) => c.stage === st);
+    return `<div class="vcol"><div class="vcolh">${lbl}<span class="vcount">${items.length}</span></div>${items.map(vcard).join('')}</div>`;
+  }).join('');
+}
+function vfid(s) { if (s == null) return ''; const cls = s >= 85 ? 'ok' : (s >= 70 ? '' : 'bad'); return `<span class="${cls}">fid ${s}</span>`; }
+function vcard(c) {
+  const generating = c.genStatus === 'generating' && c.stage === 'frames';
+  let media, acts = '';
+  if (c.stage === 'ready' || c.stage === 'qc') media = `<video src="/api/video/${c._id}/video" muted loop autoplay playsinline></video>`;
+  else if (generating) media = `<div class="vspin">generando 2 frames…</div>`;
+  else media = `<img src="/api/video/${c._id}/start-frame" loading="lazy" onerror="this.style.opacity=.2"/><div class="vfid">${vfid(c.startFidelity)}${vfid(c.lastFidelity)}</div>`;
+  if (c.stage === 'frames' && !generating) acts = `<button class="btn sm" onclick="vAct('${c._id}','curate',this)">Curar ⭐</button><button class="btn ghost sm" onclick="vDel('${c._id}')">🗑</button>`;
+  else if (c.stage === 'curated') acts = `<button class="btn sm" onclick="vAnimate('${c._id}',this)">Animar 🎬</button><button class="btn ghost sm" onclick="vDel('${c._id}')">🗑</button>`;
+  else if (c.stage === 'animating') acts = `<button class="btn ghost sm" onclick="vAct('${c._id}','refresh',this)">↻ estado</button>`;
+  else if (c.stage === 'qc') acts = `<button class="btn sm" onclick="vQc('${c._id}','pass',this)">✓ OK</button><button class="btn ghost sm" onclick="vQc('${c._id}','fail',this)">✗</button>`;
+  else if (c.stage === 'ready') acts = `<a class="btn ghost sm" href="/api/video/${c._id}/video" target="_blank">⬇ mp4</a><button class="btn ghost sm" onclick="vDel('${c._id}')">🗑</button>`;
+  else acts = `<button class="btn ghost sm" onclick="vDel('${c._id}')">🗑 falló</button>`;
+  return `<div class="vcard"><div class="vimg">${media}</div><div class="vb"><div class="vt">${esc((c.product || '').replace(' Denim Short', ''))}</div><div class="vm">${esc(c.castTag || '')}${c.hookLine ? ' · "' + esc(c.hookLine) + '"' : ''}</div></div><div class="vacts">${acts}</div></div>`;
+}
+async function newVideoClip(btn) { btn.disabled = true; btn.textContent = '…'; try { await fetch('/api/video/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); toast('Generando frames…'); loadVideo(); } finally { btn.disabled = false; btn.textContent = '+ Nuevo clip'; } }
+async function vAct(id, act, btn) { if (btn) btn.disabled = true; await fetch(`/api/video/${id}/${act}`, { method: 'POST' }); loadVideo(); }
+async function vDel(id) { if (!confirm('¿Borrar clip?')) return; await fetch(`/api/video/${id}`, { method: 'DELETE' }); loadVideo(); }
+async function vAnimate(id, btn) { btn.disabled = true; btn.textContent = '…'; const r = await fetch(`/api/video/${id}/animate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset: videoPresets[0] || 'mirror-sway' }) }).then((x) => x.json()); toast(r.error || 'Animando con Seedance…'); loadVideo(); }
+async function vQc(id, status, btn) { btn.disabled = true; await fetch(`/api/video/${id}/qc`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); loadVideo(); }
 
 /* ===== REFERENCIAS ===== */
 const RT_LBL = { outfit: '👕 outfit', scene: '🌊 escena', pose: '🧍 pose' };

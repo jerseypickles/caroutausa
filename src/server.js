@@ -13,9 +13,11 @@ import { metaRouter } from './routes/meta.js';
 import { carouselsRouter } from './routes/carousels.js';
 import { autopilotRouter } from './routes/autopilot.js';
 import { learningRouter } from './routes/learning.js';
+import { videoRouter } from './routes/video.js';
 import { startProductCron } from './sync.js';
 import { startAutopilotCron } from './autopilot.js';
 import { startMetricsCron } from './learning.js';
+import { startVideoCron } from './video.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, '..', 'public');
@@ -37,6 +39,7 @@ app.use('/api', metaRouter);
 app.use('/api', carouselsRouter);
 app.use('/api', autopilotRouter);
 app.use('/api', learningRouter);
+app.use('/api', videoRouter);
 
 // Panel de QC (frontend estatico) servido por el mismo servicio -> sin CORS, un solo deploy.
 app.use(express.static(publicDir));
@@ -55,6 +58,7 @@ async function start() {
   startProductCron(); // sincroniza Shopify al arranque y cada N min
   startAutopilotCron(); // motor autonomo: genera el mix de productos pendientes
   startMetricsCron(); // sincroniza metricas de Meta -> tab Aprendizaje siempre fresco
+  startVideoCron(); // avanza las tasks de Seedance (animating -> qc)
   app.listen(config.port, () => {
     console.log(`[server] escuchando en :${config.port}`);
   });
