@@ -1656,6 +1656,7 @@ function campaignCard(c) {
       <span class="muted" style="font-size:12px">${(c.objective || '').replace('OUTCOME_', '')}${c.dailyBudget ? ' · $' + c.dailyBudget + '/día' : ''}</span>
       <span style="flex:1"></span>
       <button class="btn ghost sm" onclick="toggleAds('${c.id}', this)">Ver ads</button>
+      <button class="btn ghost sm" onclick="deleteAccountCampaign('${c.id}','${escAttr(c.name)}', this)" title="Borrar de Meta">🗑</button>
     </div>
     <div class="meta-row">
       ${metric(i.impressions != null ? i.impressions.toLocaleString() : null, 'Impresiones')}
@@ -1668,6 +1669,13 @@ function campaignCard(c) {
     </div>
     <div class="adsbox" id="ads-${c.id}"></div>
   </div>`;
+}
+async function deleteAccountCampaign(id, name, btn) {
+  if (!confirm(`¿Borrar "${name}" de Meta? (no se puede deshacer)`)) return;
+  btn.disabled = true; btn.textContent = '…';
+  try { const r = await (await fetch(`/api/meta/account-campaigns/${id}`, { method: 'DELETE' })).json();
+    if (r.error) toast(r.error); else { toast('Campaña borrada'); loadCampaigns(); }
+  } catch (e) { toast('Error borrando'); } finally { btn.disabled = false; }
 }
 async function toggleAds(id, btn) {
   const box = document.getElementById('ads-' + id);

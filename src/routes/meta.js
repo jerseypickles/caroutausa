@@ -56,6 +56,18 @@ metaRouter.get('/meta/account-campaigns', async (_req, res) => {
   }
 });
 
+// DELETE /api/meta/account-campaigns/:id -> borra una campaña de Meta (status DELETED)
+metaRouter.delete('/meta/account-campaigns/:id', async (req, res) => {
+  if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });
+  try {
+    await meta.deleteObject(req.params.id);
+    await MetaCampaign.updateOne({ campaignId: req.params.id }, { $set: { status: 'DELETED' } });
+    res.json({ deleted: true });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 // GET /api/meta/account-campaigns/:id/ads -> ads de una campaña (thumbnails + metricas)
 metaRouter.get('/meta/account-campaigns/:id/ads', async (req, res) => {
   try {
