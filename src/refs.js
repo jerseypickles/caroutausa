@@ -49,6 +49,21 @@ export async function extractRefDna(b64, type = 'outfit') {
   }
 }
 
+// Muestreo aleatorio PONDERADO sin repetir: cada item entra con prob ~ su peso (ruleta).
+// Da variedad real con bias suave, en vez de "el mejor score siempre gana".
+function weightedSampleDistinct(arr, weightFn, n) {
+  const pool = arr.map((r) => ({ r, w: Math.max(0.01, weightFn(r)) }));
+  const out = [];
+  for (let k = 0; k < n && pool.length; k++) {
+    const total = pool.reduce((s, p) => s + p.w, 0);
+    let x = Math.random() * total, idx = 0;
+    for (; idx < pool.length - 1; idx++) { x -= pool[idx].w; if (x <= 0) break; }
+    out.push(pool[idx].r);
+    pool.splice(idx, 1);
+  }
+  return out;
+}
+
 function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -80,9 +95,14 @@ export async function pickRefs({ shopifyProductId = null, wash = null, n = 1, ty
     usedIds = new Set([...cs, ...ks].map((d) => String(d.referenceId)));
   }
   const fam = type === 'outfit' ? washFamily(wash) : null;
-  const score = (r) => (r.favorite ? 100 : 0) + (fam && r.dna?.family === fam ? 10 : 0) + (usedIds.has(String(r._id)) ? 0 : 1) + Math.random();
-  const ordered = [...refs].sort((a, b) => score(b) - score(a));
-  const chosen = ordered.slice(0, Math.min(n, ordered.length));
+  // Peso SUAVE -> pick aleatorio ponderado (no determinista) = variedad real, TODAS las refs
+  // entran. La familia es una preferencia LEVE (+1), no un bloqueo (antes +10 fijaba siempre
+  // la misma); no-usada por el producto pesa más (+1.5) para rotar; favorito un empujón (+3).
+  const weight = (r) => 1
+    + (usedIds.has(String(r._id)) ? 0 : 1.5)
+    + (fam && r.dna?.family === fam ? 1 : 0)
+    + (r.favorite ? 3 : 0);
+  const chosen = weightedSampleDistinct(refs, weight, Math.min(n, refs.length));
 
   const out = [];
   for (const r of chosen) {
