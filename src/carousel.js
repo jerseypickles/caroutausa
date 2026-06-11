@@ -58,7 +58,7 @@ ${IPHONE}`;
 
 // Genera un carrusel cohesivo: hero -> N poses + 1 detail, usando el hero como
 // referencia para que compartan modelo/fondo/color. Devuelve [{role,b64}].
-export async function generateCarousel({ imageUrl, productBackUrl = '', productDescription, refDna = '', product, wash, fitSpec = '', cards = 3 }) {
+export async function generateCarousel({ imageUrl, productBackUrl = '', productDescription, refDna = '', refImageB64 = '', product, wash, fitSpec = '', cards = 3 }) {
   // 1. Hero (set el look): el director arma un outfit INSPIRADO en el ADN de la
   // referencia (no clon); las demas cards encadenan del hero (cohesion). La 2da foto
   // (espalda) le da el garment completo para las poses de movimiento/espalda.
@@ -70,7 +70,8 @@ export async function generateCarousel({ imageUrl, productBackUrl = '', productD
   if (config.hookAuto) {
     try { hookSpec = await planHook({ product, wash, fitSpec }); } catch (e) { console.error('[carousel] planHook:', e.message); }
   }
-  const hero = await generateVariant({ imageUrl, productBackUrl, angleId: 'realista', productDescription, creativeDirection, fitSpec, hookSpec });
+  // La IMAGEN de la ref va a gpt-image (guía visual) -> el hero copia el outfit fiel.
+  const hero = await generateVariant({ imageUrl, productBackUrl, angleId: 'realista', productDescription, creativeDirection, fitSpec, hookSpec, referenceB64: refImageB64 || null });
   const heroB64 = hero.b64;
 
   // 2. Set TIGHT (max 3): hero (look completo) + N poses + 1 close-up del short.
@@ -108,6 +109,7 @@ export async function generateCarouselInBackground(carouselId) {
       productBackUrl: prod?.images?.[1] || '',
       productDescription,
       refDna: doc.referenceDna || '',
+      refImageB64: doc.referenceImageData || '',
       product: doc.product,
       wash: doc.wash,
       fitSpec: prod?.fitSpec || '',

@@ -66,14 +66,21 @@ and editorial, yet unmistakably a real photo.`;
 
 // Referencia de estilo (imagen 2): SUBORDINADA al producto. Solo aporta el resto
 // del look y la escena; jamas toca el jean.
-const STYLE_REFERENCE = `The LAST image provided is the OUTFIT / STYLE REFERENCE. REPLICATE its
-outfit on the model as faithfully as possible: the same top/jacket and layering, the same
-footwear/sneakers (same style and colorway), the same accessories (caps, chains, bags,
-socks) and the same way the clothes are worn and styled. The model's outfit should clearly
-read as the SAME look as that reference image.
-Do NOT copy its background, location or color grading — place the model in a real, organic
-everyday setting with the natural muted iPhone look described below; the reference is for
-the OUTFIT, not the scene.
+const STYLE_REFERENCE = `The LAST image provided is the OUTFIT / STYLE REFERENCE. COPY its outfit
+on the model as FAITHFULLY as possible — it must clearly read as the SAME look:
+- The SAME top type and layering (tee/hoodie/jacket), worn the same boxy/oversized/fitted way.
+- The SAME GRAPHIC on the top: match its style, typography, placement and scale closely. Any
+  TEXT must be rendered FORWARD and perfectly readable — NEVER mirrored or backwards, even if
+  the reference looks reversed (a mirror selfie).
+- The EXACT same sneakers — same model and colorway (e.g. chunky dad-runners stay chunky
+  dad-runners; do NOT swap them for white Air Force 1s).
+- The SAME accessories: cap (same style/placement), chains, bag, socks, watch.
+You MAY recolor the overall fit to a different palette, but keep every other element the same.
+BRAND-SAFE: if the reference shows a recognizable third-party BRAND wordmark or logo on the
+top, replace ONLY that text/logo with ORIGINAL wording/art in the exact SAME visual style —
+keep the look, drop the brand name. (Real sneakers on-foot are fine to reproduce.)
+Do NOT copy its background, location or color grading — place the model in the scene described
+below with a natural iPhone look; the reference is for the OUTFIT, not the scene.
 NEVER take the pants, shorts or bottoms from the reference image — the bottoms are ALWAYS the
 exact denim PRODUCT, with its wash, rips, hem and length unchanged.
 Do NOT copy the face or identity from the reference image.`;

@@ -18,7 +18,7 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     // El director (Claude) inventa la direccion creativa de este fitpic. Si no hay
     // key o falla, generateVariant cae al prompt fijo del angulo. En reintentos se
     // re-dirige (nueva escena) para aprovechar la varianza.
-    const doc = await Creative.findById(creativeId).lean();
+    const doc = await Creative.findById(creativeId).select('+referenceImageData').lean();
     const styleMode = doc?.styleMode || 'organic';
     // La referencia es INSPIRACION (ADN de estilo), no un clon: el director arma un
     // outfit fresco en ese lane. NO mandamos la imagen de referencia a gpt-image.
@@ -41,7 +41,9 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     await Creative.findByIdAndUpdate(creativeId, { sceneTag: dir?.sceneTag, castTag: dir?.castTag, hookLine: hookSpec?.hookLine || null, fontTag: hookSpec?.fontTag || null });
     // 9:16 (story/reels) = placement principal, con el hook bakeado. La 2da foto (espalda)
     // habilita tomas de movimiento/espalda fieles.
-    ({ b64 } = await generateVariant({ imageUrl, productBackUrl: doc?.sourceBackUrl || '', angleId, productDescription, creativeDirection, fitSpec, styleMode, size: STORY_SIZE, hookSpec }));
+    // La IMAGEN de la ref va a gpt-image como guía VISUAL (no solo el ADN texto) -> copia
+    // el outfit fiel (gráfico, zapas, fit, accesorios). El short sale del producto (GARMENT_LOCK).
+    ({ b64 } = await generateVariant({ imageUrl, productBackUrl: doc?.sourceBackUrl || '', angleId, productDescription, creativeDirection, fitSpec, styleMode, size: STORY_SIZE, hookSpec, referenceB64: doc?.referenceImageData || null }));
     // 4:5 (feed) y 1:1 (square) = la MISMA foto reframed, con el hook RE-UBICADO por aspecto.
     let feedB64 = null;
     try {
