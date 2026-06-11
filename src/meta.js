@@ -117,7 +117,6 @@ export function createPlacementImageCreative({ name, storyHash, feedHash, link, 
   const titleSpec = titles.filter(Boolean).slice(0, 5).map((t) => ({ text: t }));
   return graph('POST', `${acct()}/adcreatives`, {
     name,
-    ...enhancements(),
     object_story_spec: { page_id: M.pageId },
     asset_feed_spec: {
       images: [
@@ -148,7 +147,6 @@ export function createPlacementImageCreative({ name, storyHash, feedHash, link, 
 export function createCarouselCreative({ name, message, link, cards }) {
   return graph('POST', `${acct()}/adcreatives`, {
     name,
-    ...enhancements(),
     object_story_spec: {
       page_id: M.pageId,
       link_data: {
