@@ -3,8 +3,40 @@ import { Creative } from '../models/creative.js';
 import { Carousel } from '../models/carousel.js';
 import { analyzeImage } from '../analyzer.js';
 import { buildCopyUpdate, generateCopy } from '../copy.js';
+import { generateHookForCreative } from '../hook.js';
 
 export const creativesRouter = Router();
+
+// POST /api/creatives/:id/hook -> genera la variante CON HOOK (9:16 + 1:1)
+creativesRouter.post('/creatives/:id/hook', async (req, res) => {
+  try { res.json(await generateHookForCreative(req.params.id)); }
+  catch (err) { res.status(502).json({ error: err.message }); }
+});
+
+// POST /api/creatives/hook-approved -> genera hook para los singles aprobados sin hook
+creativesRouter.post('/creatives/hook-approved', async (req, res) => {
+  const force = req.body?.force === true;
+  const cs = await Creative.find({ qcStatus: 'approved', genStatus: 'ready' }).select('hookLine').lean();
+  const need = cs.filter((c) => force || !c.hookLine);
+  const out = [];
+  for (const c of need) {
+    try { out.push({ id: String(c._id), ...(await generateHookForCreative(c._id)) }); }
+    catch (e) { out.push({ id: String(c._id), error: e.message }); }
+  }
+  res.json({ generated: out.filter((o) => !o.error).length, total: need.length, out });
+});
+
+// GET /api/creatives/:id/hook-image (9:16) y /hook-square-image (1:1) -> sirve la variante
+async function serveHook(field, req, res) {
+  const doc = await Creative.findById(req.params.id).select('+' + field).lean();
+  const data = doc && doc[field];
+  if (!data) return res.status(404).json({ error: 'Sin hook' });
+  res.set('Content-Type', 'image/webp');
+  res.set('Cache-Control', 'no-store');
+  res.send(Buffer.from(data, 'base64'));
+}
+creativesRouter.get('/creatives/:id/hook-image', (req, res) => serveHook('hookImageData', req, res));
+creativesRouter.get('/creatives/:id/hook-square-image', (req, res) => serveHook('hookSquareImageData', req, res));
 
 // POST /api/creatives/regen-copy -> regenera copy (5+5, con gancho/emoji) para los
 // aprobados que tienen menos de 5 primary texts. Body opcional { force:true } = todos.

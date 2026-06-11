@@ -34,6 +34,11 @@ const creativeSchema = new Schema(
     imageData: { type: String, default: null, select: false },
     feedImageData: { type: String, default: null, select: false },
     squareImageData: { type: String, default: null, select: false }, // 1:1 cuadrado
+    // Variante con HOOK de texto (overlay) por resolucion. Si existen, el launch las usa
+    // en vez de las limpias. La limpia queda guardada para A/B.
+    hookImageData: { type: String, default: null, select: false },       // 9:16 con hook
+    hookSquareImageData: { type: String, default: null, select: false }, // 1:1 con hook
+    hookLine: { type: String, default: null },                            // el texto del hook
 
     // --- estado de generacion (async) ---
     genStatus: {

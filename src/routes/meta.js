@@ -19,8 +19,8 @@ async function toJpgB64(src) {
   const jpg = await sharp(Buffer.from(src, 'base64')).flatten({ background: '#ffffff' }).jpeg({ quality: 90 }).toBuffer();
   return jpg.toString('base64');
 }
-const storyB64 = (c) => toJpgB64(c.imageData);                              // 9:16 Stories/Reels
-const feedB64 = (c) => toJpgB64(c.squareImageData || c.feedImageData || c.imageData); // 1:1/4:5 Feed
+const storyB64 = (c) => toJpgB64(c.hookImageData || c.imageData);                              // 9:16 (hook si existe)
+const feedB64 = (c) => toJpgB64(c.hookSquareImageData || c.squareImageData || c.feedImageData || c.imageData); // 1:1 (hook si existe)
 
 // Parsea las actions de insights de Meta a numeros utiles.
 function parseActions(row) {
@@ -82,7 +82,7 @@ metaRouter.post('/meta/test-placement', async (_req, res) => {
   let campaignId = null;
   try {
     const c = await Creative.findOne({ qcStatus: 'approved', genStatus: 'ready' })
-      .select('+imageData +feedImageData +squareImageData product shopifyProductId').lean();
+      .select('+imageData +feedImageData +squareImageData +hookImageData +hookSquareImageData product shopifyProductId').lean();
     if (!c) return res.status(404).json({ error: 'No hay single aprobado para testear' });
     const prod = c.shopifyProductId ? await Product.findOne({ shopifyId: c.shopifyProductId }).lean() : null;
     const link = productLink(prod?.handle);
@@ -141,7 +141,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
   const optimizationEvent = body.optimizationEvent || 'PURCHASE';
 
   const singles = creativeIds.length
-    ? await Creative.find({ _id: { $in: creativeIds }, genStatus: 'ready' }).select('+imageData +feedImageData +squareImageData').lean() : [];
+    ? await Creative.find({ _id: { $in: creativeIds }, genStatus: 'ready' }).select('+imageData +feedImageData +squareImageData +hookImageData +hookSquareImageData').lean() : [];
   const carousels = carouselIds.length
     ? await Carousel.find({ _id: { $in: carouselIds }, genStatus: 'ready' }).select('+cards.imageData').lean() : [];
   if (!singles.length && !carousels.length) return res.status(400).json({ error: 'Sin piezas validas' });

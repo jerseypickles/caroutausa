@@ -38,6 +38,26 @@ export function buildCopyUpdate(body = {}) {
   return update;
 }
 
+// Genera el HOOK de texto que va SOBRE la foto: una frase de beneficio/actitud ultra
+// corta (NO el nombre del producto, NO precio) + un descriptor de fit para el callout.
+export async function generateHook({ product, wash }) {
+  try {
+    const r = await client.chat.completions.create({
+      model: config.judgeModel,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: 'You write ultra-short TEXT-OVERLAY hooks for streetwear denim-shorts fitpic ads. Benefit/attitude with streetwear energy. NEVER the product name, NEVER a price.' },
+        { role: 'user', content: `Return ONLY JSON {"hook":"a 2-4 word UPPERCASE benefit/attitude hook, can be two short punchy phrases (e.g. \\"LIGHT. LOOSE.\\", \\"WIDE LEG SZN\\", \\"ZERO EFFORT\\", \\"BAGGY SEASON\\", \\"JUST RIGHT.\\"), no product name, no price","fit":"a 1-2 word fit/spec descriptor in UPPERCASE (e.g. WIDE LEG, BAGGY, RELAXED, 14OZ DENIM)"}. Product: ${product || 'denim shorts'}, wash: ${wash || ''}.` },
+      ],
+    });
+    const j = JSON.parse(r.choices?.[0]?.message?.content || '{}');
+    return { hook: String(j.hook || 'LIGHT. LOOSE.').slice(0, 28), fit: String(j.fit || 'WIDE LEG').slice(0, 20) };
+  } catch (e) {
+    console.error('[copy] generateHook fallo:', e.message);
+    return { hook: 'WIDE LEG SZN', fit: 'RELAXED' };
+  }
+}
+
 // Genera copy nativo (varias variaciones) para un creative.
 export async function generateCopy({ product, wash, angle, description }) {
   const ctx = [

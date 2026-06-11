@@ -35,6 +35,35 @@ async function fetchSourceImage(imageUrl) {
   return toFile(buffer, `source.${ext}`, { type: contentType });
 }
 
+// Estilo FIJO de marca para el hook (consistencia entre todos los creativos).
+const HOOK_STYLE = `Add a clean, premium TEXT OVERLAY to this streetwear fitpic — high-end DTC fashion brand style. KEEP the photo, the model, the denim shorts, the sneakers and the background EXACTLY as they are; only add crisp typography on top, placed in the EMPTY negative space (open sky / wall / floor), NEVER over the model's face or body. Perfectly spelled, razor-sharp, professional kerning and alignment.`;
+
+// Agrega el HOOK de texto sobre una imagen YA generada (story 9:16 o square 1:1).
+// pngBuffer: la foto base en PNG. Devuelve b64 (webp) de la version con hook.
+export async function addHookOverlay(pngBuffer, { hook, callout, size = STORY_SIZE }) {
+  const src = await toFile(pngBuffer, 'src.png', { type: 'image/png' });
+  const prompt = `${HOOK_STYLE}
+
+Text to add — ONLY these two elements (NO prices, NO discount codes, NO buttons, NO other text):
+1) A bold benefit HOOK in an open area, on up to two short lines: "${hook}" — in a HEAVY CONDENSED SANS-SERIF UPPERCASE font (Anton / Archivo Black style), tight leading, color chosen to contrast its background (off-white over darker areas, charcoal over light areas) with a subtle soft shadow for legibility.
+2) Small and light, just below the hook: "${callout}" in a THIN uppercase sans-serif, generous letter-spacing, muted grey.
+
+Minimal, editorial, lots of breathing room. Like a designer made it.`;
+  const params = { model: config.imageModel, image: src, prompt, size, quality: QUALITY, n: 1, output_format: OUTPUT_FORMAT, output_compression: OUTPUT_COMPRESSION };
+  let response;
+  try {
+    response = await client.images.edit(params);
+  } catch (err) {
+    if (/output_(format|compression)/i.test(err?.message || '')) {
+      delete params.output_format; delete params.output_compression;
+      response = await client.images.edit(params);
+    } else throw err;
+  }
+  const b64 = response?.data?.[0]?.b64_json;
+  if (!b64) throw new Error('hook overlay: la API no devolvio b64');
+  return b64;
+}
+
 // Genera UNA variante para un angulo. Si viene referenceB64, se pasa como 2da
 // imagen (referencia de estilo). Devuelve { b64 } o lanza error.
 // (Con Standard/2GB ya no serializamos: el lock global colgaba todo si una request
