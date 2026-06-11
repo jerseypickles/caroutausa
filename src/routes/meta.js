@@ -153,9 +153,10 @@ metaRouter.post('/meta/launch', async (req, res) => {
       const link = productLink(prod?.handle);
       const storyHash = await meta.uploadImage(await storyB64(c));
       const feedHash = await meta.uploadImage(await feedB64(c));
-      const message = withPromo(c.copy?.primaryTexts?.[0] || c.copy?.primaryText || `${c.product || 'CAROTA'} — shop now`);
+      const bodies = (c.copy?.primaryTexts?.length ? c.copy.primaryTexts : [c.copy?.primaryText || `${c.product || 'CAROTA'} — shop now`]).map(withPromo);
+      const titles = c.copy?.headlines?.length ? c.copy.headlines : (c.copy?.headline ? [c.copy.headline] : []);
       const creative = await meta.createPlacementImageCreative({
-        name: `${c.product || 'CAROTA'} · ${c.angle}`, storyHash, feedHash, link, messages: [message],
+        name: `${c.product || 'CAROTA'} · ${c.angle}`, storyHash, feedHash, link, messages: bodies, titles,
       });
       const ad = await meta.createAd({ name: `${c.product} · ${c.angle}`, adsetId: adSet.id, creativeId: creative.id });
       ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: c._id, product: c.product, link, format: 'single' });

@@ -1,9 +1,35 @@
 import { Router } from 'express';
 import { Creative } from '../models/creative.js';
+import { Carousel } from '../models/carousel.js';
 import { analyzeImage } from '../analyzer.js';
-import { buildCopyUpdate } from '../copy.js';
+import { buildCopyUpdate, generateCopy } from '../copy.js';
 
 export const creativesRouter = Router();
+
+// POST /api/creatives/regen-copy -> regenera copy (5+5, con gancho/emoji) para los
+// aprobados que tienen menos de 5 primary texts. Body opcional { force:true } = todos.
+creativesRouter.post('/creatives/regen-copy', async (req, res) => {
+  const force = req.body?.force === true;
+  const lacks = (d) => force || (d.copy?.primaryTexts?.length || 0) < 5 || (d.copy?.headlines?.length || 0) < 5;
+  const [cs, ks] = await Promise.all([
+    Creative.find({ qcStatus: 'approved', genStatus: 'ready' }).select('product wash angle copy').lean(),
+    Carousel.find({ qcStatus: 'approved', genStatus: 'ready' }).select('product wash copy').lean(),
+  ]);
+  const items = [...cs.filter(lacks).map((d) => ({ d, M: Creative, angle: d.angle })), ...ks.filter(lacks).map((d) => ({ d, M: Carousel, angle: 'carrusel' }))];
+  let done = 0;
+  for (const { d, M, angle } of items) {
+    try {
+      const copy = await generateCopy({ product: d.product, wash: d.wash, angle });
+      if (!copy.primaryTexts.length) continue;
+      await M.findByIdAndUpdate(d._id, {
+        'copy.primaryTexts': copy.primaryTexts, 'copy.headlines': copy.headlines,
+        'copy.primaryText': copy.primaryText, 'copy.headline': copy.headline,
+      });
+      done++;
+    } catch (e) { console.error('[regen-copy]', e.message); }
+  }
+  res.json({ regenerated: done, candidates: items.length });
+});
 
 // POST /api/creatives/:id/analyze -> Creative Analyzer (lazy, cacheado)
 creativesRouter.post('/creatives/:id/analyze', async (req, res) => {

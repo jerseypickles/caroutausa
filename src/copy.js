@@ -3,21 +3,24 @@ import { config } from './config.js';
 
 const client = new OpenAI({ apiKey: config.openaiApiKey });
 
-const SYSTEM = `You write ad copy for CAROTA, a US streetwear brand (denim shorts, drops).
-Audience: young urban men (women buy too), streetwear culture. The creatives are
-candid iPhone fitpics, not glossy ads. Your copy must feel ORGANIC and native to
-the feed — like a real caption, never corporate or salesy. Short, punchy, confident,
-a little understated. No hashtags spam, no excessive emojis (0-1 max), no clickbait.`;
+const SYSTEM = `You write scroll-stopping ad copy for CAROTA, a US streetwear brand (denim shorts, drops).
+Audience: young urban men (women buy too), streetwear culture. The creatives are candid
+iPhone fitpics. Copy must feel ORGANIC and native to the feed — a real caption, never
+corporate or salesy. It must have a HOOK and PERSONALITY — confident, a little bold, with
+attitude. NEVER flat, generic, or boring ("Shop now", "Great shorts" = banned). Each
+primary text opens with a hook that earns the next second of attention. Include exactly
+ONE tasteful emoji per primary text that fits streetwear culture. No hashtag spam, no
+clickbait, no walls of text.`;
 
-// Meta testea hasta 5 primary texts + 5 headlines por ad y muestra el mejor por
-// usuario -> generamos VARIAS variaciones distintas entre si (mas variedad = mas
-// optimizacion). Pedimos 3 de cada una con angulos diferentes.
-const INSTRUCTION = `Return ONLY JSON with DISTINCT variations Meta can A/B test:
+// Meta testea hasta 5 primary texts + 5 headlines por ad y muestra el mejor por usuario
+// -> generamos 5 de cada una, distintas entre si y con angulos diferentes (mas variedad
+// = mas optimizacion).
+const INSTRUCTION = `Return ONLY JSON with 5 DISTINCT, NON-FLAT variations Meta can A/B test:
 {
-  "primaryTexts": ["<v1>", "<v2>", "<v3>"],   // 3 different captions above the ad, each 1-2 short lines, native and scroll-stopping, max ~120 chars. Vary the angle (one benefit-led, one hype/drop, one casual/relatable). No duplicates.
-  "headlines": ["<h1>", "<h2>", "<h3>"]        // 3 different headlines, each very short (max ~5 words), punchy. No duplicates.
+  "primaryTexts": ["<v1>","<v2>","<v3>","<v4>","<v5>"],  // 5 different captions, each 1-2 short lines, native, with a HOOK + exactly ONE emoji, max ~120 chars. Use a DIFFERENT angle each: 1) benefit/fit-led, 2) hype/drop energy, 3) casual/relatable POV, 4) bold/confident flex, 5) FOMO/scarcity. No duplicates, none generic.
+  "headlines": ["<h1>","<h2>","<h3>","<h4>","<h5>"]       // 5 different headlines, each very short (max ~5 words), punchy with attitude. No duplicates.
 }
-Write in English (US store). Make them specific to the product when possible.`;
+Write in English (US store). Be specific to the product/wash when possible.`;
 
 function clean(arr, max, n) {
   const out = [...new Set((Array.isArray(arr) ? arr : []).map((s) => String(s || '').trim()).filter(Boolean))].map((s) => s.slice(0, max));
