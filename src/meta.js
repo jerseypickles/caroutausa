@@ -153,7 +153,7 @@ export function createSingleImageCreative({ name, imageHash, link, message, igAc
     name,
     object_story_spec: {
       page_id: M.pageId,
-      ...(igActorId ? { instagram_actor_id: igActorId } : {}),
+      ...(igActorId ? { instagram_user_id: igActorId } : {}),
       link_data: {
         image_hash: imageHash,
         link,
@@ -171,7 +171,7 @@ export function createPlacementImageCreative({ name, storyHash, feedHash, link, 
   const titleSpec = titles.filter(Boolean).slice(0, 5).map((t) => ({ text: t }));
   return graph('POST', `${acct()}/adcreatives`, {
     name,
-    object_story_spec: { page_id: M.pageId, ...(igActorId ? { instagram_actor_id: igActorId } : {}) },
+    object_story_spec: { page_id: M.pageId, ...(igActorId ? { instagram_user_id: igActorId } : {}) },
     asset_feed_spec: {
       images: [
         { hash: feedHash, adlabels: [{ name: 'feed_img' }] },
@@ -203,7 +203,7 @@ export function createCarouselCreative({ name, message, link, cards, igActorId =
     name,
     object_story_spec: {
       page_id: M.pageId,
-      ...(igActorId ? { instagram_actor_id: igActorId } : {}),
+      ...(igActorId ? { instagram_user_id: igActorId } : {}),
       link_data: {
         message: message || '',
         link,
