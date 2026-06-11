@@ -36,13 +36,19 @@ async function tightCrop(b64, zoom = VIDEO_ZOOM) {
   return out.toString('base64');
 }
 
-// Frame "last": el SIGUIENTE BEAT del fit-check (~1-2s) con un CAMBIO DE POSE claro pero
-// natural -> Seedance tiene movimiento real para interpolar (no dos frames iguales).
-function lastFramePrompt(productDescription = '') {
+// Prompt DIRECTO waist-down (SIN director/casting -> no genera persona completa). Modelado
+// en el prompt que probó el usuario: describe el ENCUADRE de la cintura para abajo + el short.
+function videoStartPrompt(refDna = '') {
+  const ref = refDna ? ` The sneakers, socks and lower-body styling vibe match the STYLE REFERENCE (last image): ${refDna}.` : '';
   return `${GARMENT_LOCK}
-The SECOND image is a frame of the SAME mirror fit-check. Generate the NEXT pose of the same clip. The model MUST be in a CLEARLY DIFFERENT stance from the second image — do NOT reproduce the same pose. Make ALL of these changes at once: shift the body weight onto the OTHER leg, turn the torso to a 3/4 angle, and move the FREE hand into the pocket (or down to the side). It has to be visibly a different pose / different moment, the way you naturally move between two beats of a mirror outfit-check — never a near-identical copy.
-KEEP IDENTICAL: the same real person, the same outfit and graphic, the same sneakers, the same denim shorts (exact wash, rips, hem, knee length), the same room, the same lighting and color grading, the same mirror-selfie framing. ONLY the body pose changes. NO text overlay.${productDescription ? `\nProduct to preserve exactly: ${productDescription}` : ''}
-Make it a REAL candid iPhone mirror photo — natural grain and light, never an AI render.`;
+Vertical mirror-selfie fit-check photo, casual iPhone quality. CROPPED FRAMING FROM THE WAIST DOWN — the head, chest and arms are NOT visible in the frame; show ONLY the very bottom edge of the torso/top, the legs and the feet. The subject wears the denim SHORTS from the FIRST product image EXACTLY: same wash, wide straight leg, knee length, raw frayed released hem, front button and zip fly, pockets. Only the BOTTOM HEM of an oversized top (hoodie or tee) is visible at the very top edge of the frame. Bare lower legs between the shorts hem and white crew socks, current chunky sneakers, standing on a soft rug / light wood floor in a clean minimal room. Natural window daylight from the side, soft shadows, amateur fit-check aesthetic, slight phone-camera grain, realistic denim fabric texture and wash detail. The denim SHORTS fill the frame and are the whole subject.${ref}
+NO head, NO face, NO chest, NO arms, NO text overlay.`;
+}
+// Last frame: el siguiente momento (cambio de stance de piernas) — interpola movimiento.
+function videoLastPrompt() {
+  return `${GARMENT_LOCK}
+The SECOND image is the previous frame of a vertical WAIST-DOWN fit-check clip (cropped from the waist down: no head, chest or arms — only the legs, the denim shorts and the feet). Generate the NEXT moment of the SAME clip: keep the SAME denim shorts, legs, socks, sneakers, floor, room and lighting IDENTICAL and the SAME waist-down framing, but SHIFT the body weight onto the OTHER leg and change the stance slightly — a natural small movement, visibly a different stance, NOT a frozen copy of the previous frame. Casual iPhone fit-check, realistic grain.
+NO head, NO face, NO chest, NO arms, NO text overlay.`;
 }
 
 // 1) FRAMES: genera start + last (ambos fieles a ref + producto), SIN hook bakeado.
@@ -55,39 +61,30 @@ export async function generateVideoFrames(clipId) {
     const productDescription = [clip.product, prod?.description].filter(Boolean).join('. ');
     const imageUrl = clip.sourceImageUrl;
 
-    // Escena + dirección (mismo motor que los singles). El director copia la ref (estricto).
-    const scene = await pickScene(clip.shopifyProductId).catch(() => null);
-    const dir = await directCreative({
-      product: clip.product, wash: clip.wash, angle: 'realista',
-      refDna: clip.referenceDna || '', sceneDna: scene?.dna || '', mode: 'video',
-    });
-    const creativeDirection = dir?.text || '';
-
-    // START frame (ref image -> copia el outfit; producto del GARMENT_LOCK). 9:16, sin hook.
+    // SIN director (el casting describía una PERSONA COMPLETA y le ganaba al "waist-down").
+    // Prompt DIRECTO de encuadre cintura-abajo, full resolución nativa (sin zoom-crop).
     const start = await generateVariant({
-      imageUrl, productBackUrl: '', angleId: 'realista', productDescription, creativeDirection,
-      fitSpec, size: STORY_SIZE, referenceB64: clip.referenceImageData || null,
+      imageUrl, productDescription, fitSpec, size: STORY_SIZE,
+      referenceB64: clip.referenceImageData || null,
+      prompt: videoStartPrompt(clip.referenceDna || ''),
     });
-    // LAST frame: cambio de pose claro DESDE el start (mismo outfit/producto/escena).
+    // LAST frame: el siguiente momento DESDE el start (cambio de stance de piernas).
     const last = await generateVariant({
       imageUrl, referenceB64: start.b64, productDescription, fitSpec,
-      prompt: lastFramePrompt(productDescription), size: STORY_SIZE,
+      prompt: videoLastPrompt(), size: STORY_SIZE,
     });
-    // Recorte cerrado determinístico, IGUAL a los dos (producto llena el frame, sin cara).
-    const startB64 = await tightCrop(start.b64);
-    const lastB64 = await tightCrop(last.b64);
-    const startFid = await judgeFidelity({ sourceImageUrl: imageUrl, b64: startB64, fitSpec }).catch(() => ({ score: null, issues: [] }));
-    const lastFid = await judgeFidelity({ sourceImageUrl: imageUrl, b64: lastB64, fitSpec }).catch(() => ({ score: null, issues: [] }));
+    const startFid = await judgeFidelity({ sourceImageUrl: imageUrl, b64: start.b64, fitSpec }).catch(() => ({ score: null, issues: [] }));
+    const lastFid = await judgeFidelity({ sourceImageUrl: imageUrl, b64: last.b64, fitSpec }).catch(() => ({ score: null, issues: [] }));
 
     // Hook: lo PLANEAMOS (texto+fuente) pero NO lo bakeamos -> va como overlay al final.
     let hook = null;
     try { hook = await planHook({ product: clip.product, wash: clip.wash, fitSpec }); } catch (e) {}
 
     await VideoClip.findByIdAndUpdate(clipId, {
-      startImageData: startB64, lastImageData: lastB64,
+      startImageData: start.b64, lastImageData: last.b64,
       startFidelity: startFid.score, lastFidelity: lastFid.score,
       fidelityIssues: [...(startFid.issues || []), ...(lastFid.issues || [])].slice(0, 6),
-      castTag: dir?.castTag, sceneTag: dir?.sceneTag,
+      castTag: 'lower-body', sceneTag: 'fit-check',
       hookLine: hook?.hookLine || null, fontTag: hook?.fontTag || null,
       stage: 'frames', genStatus: 'ready', error: null,
     });
