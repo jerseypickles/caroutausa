@@ -38,7 +38,7 @@ export const config = {
   metaPromo: process.env.META_PROMO != null ? process.env.META_PROMO : '🔥 25% OFF con el código SUMMER25',
   // Meta Marketing API (valores en Render). Opcional: el server arranca sin esto.
   meta: {
-    graphVersion: process.env.META_GRAPH_VERSION || 'v23.0',
+    graphVersion: process.env.META_GRAPH_VERSION || 'v25.0',
     appId: process.env.META_APP_ID || '',
     appSecret: process.env.META_APP_SECRET || '',
     accessToken: process.env.META_ACCESS_TOKEN || '',
