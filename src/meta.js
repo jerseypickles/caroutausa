@@ -15,13 +15,15 @@ function proof() {
 }
 
 // Llamada generica a la Graph API. params: objetos anidados se mandan como JSON.
-async function graph(method, path, params = {}) {
+// token: por defecto el user token; se puede pasar un Page Access Token.
+async function graph(method, path, params = {}, token = M.accessToken) {
   const body = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     body.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
   }
-  body.append('access_token', M.accessToken);
-  const p = proof();
+  body.append('access_token', token);
+  // appsecret_proof solo aplica al user token (se genera con el access token del app).
+  const p = token === M.accessToken ? proof() : null;
   if (p) body.append('appsecret_proof', p);
 
   const url = `${BASE}/${path}`;
@@ -44,31 +46,43 @@ const acct = () => M.adAccountId; // ya viene como act_...
 // Cuenta de Instagram para los ads (requerida en placements de IG). Prueba: override por
 // env -> cuenta business de la pagina -> instagram_accounts del ad account -> page-backed.
 // Se cachea a nivel modulo.
+// Page Access Token (para leer/crear la cuenta de IG de la pagina).
+async function pageToken() {
+  try { const j = await graph('GET', M.pageId, { fields: 'access_token' }); return j.access_token || ''; } catch { return ''; }
+}
+
 let _igActorId;
 export async function getIgActorId() {
   if (_igActorId !== undefined) return _igActorId;
   if (M.igAccountId) { _igActorId = M.igAccountId; return _igActorId; }
   _igActorId = '';
-  try {
-    const p = await graph('GET', M.pageId, { fields: 'instagram_business_account{id},connected_instagram_account{id}' });
-    _igActorId = p.instagram_business_account?.id || p.connected_instagram_account?.id || '';
-  } catch { /* sigue */ }
+  const grab = (obj) => obj?.instagram_business_account?.id || obj?.connected_instagram_account?.id || '';
+  try { _igActorId = grab(await graph('GET', M.pageId, { fields: 'instagram_business_account{id},connected_instagram_account{id}' })); } catch { /* sigue */ }
+  if (!_igActorId) { try { const a = await graph('GET', `${acct()}/instagram_accounts`, { fields: 'id' }); _igActorId = a.data?.[0]?.id || ''; } catch { /* sigue */ } }
+  // Con Page Token: cuenta business de la pagina + page-backed (crea una si no hay).
   if (!_igActorId) {
-    try { const a = await graph('GET', `${acct()}/instagram_accounts`, { fields: 'id,username' }); _igActorId = a.data?.[0]?.id || ''; } catch { /* sigue */ }
-  }
-  if (!_igActorId) {
-    try { const b = await graph('GET', `${M.pageId}/page_backed_instagram_accounts`, { fields: 'id' }); _igActorId = b.data?.[0]?.id || ''; } catch { /* sigue */ }
+    const pt = await pageToken();
+    if (pt) {
+      try { _igActorId = grab(await graph('GET', M.pageId, { fields: 'instagram_business_account{id},connected_instagram_account{id}' }, pt)); } catch { /* sigue */ }
+      if (!_igActorId) { try { const b = await graph('GET', `${M.pageId}/page_backed_instagram_accounts`, { fields: 'id' }, pt); _igActorId = b.data?.[0]?.id || ''; } catch { /* sigue */ } }
+      if (!_igActorId) { try { const c = await graph('POST', `${M.pageId}/page_backed_instagram_accounts`, {}, pt); _igActorId = c.id || ''; } catch { /* sigue */ } }
+    }
   }
   return _igActorId;
 }
 
-// Diagnostico: lista todas las cuentas de IG alcanzables (para encontrar el ID correcto).
+// Diagnostico: lista todas las cuentas de IG alcanzables (user token + page token).
 export async function listIgAccounts() {
   const out = {};
-  const tryGet = async (key, path, fields) => { try { out[key] = await graph('GET', path, { fields }); } catch (e) { out[key] = { error: e.message }; } };
-  await tryGet('pageBusiness', M.pageId, 'instagram_business_account{id,username},connected_instagram_account{id,username}');
+  const tryGet = async (key, path, fields, tok) => { try { out[key] = await graph('GET', path, { fields }, tok); } catch (e) { out[key] = { error: e.message }; } };
+  await tryGet('pageBusiness_user', M.pageId, 'instagram_business_account{id,username},connected_instagram_account{id,username}');
   await tryGet('adAccountIg', `${acct()}/instagram_accounts`, 'id,username');
-  await tryGet('pageBacked', `${M.pageId}/page_backed_instagram_accounts`, 'id,username');
+  const pt = await pageToken();
+  out.hasPageToken = Boolean(pt);
+  if (pt) {
+    await tryGet('pageBusiness_pageTok', M.pageId, 'instagram_business_account{id,username},connected_instagram_account{id,username}', pt);
+    await tryGet('pageBacked_pageTok', `${M.pageId}/page_backed_instagram_accounts`, 'id,username', pt);
+  }
   return out;
 }
 
