@@ -215,6 +215,13 @@ metaRouter.post('/meta/launch', async (req, res) => {
 // GET /api/meta/campaigns -> campañas lanzadas (de Mongo)
 metaRouter.get('/meta/campaigns', async (_req, res) => {
   const campaigns = await MetaCampaign.find({ status: { $ne: 'DELETED' } }).sort({ createdAt: -1 }).lean();
+  // Insights EN VIVO (dedup + atribución por click), no el snapshot guardado.
+  if (meta.metaConfigured()) {
+    await Promise.all(campaigns.map(async (c) => {
+      const live = await meta.getCampaignInsights(c.campaignId);
+      if (live) c.insights = live;
+    }));
+  }
   res.json({ campaigns });
 });
 

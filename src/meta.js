@@ -309,6 +309,11 @@ export function parseActions(row) {
   };
 }
 
+// Insights normalizados EN VIVO de una campaña (dedup + click-attribution).
+export async function getCampaignInsights(campaignId) {
+  try { return normInsights(await getInsights(campaignId)); } catch { return null; }
+}
+
 function normInsights(row) {
   if (!row) return null;
   const acts = parseActions(row);
