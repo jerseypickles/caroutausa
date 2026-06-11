@@ -242,7 +242,8 @@ export function deleteObject(objectId) {
 // Insights por objeto (campaign/adset/ad).
 export async function getInsights(objectId, datePreset = 'maximum') {
   const fields = 'impressions,clicks,ctr,cpc,spend,actions,cost_per_action_type';
-  const json = await graph('GET', `${objectId}/insights`, { fields, date_preset: datePreset });
+  // Atribución por CLICK (7d) -> saca el view-through inflado (ATC/compras de gente que solo VIO el ad).
+  const json = await graph('GET', `${objectId}/insights`, { fields, date_preset: datePreset, action_attribution_windows: ['7d_click'] });
   return json.data?.[0] || null;
 }
 
@@ -325,7 +326,7 @@ function normInsights(row) {
 // --- VISUALIZACION: lee las campañas que YA existen en la cuenta ---
 export async function listAccountCampaigns() {
   const fields = 'name,status,effective_status,objective,daily_budget,lifetime_budget,created_time,' +
-    'insights.date_preset(maximum){impressions,clicks,ctr,cpc,spend,actions}';
+    'insights.date_preset(maximum).action_attribution_windows(7d_click){impressions,clicks,ctr,cpc,spend,actions}';
   const json = await graph('GET', `${acct()}/campaigns`, { fields, limit: 50 });
   return (json.data || []).map((c) => ({
     id: c.id,
@@ -342,7 +343,7 @@ export async function listAccountCampaigns() {
 // Ads de una campaña, con thumbnail del creative y metricas.
 export async function getCampaignAds(campaignId) {
   const fields = 'name,effective_status,creative{thumbnail_url,image_url},' +
-    'insights.date_preset(maximum){impressions,clicks,ctr,spend,actions}';
+    'insights.date_preset(maximum).action_attribution_windows(7d_click){impressions,clicks,ctr,spend,actions}';
   const json = await graph('GET', `${campaignId}/ads`, { fields, limit: 50 });
   return (json.data || []).map((a) => ({
     id: a.id,
