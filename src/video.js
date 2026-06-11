@@ -23,8 +23,9 @@ const MOTION_GUARD = ' NO walking, NO big movements, NO morphing. The denim shor
 // CROP cerrado DETERMINÍSTICO: gpt-image no respeta el encuadre por texto, así que recorto yo.
 // Corta la cabeza arriba y hace zoom (bottom-aligned, mantiene los pies) -> el PRODUCTO llena
 // el frame, como un fit-check pegado al espejo (sin cara). Mismo crop a start y last.
-const VIDEO_ZOOM = Number(process.env.VIDEO_ZOOM || 1.32);
+const VIDEO_ZOOM = Number(process.env.VIDEO_ZOOM || 1);
 async function tightCrop(b64, zoom = VIDEO_ZOOM) {
+  if (!zoom || zoom <= 1.01) return b64; // sin crop -> sin upscale (el encuadre es nativo)
   const buf = Buffer.from(b64, 'base64');
   const m = await sharp(buf).metadata();
   const W = m.width, H = m.height;
