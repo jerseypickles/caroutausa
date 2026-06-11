@@ -79,6 +79,7 @@ metaRouter.get('/meta/ig-accounts', async (_req, res) => {
 // por placement (story 9:16 + feed 1:1) SIN crear ad ni gastar. Devuelve ok o el error.
 metaRouter.post('/meta/test-placement', async (_req, res) => {
   if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });
+  let campaignId = null;
   try {
     const c = await Creative.findOne({ qcStatus: 'approved', genStatus: 'ready' })
       .select('+imageData +feedImageData +squareImageData product shopifyProductId').lean();
@@ -88,9 +89,17 @@ metaRouter.post('/meta/test-placement', async (_req, res) => {
     const igActorId = await meta.getIgActorId();
     const storyHash = await meta.uploadImage(await storyB64(c));
     const feedHash = await meta.uploadImage(await feedB64(c));
-    const creative = await meta.createPlacementImageCreative({ name: 'TEST · placement (borrable)', storyHash, feedHash, link, messages: ['test'], igActorId });
-    res.json({ ok: true, creativeId: creative.id, product: c.product, igActorId: igActorId || '(ninguna)' });
+    // Cadena COMPLETA (campaña+adset+creative+ad, PAUSED) para validar el error de IG a
+    // nivel ad. Se borra al final (exito o error) -> no deja huerfanas ni gasta.
+    const campaign = await meta.createCampaign({ name: 'TEST · borrable' });
+    campaignId = campaign.id;
+    const adSet = await meta.createAdSet({ name: 'TEST · adset', campaignId: campaign.id, dailyBudgetCents: 1000, optimizationEvent: 'PURCHASE' });
+    const creative = await meta.createPlacementImageCreative({ name: 'TEST · placement', storyHash, feedHash, link, messages: ['test'], titles: ['test'], igActorId });
+    const ad = await meta.createAd({ name: 'TEST · ad', adsetId: adSet.id, creativeId: creative.id });
+    await meta.deleteObject(campaign.id);
+    res.json({ ok: true, validated: 'campaña+adset+creative+ad', igActorId: igActorId || '(ninguna)', adId: ad.id });
   } catch (err) {
+    if (campaignId) { try { await meta.deleteObject(campaignId); } catch { /* noop */ } }
     res.status(502).json({ error: err.message });
   }
 });
