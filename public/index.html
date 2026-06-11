@@ -266,6 +266,20 @@
   .adm.big .admv { font-size: 16px; }
   .adm .admk { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-top: 1px; }
   .adnodata { font-size: 11.5px; color: var(--faint); margin-top: 6px; }
+  /* Aprendizaje */
+  .learnsec { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
+  .learnsechd { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+  .learnrows { display: flex; flex-direction: column; gap: 8px; }
+  .learnrow { display: grid; grid-template-columns: 150px 1fr 90px 180px; align-items: center; gap: 12px; padding: 7px 10px; border-radius: 9px; }
+  .learnrow.win { background: var(--ok-soft); }
+  .lrv { font-size: 12.5px; font-weight: 600; text-transform: capitalize; }
+  .lrbar { height: 7px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .lrbar span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+  .learnrow.win .lrbar span { background: var(--ok); }
+  .lrctr { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; text-align: right; }
+  .lrctr .muted { font-size: 9px; }
+  .lrn { font-size: 11px; color: var(--muted); text-align: right; }
+  @media (max-width: 720px) { .learnrow { grid-template-columns: 1fr auto; } .lrbar, .lrn { display: none; } }
   /* compositor de lanzamiento */
   .hint { font-size: 12.5px; color: var(--muted); margin: -6px 0 14px; }
   .hint b { color: var(--text); }
@@ -549,6 +563,7 @@
     <a data-view="cola" onclick="showView('cola')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Cola de QC<span class="pill zero" id="pillQc">0</span></a>
     <a data-view="ads" onclick="showView('ads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-5"/></svg>Ad Manager<span class="pill zero" id="pillAds">0</span></a>
     <a data-view="motor" onclick="showView('motor')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5L19 19M19 5l-2.5 2.5M7.5 16.5L5 19"/></svg>Motor<span class="dot" id="motorDot"></span></a>
+    <a data-view="aprendizaje" onclick="showView('aprendizaje')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-3-3-4 4"/></svg>Aprendizaje</a>
   </nav>
   <div class="foot"><span class="dot"></span>Cron Shopify activo</div>
 </aside>
@@ -655,6 +670,18 @@
       <div class="feed" id="feed"></div>
     </section>
 
+    <!-- APRENDIZAJE -->
+    <section class="view" id="view-aprendizaje">
+      <div class="admhero">
+        <div class="admstat"><div class="admicon">📈</div><div class="admtxt"><div class="admk">Creativos con data</div><div class="admv" id="learnCount">0</div></div></div>
+        <div class="admstat"><div class="admtxt"><div class="admk">Estado</div><div class="admv" id="learnState" style="font-size:13px">—</div></div></div>
+        <span style="flex:1"></span>
+        <button class="btn lg" onclick="syncLearning(this)">↻ Sincronizar métricas de Meta</button>
+      </div>
+      <div class="hint" id="learnHint"></div>
+      <div id="learnGrid"></div>
+    </section>
+
   </div>
 </div>
 
@@ -727,6 +754,7 @@ const TITLES = {
   cola: ['Cola de QC', 'Revisá, aprobá o rechazá cada variante'],
   ads: ['Ad Manager', 'Lanzá y gestioná campañas de conversión en Meta'],
   motor: ['Motor', 'El engine trabajando solo · qué va desarrollando'],
+  aprendizaje: ['Aprendizaje', 'Qué ADN (escena/casting/ángulo/wash) rinde mejor en Meta'],
 };
 let adsPoll = null;
 function showView(name) {
@@ -739,6 +767,7 @@ function showView(name) {
   if (name === 'referencias') loadReferences();
   if (name === 'ads') { loadAdManager(); adsPoll = setInterval(() => { loadLaunched(); loadCampaigns(); }, 90000); } // refresca métricas cada 90s
   if (name === 'motor') loadMotor();
+  if (name === 'aprendizaje') loadLearning();
   if (name === 'cola') renderMotorBar();
 }
 async function renderMotorBar() {
@@ -1657,6 +1686,38 @@ async function toggleAds(id, btn) {
     btn.textContent = 'Ocultar';
   } catch (e) { box.innerHTML = '<div class="muted" style="padding:10px 0">Error cargando ads.</div>'; btn.textContent = 'Ver ads'; }
   finally { btn.disabled = false; }
+}
+
+/* ===== APRENDIZAJE ===== */
+const DIM_LBL = { sceneTag: '🌊 Escena', castTag: '🧑 Casting', angle: '🎬 Ángulo', wash: '👖 Wash', format: '🖼 Formato' };
+async function loadLearning() {
+  let d = {};
+  try { d = await (await fetch('/api/learning')).json(); } catch (e) {}
+  document.getElementById('learnCount').textContent = d.totalCreatives || 0;
+  document.getElementById('learnState').textContent = d.totalCreatives ? 'aprendiendo' : 'sin data aún';
+  const grid = document.getElementById('learnGrid'), hint = document.getElementById('learnHint');
+  if (!d.totalCreatives) {
+    hint.innerHTML = 'Todavía no hay métricas. <b>Lanzá y activá campañas</b> en el Ad Manager; cuando los ads corran, apretá <b>Sincronizar</b> y el CTR real se pega a cada creativo según su ADN.';
+    grid.innerHTML = ''; return;
+  }
+  hint.innerHTML = 'CTR real por cada dimensión del ADN — verde = el que mejor rinde. Con esto el sistema puede priorizar ganadores y retirar perdedores.';
+  grid.innerHTML = Object.entries(d.report).map(([dim, rows]) => {
+    if (!rows.length) return '';
+    const best = rows[0]?.ctr || 0;
+    return `<div class="learnsec"><div class="learnsechd">${DIM_LBL[dim] || dim}</div>
+      <div class="learnrows">${rows.map((r) => `<div class="learnrow ${r.ctr === best && best > 0 ? 'win' : ''}">
+        <span class="lrv">${esc(String(r.value))}</span>
+        <span class="lrbar"><span style="width:${best ? Math.round(r.ctr / best * 100) : 0}%"></span></span>
+        <span class="lrctr">${r.ctr}% <span class="muted">CTR</span></span>
+        <span class="lrn">${r.n} ads · $${r.spend}${r.cpa != null ? ' · CPA $' + r.cpa : ''}</span>
+      </div>`).join('')}</div></div>`;
+  }).join('');
+}
+async function syncLearning(btn) {
+  btn.disabled = true; btn.textContent = 'Sincronizando…';
+  try { const r = await (await fetch('/api/learning/sync', { method: 'POST' })).json();
+    if (r.error) toast(r.error); else toast(`Métricas: ${r.updated || 0} ads · ${r.campaigns || 0} campañas`); loadLearning();
+  } catch (e) { toast('Error sincronizando'); } finally { btn.disabled = false; btn.textContent = '↻ Sincronizar métricas de Meta'; }
 }
 
 /* init */

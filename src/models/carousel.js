@@ -22,6 +22,10 @@ const carouselSchema = new Schema(
     sourceImageUrl: { type: String, required: true },
     sceneTag: { type: String, default: null, index: true }, // ADN: escena del hero
     castTag: { type: String, default: null, index: true },  // ADN: casting del hero
+    metrics: { // métricas reales de Meta (loop de aprendizaje)
+      impressions: Number, clicks: Number, ctr: Number, spend: Number,
+      addToCart: Number, purchases: Number, cpa: Number, updatedAt: Date,
+    },
 
     hasReference: { type: Boolean, default: false },
     referenceId: { type: String, default: null },

@@ -93,7 +93,14 @@ const creativeSchema = new Schema(
     },
     qcNotes: { type: String }, // por que se rechazo (tell detectado)
 
-    // --- metricas Meta (se llenan en Fase 3) ---
+    // --- metricas REALES de Meta por creativo (loop de aprendizaje) ---
+    metrics: {
+      impressions: Number, clicks: Number, ctr: Number, spend: Number,
+      addToCart: Number, purchases: Number, cpa: Number,
+      updatedAt: Date,
+    },
+
+    // --- metricas Meta (legacy) ---
     spend: { type: Number },
     impressions: { type: Number },
     hookRate3s: { type: Number },

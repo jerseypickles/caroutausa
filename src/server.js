@@ -12,6 +12,7 @@ import { referencesRouter } from './routes/references.js';
 import { metaRouter } from './routes/meta.js';
 import { carouselsRouter } from './routes/carousels.js';
 import { autopilotRouter } from './routes/autopilot.js';
+import { learningRouter } from './routes/learning.js';
 import { startProductCron } from './sync.js';
 import { startAutopilotCron } from './autopilot.js';
 
@@ -34,6 +35,7 @@ app.use('/api', referencesRouter);
 app.use('/api', metaRouter);
 app.use('/api', carouselsRouter);
 app.use('/api', autopilotRouter);
+app.use('/api', learningRouter);
 
 // Panel de QC (frontend estatico) servido por el mismo servicio -> sin CORS, un solo deploy.
 app.use(express.static(publicDir));
