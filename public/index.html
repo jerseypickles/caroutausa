@@ -277,6 +277,7 @@
   .lrbar { height: 7px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
   .lrbar span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
   .learnrow.win .lrbar span { background: var(--ok); }
+  .learnrow.low { opacity: .5; }
   .lrctr { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; text-align: right; }
   .lrctr .muted { font-size: 9px; }
   .lrn { font-size: 11px; color: var(--muted); text-align: right; }
@@ -1722,17 +1723,19 @@ async function loadLearning() {
     hint.innerHTML = 'Todavía no hay métricas. Tu campaña ya está corriendo — en cuanto los ads junten clicks, esto se llena <b>solo</b> (se actualiza cada pocos minutos) con el CTR real por ADN.';
     grid.innerHTML = ''; return;
   }
-  hint.innerHTML = 'CTR real por cada dimensión del ADN — verde = el que mejor rinde. Con esto el sistema puede priorizar ganadores y retirar perdedores.';
+  hint.innerHTML = `CTR real por dimensión del ADN. Solo se corona (verde) un valor con data confiable (≥${d.minImpr || 80} impresiones); el resto figura como <b>juntando data</b>. Con esto el sistema prioriza ganadores reales, no ruido.`;
   grid.innerHTML = Object.entries(d.report).map(([dim, rows]) => {
     if (!rows.length) return '';
-    const best = rows[0]?.ctr || 0;
+    const best = (rows.find((r) => !r.low)?.ctr) || 0; // mejor entre los confiables
     return `<div class="learnsec"><div class="learnsechd">${DIM_LBL[dim] || dim}</div>
-      <div class="learnrows">${rows.map((r) => `<div class="learnrow ${r.ctr === best && best > 0 ? 'win' : ''}">
-        <span class="lrv">${esc(String(r.value))}</span>
-        <span class="lrbar"><span style="width:${best ? Math.round(r.ctr / best * 100) : 0}%"></span></span>
+      <div class="learnrows">${rows.map((r) => {
+        const isWin = !r.low && r.ctr === best && best > 0;
+        return `<div class="learnrow ${isWin ? 'win' : ''} ${r.low ? 'low' : ''}">
+        <span class="lrv">${isWin ? '🏆 ' : ''}${esc(String(r.value))}</span>
+        <span class="lrbar"><span style="width:${(!r.low && best) ? Math.round(r.ctr / best * 100) : 0}%"></span></span>
         <span class="lrctr">${r.ctr}% <span class="muted">CTR</span></span>
-        <span class="lrn">${r.n} ads · $${r.spend}${r.cpa != null ? ' · CPA $' + r.cpa : ''}</span>
-      </div>`).join('')}</div></div>`;
+        <span class="lrn">${r.low ? `<span class="muted">juntando data · ${r.impressions} impr</span>` : `${r.n} ads · $${r.spend}${r.cpa != null ? ' · CPA $' + r.cpa : ''}`}</span>
+      </div>`; }).join('')}</div></div>`;
   }).join('');
 }
 async function syncLearning(btn) {

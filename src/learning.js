@@ -48,6 +48,9 @@ export async function syncCreativeMetrics() {
 // (escena, casting, ángulo, wash, formato) y calcula el CTR/CPA promedio ponderado ->
 // leaderboard de qué atributo gana.
 const DIMS = ['sceneTag', 'castTag', 'angle', 'wash', 'format', 'fontTag'];
+// Umbral mínimo de impresiones para que un valor sea "confiable" (no coronar ruido).
+// 80 es un piso bajo para filtrar samples de 3-20 impr; lo ideal son cientos/miles.
+const MIN_IMPR = 80;
 export async function learningReport() {
   const [cs, ks] = await Promise.all([
     Creative.find({ 'metrics.impressions': { $gt: 0 } }).select('sceneTag castTag angle wash format fontTag metrics').lean(),
@@ -70,7 +73,8 @@ export async function learningReport() {
       value: g.value, n: g.n, impressions: g.impressions, spend: +g.spend.toFixed(0), purchases: g.purchases,
       ctr: g.impressions ? +(g.clicks / g.impressions * 100).toFixed(2) : 0,
       cpa: g.purchases ? +(g.spend / g.purchases).toFixed(2) : null,
-    })).sort((a, b) => b.ctr - a.ctr);
+      low: g.impressions < MIN_IMPR, // poca data: no es confiable todavía, no coronar
+    })).sort((a, b) => (a.low - b.low) || (b.ctr - a.ctr)); // primero los confiables, luego por CTR
   }
-  return { totalCreatives: items.length, report };
+  return { totalCreatives: items.length, minImpr: MIN_IMPR, report };
 }
