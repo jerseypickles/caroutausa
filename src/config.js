@@ -33,6 +33,9 @@ export const config = {
   autopilotTarget: Number(process.env.AUTOPILOT_TARGET || 8), // creatives por producto antes de parar
   // Tienda Shopify (para el link de destino de los ads)
   storeUrl: process.env.STORE_URL || 'https://carotaus.com',
+  // Promo que se agrega al copy de CADA ad al lanzar (cambialo cuando cambie la oferta).
+  // Poné META_PROMO='' (vacío) para no agregar nada.
+  metaPromo: process.env.META_PROMO != null ? process.env.META_PROMO : '🔥 25% OFF con el código SUMMER25',
   // Meta Marketing API (valores en Render). Opcional: el server arranca sin esto.
   meta: {
     graphVersion: process.env.META_GRAPH_VERSION || 'v23.0',

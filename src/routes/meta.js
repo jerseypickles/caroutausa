@@ -126,12 +126,14 @@ metaRouter.post('/meta/launch', async (req, res) => {
     });
 
     const ads = [];
+    // Agrega la promo activa (SUMMER25, etc.) al final de cada copy.
+    const withPromo = (msg) => (config.metaPromo ? `${msg}\n\n${config.metaPromo}` : msg);
     // Singles -> creative basico de imagen (1:1, va bien en todos los placements).
     for (const c of singles) {
       const prod = c.shopifyProductId ? await Product.findOne({ shopifyId: c.shopifyProductId }).lean() : null;
       const link = productLink(prod?.handle);
       const imgHash = await meta.uploadImage(await feedB64(c));
-      const message = c.copy?.primaryTexts?.[0] || c.copy?.primaryText || `${c.product || 'CAROTA'} — shop now`;
+      const message = withPromo(c.copy?.primaryTexts?.[0] || c.copy?.primaryText || `${c.product || 'CAROTA'} — shop now`);
       const creative = await meta.createSingleImageCreative({
         name: `${c.product || 'CAROTA'} · ${c.angle}`, imageHash: imgHash, link, message,
       });
@@ -151,7 +153,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
       if (cards.length < 2) continue; // un carrusel necesita 2+ cards
       const creative = await meta.createCarouselCreative({
         name: `${cr.product || 'CAROTA'} · carrusel`,
-        message: cr.copy?.primaryText || `${cr.product || 'CAROTA'} — shop now`, link, cards,
+        message: withPromo(cr.copy?.primaryTexts?.[0] || cr.copy?.primaryText || `${cr.product || 'CAROTA'} — shop now`), link, cards,
       });
       const ad = await meta.createAd({ name: `${cr.product} · carrusel`, adsetId: adSet.id, creativeId: creative.id });
       ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: cr._id, product: cr.product, link, format: 'carousel' });
