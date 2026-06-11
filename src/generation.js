@@ -35,7 +35,7 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     // generación (una sola pasada, sin perder contexto). La fidelidad la cubre el judge.
     let hookSpec = null;
     if (config.hookAuto) {
-      try { hookSpec = await planHook({ product: doc?.product, wash: doc?.wash }); } catch (e) { console.error(`[gen] planHook (${creativeId}):`, e.message); }
+      try { hookSpec = await planHook({ product: doc?.product, wash: doc?.wash, fitSpec: doc?.fitSpec || '' }); } catch (e) { console.error(`[gen] planHook (${creativeId}):`, e.message); }
     }
     // ADN del creativo (para aprender qué rinde): escena + casting + fuente del hook.
     await Creative.findByIdAndUpdate(creativeId, { sceneTag: dir?.sceneTag, castTag: dir?.castTag, hookLine: hookSpec?.hookLine || null, fontTag: hookSpec?.fontTag || null });

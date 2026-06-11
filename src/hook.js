@@ -17,8 +17,8 @@ async function pickFontStyle() {
 
 // Decide el HOOK (texto + fuente) ANTES de generar -> para bakearlo en la misma pasada.
 // Devuelve { hookLine, callout, fontTag, fontDesc }.
-export async function planHook({ product, wash }) {
-  const { hook, fit } = await generateHook({ product, wash });
+export async function planHook({ product, wash, fitSpec = '' }) {
+  const { hook, fit } = await generateHook({ product, wash, fitSpec });
   const washTxt = (wash || '').replace(/\s*wash\s*/i, '').toUpperCase().trim();
   const callout = `${washTxt ? washTxt + ' WASH · ' : ''}${fit}`;
   const font = await pickFontStyle();
