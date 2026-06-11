@@ -30,7 +30,8 @@ export async function createVideoTask({ imageUrls, prompt, duration = 5, aspectR
     method: 'POST',
     body: {
       model: 'seedance',
-      task_type: fast ? 'seedance-2-fast' : 'seedance-2-preview',
+      // seedance-2-fast = max 720p (rápido/barato); seedance-2 = soporta 1080p (calidad).
+      task_type: fast ? 'seedance-2-fast' : 'seedance-2',
       input: {
         prompt,
         mode: 'first_last_frames', // i2v (1 imagen = start; 2 = start+last)

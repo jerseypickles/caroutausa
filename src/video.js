@@ -105,7 +105,7 @@ export async function animateClip(clipId, { preset = 'mirror-sway' } = {}) {
   const prompt = (MOTION_PRESETS[preset] || MOTION_PRESETS['mirror-sway']) + MOTION_GUARD;
   const taskId = await createVideoTask({
     imageUrls: [startUrl, lastUrl], prompt, duration: clip.duration || 5,
-    aspectRatio: '9:16', resolution: '1080p', fast: true, // máxima resolución de Seedance 2.0
+    aspectRatio: '9:16', resolution: '1080p', fast: false, // seedance-2 (1080p; -fast no soporta 1080p)
   });
   await VideoClip.findByIdAndUpdate(clipId, { taskId, motionPreset: preset, motionPrompt: prompt, stage: 'animating', error: null });
   return taskId;
