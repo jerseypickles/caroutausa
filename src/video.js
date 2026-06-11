@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import { VideoClip } from './models/videoClip.js';
 import { Product } from './models/product.js';
 import { generateVariant, STORY_SIZE } from './openai.js';
@@ -19,12 +20,27 @@ export const MOTION_PRESETS = {
 };
 const MOTION_GUARD = ' NO walking, NO big movements, NO morphing. The denim shorts keep the EXACT same shape, wash, rips, hem and length the whole time. Hands and face stay stable and natural.';
 
+// CROP cerrado DETERMINÍSTICO: gpt-image no respeta el encuadre por texto, así que recorto yo.
+// Corta la cabeza arriba y hace zoom (bottom-aligned, mantiene los pies) -> el PRODUCTO llena
+// el frame, como un fit-check pegado al espejo (sin cara). Mismo crop a start y last.
+const VIDEO_ZOOM = Number(process.env.VIDEO_ZOOM || 1.32);
+async function tightCrop(b64, zoom = VIDEO_ZOOM) {
+  const buf = Buffer.from(b64, 'base64');
+  const m = await sharp(buf).metadata();
+  const W = m.width, H = m.height;
+  const cw = Math.round(W / zoom), ch = Math.round(H / zoom);
+  const left = Math.round((W - cw) / 2);
+  const top = H - ch; // pies abajo, cabeza cortada arriba
+  const out = await sharp(buf).extract({ left, top, width: cw, height: ch }).resize(W, H).webp({ quality: 92 }).toBuffer();
+  return out.toString('base64');
+}
+
 // Frame "last": el SIGUIENTE BEAT del fit-check (~1-2s) con un CAMBIO DE POSE claro pero
 // natural -> Seedance tiene movimiento real para interpolar (no dos frames iguales).
 function lastFramePrompt(productDescription = '') {
   return `${GARMENT_LOCK}
-The SECOND image is a frame of the SAME mirror fit-check. Generate the NEXT POSE of the same clip, about 1-2 seconds later — it must be a CLEARLY DIFFERENT pose from the second image, the kind of natural movement you do between two beats of a mirror outfit-check. Pick ONE clear change: shift the weight onto the OTHER leg and turn the body slightly to a 3/4 angle, OR move the free hand into a pocket / down to the side, OR angle the torso and tilt the head. It must read as the same person mid-movement, NOT a frozen copy of the first frame.
-KEEP IDENTICAL: the SAME real person and face, the SAME outfit and graphic, the SAME sneakers, the SAME denim shorts (exact wash, rips, hem, length), the SAME room, lighting and color grading, the SAME mirror-selfie framing (full body, phone up). Only the POSE changes. NO text overlay.${productDescription ? `\nProduct to preserve exactly: ${productDescription}` : ''}
+The SECOND image is a frame of the SAME mirror fit-check. Generate the NEXT pose of the same clip. The model MUST be in a CLEARLY DIFFERENT stance from the second image — do NOT reproduce the same pose. Make ALL of these changes at once: shift the body weight onto the OTHER leg, turn the torso to a 3/4 angle, and move the FREE hand into the pocket (or down to the side). It has to be visibly a different pose / different moment, the way you naturally move between two beats of a mirror outfit-check — never a near-identical copy.
+KEEP IDENTICAL: the same real person, the same outfit and graphic, the same sneakers, the same denim shorts (exact wash, rips, hem, knee length), the same room, the same lighting and color grading, the same mirror-selfie framing. ONLY the body pose changes. NO text overlay.${productDescription ? `\nProduct to preserve exactly: ${productDescription}` : ''}
 Make it a REAL candid iPhone mirror photo — natural grain and light, never an AI render.`;
 }
 
@@ -51,21 +67,23 @@ export async function generateVideoFrames(clipId) {
       imageUrl, productBackUrl: '', angleId: 'realista', productDescription, creativeDirection,
       fitSpec, size: STORY_SIZE, referenceB64: clip.referenceImageData || null,
     });
-    const startFid = await judgeFidelity({ sourceImageUrl: imageUrl, b64: start.b64, fitSpec }).catch(() => ({ score: null, issues: [] }));
-
-    // LAST frame: delta chico DESDE el start (mantiene todo, interpola fiel).
+    // LAST frame: cambio de pose claro DESDE el start (mismo outfit/producto/escena).
     const last = await generateVariant({
       imageUrl, referenceB64: start.b64, productDescription, fitSpec,
       prompt: lastFramePrompt(productDescription), size: STORY_SIZE,
     });
-    const lastFid = await judgeFidelity({ sourceImageUrl: imageUrl, b64: last.b64, fitSpec }).catch(() => ({ score: null, issues: [] }));
+    // Recorte cerrado determinístico, IGUAL a los dos (producto llena el frame, sin cara).
+    const startB64 = await tightCrop(start.b64);
+    const lastB64 = await tightCrop(last.b64);
+    const startFid = await judgeFidelity({ sourceImageUrl: imageUrl, b64: startB64, fitSpec }).catch(() => ({ score: null, issues: [] }));
+    const lastFid = await judgeFidelity({ sourceImageUrl: imageUrl, b64: lastB64, fitSpec }).catch(() => ({ score: null, issues: [] }));
 
     // Hook: lo PLANEAMOS (texto+fuente) pero NO lo bakeamos -> va como overlay al final.
     let hook = null;
     try { hook = await planHook({ product: clip.product, wash: clip.wash, fitSpec }); } catch (e) {}
 
     await VideoClip.findByIdAndUpdate(clipId, {
-      startImageData: start.b64, lastImageData: last.b64,
+      startImageData: startB64, lastImageData: lastB64,
       startFidelity: startFid.score, lastFidelity: lastFid.score,
       fidelityIssues: [...(startFid.issues || []), ...(lastFid.issues || [])].slice(0, 6),
       castTag: dir?.castTag, sceneTag: dir?.sceneTag,
@@ -89,7 +107,7 @@ export async function animateClip(clipId, { preset = 'mirror-sway' } = {}) {
   const prompt = (MOTION_PRESETS[preset] || MOTION_PRESETS['mirror-sway']) + MOTION_GUARD;
   const taskId = await createVideoTask({
     imageUrls: [startUrl, lastUrl], prompt, duration: clip.duration || 5,
-    aspectRatio: '9:16', resolution: '720p', fast: true,
+    aspectRatio: '9:16', resolution: '1080p', fast: true, // máxima resolución de Seedance 2.0
   });
   await VideoClip.findByIdAndUpdate(clipId, { taskId, motionPreset: preset, motionPrompt: prompt, stage: 'animating', error: null });
   return taskId;
