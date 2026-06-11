@@ -5,7 +5,7 @@ import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
 import { directCreative } from './director.js';
 import { pickScene } from './refs.js';
-import { generateHookForCreative } from './hook.js';
+import { planHook } from './hook.js';
 import { logActivity } from './models/activity.js';
 import { config } from './config.js';
 
@@ -30,32 +30,31 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
       seed: attempt > 0 ? `retry ${attempt}: try a completely different setting and energy` : '',
     });
     const creativeDirection = dir?.text || '';
-    // ADN del creativo (para aprender qué rinde): escena + casting elegidos.
-    if (dir) await Creative.findByIdAndUpdate(creativeId, { sceneTag: dir.sceneTag, castTag: dir.castTag });
-    // 9:16 (story/reels) = placement principal. La 2da foto (espalda) habilita
-    // tomas de movimiento/espalda fieles.
-    ({ b64 } = await generateVariant({ imageUrl, productBackUrl: doc?.sourceBackUrl || '', angleId, productDescription, creativeDirection, fitSpec, styleMode, size: STORY_SIZE }));
-    // 4:5 (feed) y 1:1 (square) = la MISMA foto reframed (usa el 9:16 como referencia)
+    // HOOK dirigido: se decide ACÁ (texto + fuente rotada/explorada) y se BAKEA en la misma
+    // generación (una sola pasada, sin perder contexto). La fidelidad la cubre el judge.
+    let hookSpec = null;
+    if (config.hookAuto) {
+      try { hookSpec = await planHook({ product: doc?.product, wash: doc?.wash }); } catch (e) { console.error(`[gen] planHook (${creativeId}):`, e.message); }
+    }
+    // ADN del creativo (para aprender qué rinde): escena + casting + fuente del hook.
+    await Creative.findByIdAndUpdate(creativeId, { sceneTag: dir?.sceneTag, castTag: dir?.castTag, hookLine: hookSpec?.hookLine || null, fontTag: hookSpec?.fontTag || null });
+    // 9:16 (story/reels) = placement principal, con el hook bakeado. La 2da foto (espalda)
+    // habilita tomas de movimiento/espalda fieles.
+    ({ b64 } = await generateVariant({ imageUrl, productBackUrl: doc?.sourceBackUrl || '', angleId, productDescription, creativeDirection, fitSpec, styleMode, size: STORY_SIZE, hookSpec }));
+    // 4:5 (feed) y 1:1 (square) = la MISMA foto reframed, con el hook RE-UBICADO por aspecto.
     let feedB64 = null;
     try {
-      const feed = await generateVariant({ imageUrl, referenceB64: b64, productDescription, fitSpec, styleMode, prompt: buildFeedReframePrompt(productDescription), size: FEED_SIZE });
+      const feed = await generateVariant({ imageUrl, referenceB64: b64, productDescription, fitSpec, styleMode, prompt: buildFeedReframePrompt(productDescription, hookSpec), size: FEED_SIZE });
       feedB64 = feed.b64;
     } catch (e) { console.error(`[gen] feed 4:5 fallo (${creativeId}):`, e.message); }
     let squareB64 = null;
     try {
-      const sq = await generateVariant({ imageUrl, referenceB64: b64, productDescription, fitSpec, styleMode, prompt: buildSquareReframePrompt(productDescription), size: SQUARE_SIZE });
+      const sq = await generateVariant({ imageUrl, referenceB64: b64, productDescription, fitSpec, styleMode, prompt: buildSquareReframePrompt(productDescription, hookSpec), size: SQUARE_SIZE });
       squareB64 = sq.b64;
     } catch (e) { console.error(`[gen] square 1:1 fallo (${creativeId}):`, e.message); }
     await Creative.findByIdAndUpdate(creativeId, { imageData: b64, feedImageData: feedB64, squareImageData: squareB64, genStatus: 'ready', genError: null });
     const d = await Creative.findById(creativeId).select('product').lean();
-    logActivity('single', `Single listo (${angleId}) de ${d?.product || ''}`, { product: d?.product || '', refId: String(creativeId), level: 'ok' });
-    // Variante con HOOK (director del hook: rota/explora fuentes, + check de fidelidad).
-    // Fire-and-forget: no bloquea que el creativo ya esté listo en la cola.
-    if (config.hookAuto) {
-      generateHookForCreative(creativeId)
-        .then((r) => logActivity('single', `Hook (${r?.fontTag || '?'}) ${r?.discarded ? 'descartado (fidelidad)' : 'listo'} de ${d?.product || ''}`, { product: d?.product || '', refId: String(creativeId), level: r?.discarded ? 'warn' : 'ok' }))
-        .catch((e) => console.error(`[gen] hook auto (${creativeId}):`, e.message));
-    }
+    logActivity('single', `Single listo (${angleId}${hookSpec ? ' · hook ' + hookSpec.fontTag : ''}) de ${d?.product || ''}`, { product: d?.product || '', refId: String(creativeId), level: 'ok' });
   } catch (err) {
     console.error(`[gen] fallo angulo ${angleId} (${creativeId}):`, err.message);
     await Creative.findByIdAndUpdate(creativeId, { genStatus: 'failed', genError: err.message, fidelityStatus: 'failed' });

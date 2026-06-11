@@ -4,12 +4,13 @@ import { generateHook, inventFontStyle } from './copy.js';
 import { addHookOverlay, STORY_SIZE, SQUARE_SIZE } from './openai.js';
 import { judgeHookFidelity } from './judge.js';
 
-// Estilos de fuente/diseño BASE que rotamos para testear (el director explora nuevos además).
+// Estilos de fuente/diseño BASE — alineados a la identidad CAROTA (blackletter/gótico,
+// como el wordmark). El director explora nuevos PERO siempre on-brand (street/gótico).
 const FONT_STYLES = [
-  { tag: 'condensed-bold', desc: 'a HEAVY CONDENSED SANS-SERIF UPPERCASE font (Anton / Archivo Black style), tight leading, bold streetwear impact' },
-  { tag: 'clean-grotesque', desc: 'a CLEAN bold grotesque sans-serif (Helvetica Now / Inter Bold), minimal modern DTC, refined letter-spacing' },
-  { tag: 'serif-editorial', desc: 'an elegant high-fashion SERIF (Vogue / GQ editorial), thin-to-bold contrast, aspirational magazine feel' },
-  { tag: 'handstyle', desc: 'an urban HANDSTYLE / graffiti marker script, raw youthful street energy, hand-drawn but perfectly legible' },
+  { tag: 'blackletter', desc: 'a bold BLACKLETTER / Old-English gothic typeface exactly like the CAROTA wordmark — medieval, sharp pointed serifs, dense and premium streetwear' },
+  { tag: 'gothic-tattoo', desc: 'a gothic TATTOO-style blackletter, spiky and edgy street energy, hand-inked feel but perfectly legible' },
+  { tag: 'condensed-bold', desc: 'a HEAVY CONDENSED SANS-SERIF UPPERCASE (Anton / Archivo Black), bold streetwear impact — pairs with the gothic logo' },
+  { tag: 'blackletter-outline', desc: 'a BLACKLETTER gothic display rendered as a clean outline / hollow stroke, modern street take on the medieval CAROTA wordmark' },
 ];
 // round-robin con arranque aleatorio; cada 5ta vez explora un estilo NUEVO (inventado).
 let _fontIdx = Math.floor(Math.random() * FONT_STYLES.length);
@@ -23,8 +24,18 @@ async function pickFontStyle() {
   return FONT_STYLES[_fontIdx++ % FONT_STYLES.length]; // exploit (rota los base)
 }
 
-// Genera la VARIANTE CON HOOK de un creativo: un hook de beneficio + callout del short,
-// aplicado a la 9:16 (story) Y a la 1:1 (square). Guarda hookImageData/hookSquareImageData.
+// Decide el HOOK (texto + fuente) ANTES de generar -> para bakearlo en la misma pasada.
+// Devuelve { hookLine, callout, fontTag, fontDesc }.
+export async function planHook({ product, wash }) {
+  const { hook, fit } = await generateHook({ product, wash });
+  const washTxt = (wash || '').replace(/\s*wash\s*/i, '').toUpperCase().trim();
+  const callout = `${washTxt ? washTxt + ' WASH · ' : ''}${fit}`;
+  const font = await pickFontStyle();
+  return { hookLine: hook, callout, fontTag: font.tag, fontDesc: font.desc };
+}
+
+// Genera la VARIANTE CON HOOK por separado (2do pase) — se mantiene para re-hookear
+// manualmente creativos viejos. El flujo AUTO ahora lo bakea en la misma generación.
 export async function generateHookForCreative(creativeId) {
   const c = await Creative.findById(creativeId).select('+imageData +squareImageData +feedImageData product wash').lean();
   if (!c?.imageData) throw new Error('Creativo sin imagen base');

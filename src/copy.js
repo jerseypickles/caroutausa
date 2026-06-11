@@ -66,8 +66,8 @@ export async function inventFontStyle() {
       model: config.judgeModel,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: 'You are an art director inventing a fresh TYPOGRAPHY treatment for a streetwear ad text-overlay. Be specific and renderable by an image model.' },
-        { role: 'user', content: 'Invent ONE distinctive font/design treatment for an ad hook (different from: heavy condensed sans, clean grotesque, high-fashion serif, graffiti handstyle). Return ONLY JSON {"tag":"short-kebab-slug","desc":"one concrete sentence describing the typeface style, weight, case and any treatment (outline, chrome, sticker, retro, etc.) — renderable, legible, premium"}.' },
+        { role: 'system', content: 'You are an art director for CAROTA, a streetwear brand whose logo is a bold BLACKLETTER / Old-English gothic wordmark. Invent fresh TYPOGRAPHY treatments for ad text-overlays that stay ON-BRAND: gothic, blackletter, tattoo, heavy street display. NEVER corporate serif, thin, script-cursive or soft. Renderable by an image model and legible.' },
+        { role: 'user', content: 'Invent ONE distinctive ON-BRAND font/design treatment for the ad hook (a fresh take within the gothic/blackletter/heavy-street family — e.g. chrome blackletter, distressed gothic, varsity-gothic mix, sprayed stencil gothic). Return ONLY JSON {"tag":"short-kebab-slug","desc":"one concrete sentence: the typeface style, weight, case and treatment — gothic/street, legible, premium"}.' },
       ],
     });
     const j = JSON.parse(r.choices?.[0]?.message?.content || '{}');

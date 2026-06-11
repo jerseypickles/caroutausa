@@ -68,7 +68,7 @@ Minimal, editorial, lots of breathing room. Like a designer made it.`;
 // imagen (referencia de estilo). Devuelve { b64 } o lanza error.
 // (Con Standard/2GB ya no serializamos: el lock global colgaba todo si una request
 //  se trababa. La concurrencia por-flujo ya esta limitada en enqueueJobs/carousel.)
-export async function generateVariant({ imageUrl, productBackUrl = '', angleId, referenceB64, productDescription, creativeDirection = '', fitSpec = '', styleMode = 'organic', prompt: promptOverride, size = STORY_SIZE }) {
+export async function generateVariant({ imageUrl, productBackUrl = '', angleId, referenceB64, productDescription, creativeDirection = '', fitSpec = '', styleMode = 'organic', prompt: promptOverride, size = STORY_SIZE, hookSpec = null }) {
   const productImage = await fetchSourceImage(imageUrl);
   const model = config.imageModel;
 
@@ -84,7 +84,7 @@ export async function generateVariant({ imageUrl, productBackUrl = '', angleId, 
   // prompt custom (ej. carrusel/reframe) + fit, o el armado por angulo (ya incluye fit).
   const prompt = promptOverride
     ? `${promptOverride}${fitLock(fitSpec)}`
-    : buildPrompt(angleId, { withReference: Boolean(referenceB64), productDescription, creativeDirection, fitSpec, styleMode, hasBack: Boolean(backImage) });
+    : buildPrompt(angleId, { withReference: Boolean(referenceB64), productDescription, creativeDirection, fitSpec, styleMode, hasBack: Boolean(backImage), hookSpec });
 
   const params = {
     model, image, prompt, size, quality: QUALITY, n: 1,

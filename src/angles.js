@@ -113,20 +113,25 @@ Striking and scroll-stopping while still looking like a real photograph.`,
 export const DEFAULT_ANGLE = 'realista';
 
 // Reframe del placement: misma foto (imagen 2 = el 9:16) recompuesta a otro frame.
-function reframePrompt(productDescription, frameDesc) {
+function reframePrompt(productDescription, frameDesc, hookSpec = null) {
+  // El 9:16 fuente ya trae el hook -> en el reframe lo RE-UBICAMOS limpio para el aspecto
+  // nuevo (re-render, no recorte), con el mismo texto y fuente.
+  const hookNote = hookSpec
+    ? `\n\nThe source photo has a text overlay — keep the SAME words and font style, but RE-LAY it cleanly for ${frameDesc}: in the empty negative space, NEVER over the face or the shorts, crisp and well-placed for this frame.${hookOverlay(hookSpec)}`
+    : '';
   return `${GARMENT_LOCK}
 
 The SECOND image is the SAME fitpic shot vertically (9:16). Reproduce the EXACT same
 photo — same real model, same outfit, same location, same pose, same lighting and
 colors — but recomposed for ${frameDesc}. Keep the full denim shorts and the outfit
 clearly visible. It must read as the SAME photo, just reframed, not a new scene.
-${productDescription ? `\nThe product to preserve exactly: ${productDescription}` : ''}
+${productDescription ? `\nThe product to preserve exactly: ${productDescription}` : ''}${hookNote}
 
 Real organic iPhone photo, phone-camera color (not professional grading), natural
 light, candid framing.`;
 }
-export const buildFeedReframePrompt = (d = '') => reframePrompt(d, 'a 4:5 FEED frame (a bit wider, less tall)');
-export const buildSquareReframePrompt = (d = '') => reframePrompt(d, 'a 1:1 SQUARE frame (centered, equal width and height)');
+export const buildFeedReframePrompt = (d = '', hookSpec = null) => reframePrompt(d, 'a 4:5 FEED frame (a bit wider, less tall)', hookSpec);
+export const buildSquareReframePrompt = (d = '', hookSpec = null) => reframePrompt(d, 'a 1:1 SQUARE frame (centered, equal width and height)', hookSpec);
 
 // Flat-lay / packshot: el short SOLO sobre superficie solida con sombra real. Sin
 // modelo. Producto como heroe -> formato que convierte mucho en Meta.
@@ -162,7 +167,14 @@ export function fitLock(fitSpec = '') {
 // Brand-safe: nada de logos de OTRAS marcas en la parte de arriba (es un ad de CAROTA).
 const BRAND_SAFE = `BRAND-SAFE TOP: the top / upper clothing (tee, hoodie, knit, jacket) must have NO third-party brand logo, wordmark or recognizable brand graphic on it — no real brand names or famous logos. Keep the top CLEAN and plain, or with only a subtle abstract / tonal design. It is the brand's own apparel. (Real sneakers on the feet are fine.)`;
 
-export function buildPrompt(angleId, { withReference = false, productDescription = '', creativeDirection = '', fitSpec = '', styleMode = 'organic', hasBack = false } = {}) {
+// Instrucción del HOOK para bakearlo EN la misma generación (una sola pasada). El texto
+// va en el espacio negativo, NUNCA sobre la cara ni sobre el short (no lo altera).
+export function hookOverlay({ hookLine, callout, fontDesc } = {}) {
+  if (!hookLine) return '';
+  return `\n\nTEXT OVERLAY (part of the composition, like a high-end DTC ad): place a clean premium typographic overlay in the EMPTY negative space — NEVER over the model's face or over the denim shorts, and it must NOT change the shorts in any way. (1) the HOOK "${hookLine}" set in ${fontDesc}, color chosen to contrast its background with a subtle soft shadow, perfectly spelled and razor-sharp. (2) small and light just below: "${callout}" in a THIN uppercase sans-serif, generous letter-spacing, muted grey. Minimal, editorial, lots of breathing room.`;
+}
+
+export function buildPrompt(angleId, { withReference = false, productDescription = '', creativeDirection = '', fitSpec = '', styleMode = 'organic', hasBack = false, hookSpec = null } = {}) {
   const angle = ANGLES[angleId];
   if (!angle && !creativeDirection) {
     throw new Error(`Angulo desconocido: ${angleId}. Validos: ${Object.keys(ANGLES).join(', ')}`);
@@ -176,5 +188,5 @@ export function buildPrompt(angleId, { withReference = false, productDescription
   const scene = creativeDirection || angle.prompt;
   // El riel de produccion depende del modo: organico (iPhone) vs campaña (pulido).
   const look = styleMode === 'campaign' ? CAMPAIGN_LOOK : ANTI_AI;
-  return `${GARMENT_LOCK}${back}${fitLock(fitSpec)}${desc}${ref}\n\n${scene}\n\n${BRAND_SAFE}\n\n${look}`;
+  return `${GARMENT_LOCK}${back}${fitLock(fitSpec)}${desc}${ref}\n\n${scene}\n\n${BRAND_SAFE}${hookOverlay(hookSpec)}\n\n${look}`;
 }
