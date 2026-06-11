@@ -45,5 +45,6 @@ export const config = {
     adAccountId: process.env.META_AD_ACCOUNT_ID || '',
     pageId: process.env.META_PAGE_ID || '',
     pixelId: process.env.META_PIXEL_ID || '',
+    igAccountId: process.env.META_IG_ID || '', // override manual de la cuenta de Instagram
   },
 };

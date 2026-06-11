@@ -68,6 +68,13 @@ metaRouter.delete('/meta/account-campaigns/:id', async (req, res) => {
   }
 });
 
+// GET /api/meta/ig-accounts -> lista las cuentas de IG alcanzables (para encontrar el ID)
+metaRouter.get('/meta/ig-accounts', async (_req, res) => {
+  if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });
+  try { res.json({ resolved: await meta.getIgActorId(), sources: await meta.listIgAccounts() }); }
+  catch (err) { res.status(502).json({ error: err.message }); }
+});
+
 // POST /api/meta/test-placement -> valida la creacion de un creative con customizacion
 // por placement (story 9:16 + feed 1:1) SIN crear ad ni gastar. Devuelve ok o el error.
 metaRouter.post('/meta/test-placement', async (_req, res) => {

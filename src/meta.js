@@ -41,16 +41,35 @@ async function graph(method, path, params = {}) {
 
 const acct = () => M.adAccountId; // ya viene como act_...
 
-// Cuenta de Instagram de la pagina (necesaria cuando el ad va a placements de IG).
-// Se cachea a nivel modulo. Devuelve '' si no hay (cae a page-backed).
+// Cuenta de Instagram para los ads (requerida en placements de IG). Prueba: override por
+// env -> cuenta business de la pagina -> instagram_accounts del ad account -> page-backed.
+// Se cachea a nivel modulo.
 let _igActorId;
 export async function getIgActorId() {
   if (_igActorId !== undefined) return _igActorId;
+  if (M.igAccountId) { _igActorId = M.igAccountId; return _igActorId; }
+  _igActorId = '';
   try {
-    const j = await graph('GET', M.pageId, { fields: 'instagram_business_account,connected_instagram_account,instagram_accounts' });
-    _igActorId = j.instagram_business_account?.id || j.connected_instagram_account?.id || j.instagram_accounts?.data?.[0]?.id || '';
-  } catch { _igActorId = ''; }
+    const p = await graph('GET', M.pageId, { fields: 'instagram_business_account{id},connected_instagram_account{id}' });
+    _igActorId = p.instagram_business_account?.id || p.connected_instagram_account?.id || '';
+  } catch { /* sigue */ }
+  if (!_igActorId) {
+    try { const a = await graph('GET', `${acct()}/instagram_accounts`, { fields: 'id,username' }); _igActorId = a.data?.[0]?.id || ''; } catch { /* sigue */ }
+  }
+  if (!_igActorId) {
+    try { const b = await graph('GET', `${M.pageId}/page_backed_instagram_accounts`, { fields: 'id' }); _igActorId = b.data?.[0]?.id || ''; } catch { /* sigue */ }
+  }
   return _igActorId;
+}
+
+// Diagnostico: lista todas las cuentas de IG alcanzables (para encontrar el ID correcto).
+export async function listIgAccounts() {
+  const out = {};
+  const tryGet = async (key, path, fields) => { try { out[key] = await graph('GET', path, { fields }); } catch (e) { out[key] = { error: e.message }; } };
+  await tryGet('pageBusiness', M.pageId, 'instagram_business_account{id,username},connected_instagram_account{id,username}');
+  await tryGet('adAccountIg', `${acct()}/instagram_accounts`, 'id,username');
+  await tryGet('pageBacked', `${M.pageId}/page_backed_instagram_accounts`, 'id,username');
+  return out;
 }
 
 // Advantage+ creative SELECTIVO: prendemos solo lo que NO toca la estetica (mejor CTA)
