@@ -128,12 +128,12 @@ export function createAdSet({ name, campaignId, dailyBudgetCents, optimizationEv
     // Placements MANUALES que cubrimos con imagen propia (story 9:16 + feed 1:1).
     // Excluye audience network (baja calidad en trafico frio) y deja cobertura 100%
     // para la customizacion por placement del creative (sin error de cobertura).
-    // Advantage+ Audience: Meta encuentra el publico (ideal trafico frio + pixel);
-    // la edad es solo una SEMILLA, Meta expande mas alla.
+    // Advantage+ Audience: Meta encuentra el publico (ideal trafico frio + pixel).
+    // OJO: con Advantage+ Audience NO se puede fijar age_max <65 como control duro
+    // (#1870189); va amplio (18+) y el algoritmo sesga joven solo via el pixel/producto.
     targeting: {
       geo_locations: { countries },
       age_min: 18,
-      age_max: 40,
       publisher_platforms: ['facebook', 'instagram'],
       facebook_positions: ['feed', 'story', 'facebook_reels'],
       instagram_positions: ['stream', 'story', 'explore', 'reels'],
