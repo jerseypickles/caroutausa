@@ -104,6 +104,35 @@
   .rd { display: flex; gap: 7px; font-size: 11px; line-height: 1.35; }
   .rd .rdk { flex: none; color: var(--muted); font-weight: 600; width: 78px; }
   .rd .rdv { color: var(--text); }
+  /* Referencias — cards limpias clickeables */
+  .refcard { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; cursor: pointer; box-shadow: 0 1px 2px rgba(16,24,40,.04); transition: box-shadow .16s, transform .16s, border-color .16s; }
+  .refcard:hover { box-shadow: 0 10px 26px rgba(16,24,40,.10); transform: translateY(-2px); border-color: var(--border2); }
+  .refcard.off { opacity: .55; } .refcard.avoidref { opacity: .45; }
+  .refimg { position: relative; aspect-ratio: 3/4; background: var(--surface2); }
+  .refimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .reftb { position: absolute; top: 8px; left: 8px; padding: 3px 8px; border-radius: 7px; background: rgba(255,255,255,.92); color: #14161a; font-size: 10.5px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .refbadge { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .refbadge.fav { background: #f5a623; color: #fff; } .refbadge.av { background: var(--bad); color: #fff; } .refbadge.off { background: rgba(0,0,0,.6); color: #fff; width: auto; padding: 0 7px; border-radius: 7px; font-size: 10px; }
+  .refcb { padding: 10px 12px; }
+  .refcl { font-size: 12.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .refcm { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Referencias — modal */
+  .refmbox { width: 760px; }
+  .refm { display: grid; grid-template-columns: 300px 1fr; gap: 22px; }
+  .refm-img { border-radius: 13px; overflow: hidden; background: var(--surface2); align-self: start; }
+  .refm-img img { width: 100%; display: block; cursor: zoom-in; }
+  .refm-title { font-size: 18px; font-weight: 700; }
+  .refm-sub { font-size: 12.5px; color: var(--muted); margin: 3px 0 10px; }
+  .refm-types { display: flex; gap: 6px; margin-bottom: 18px; }
+  .refm-types .rt { flex: 1; background: var(--surface2); border: 1px solid transparent; color: var(--muted); font-size: 12px; font-weight: 600; padding: 8px 4px; border-radius: 9px; cursor: pointer; font-family: inherit; }
+  .refm-types .rt.on { background: var(--accent); color: #fff; }
+  .refm-seclbl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 9px; }
+  .refm-dna { display: flex; flex-direction: column; gap: 9px; }
+  .rmrow { display: flex; gap: 11px; font-size: 13px; line-height: 1.4; }
+  .rmrow .rmk { flex: none; width: 96px; color: var(--muted); font-weight: 600; }
+  .rmrow .rmv { color: var(--text); }
+  .refm-acts { display: flex; align-items: center; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .refm-acts .avoidbtn { color: var(--bad); border-color: var(--bad); }
   .ref.inactive { opacity: .5; }
   .ref img { width: 100%; aspect-ratio: 3/4; object-fit: cover; background: var(--surface3); cursor: zoom-in; }
   .ref .body { padding: 11px 12px; display: flex; align-items: center; gap: 8px; }
@@ -641,6 +670,14 @@
   </div>
 </div>
 
+<!-- Modal de referencia -->
+<div class="qcmodal" id="refModal" onclick="closeRefModal()">
+  <div class="qcmbox refmbox" onclick="event.stopPropagation()">
+    <button class="qcmx" onclick="closeRefModal()" aria-label="Cerrar">&times;</button>
+    <div id="refModalBody"></div>
+  </div>
+</div>
+
 <!-- Modal de lanzamiento -->
 <div class="lmodal" id="launchModal" onclick="closeLaunch()">
   <div class="lmbox" onclick="event.stopPropagation()">
@@ -825,6 +862,8 @@ async function syncNow() {
 }
 
 /* ===== REFERENCIAS ===== */
+const RT_LBL = { outfit: '👕 outfit', scene: '🌊 escena', pose: '🧍 pose' };
+let refModalId = null;
 async function loadReferences() {
   const r = await fetch('/api/references');
   const data = await r.json();
@@ -833,27 +872,47 @@ async function loadReferences() {
   document.getElementById('pillRef').classList.toggle('zero', data.activeCount === 0);
   document.getElementById('kRefs').textContent = data.activeCount;
   const grid = document.getElementById('refgrid');
-  const RT = { outfit: '👕 outfit', scene: '🌊 escena', pose: '🧍 pose' };
-  grid.innerHTML = references.length ? references.map(ref => `
-    <div class="ref ${ref.active ? '' : 'inactive'} ${ref.avoid ? 'avoidref' : ''}">
-      <img src="/api/references/${ref._id}/image" loading="lazy" alt="referencia" onclick="openZoom('/api/references/${ref._id}/image')" />
-      <div class="reftypes">
-        ${Object.keys(RT).map(t => `<button class="rt ${(ref.type || 'outfit') === t ? 'on' : ''}" onclick="setRefType('${ref._id}','${t}')">${RT[t]}</button>`).join('')}
-      </div>
-      ${refDnaHtml(ref)}
-      <div class="body">
-        <span class="label">${ref.label || 'pin'}</span>
-        <span style="flex:1"></span>
-        <button class="iconbtn" title="Re-analizar (ver qué capta)" onclick="reextractRef('${ref._id}', this)">↻</button>
-        <button class="iconbtn ${ref.favorite ? 'fav' : ''}" title="Favorito (se usa más)" onclick="toggleRefFlag('${ref._id}','favorite',${!ref.favorite})">★</button>
-        <button class="iconbtn ${ref.avoid ? 'avoidon' : ''}" title="Evitar (nunca usar)" onclick="toggleRefFlag('${ref._id}','avoid',${!ref.avoid})">⊘</button>
-        <label class="switch" title="Activa para generación">
-          <input type="checkbox" ${ref.active ? 'checked' : ''} onchange="toggleRef('${ref._id}', this.checked)" /><span></span>
-        </label>
-        <button class="iconbtn" title="Eliminar" onclick="deleteRef('${ref._id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
-      </div>
-    </div>`).join('') : '<div class="empty">Sin referencias todavía. Subí tu primer pin arriba.</div>';
+  grid.innerHTML = references.length ? references.map(refCard).join('') : '<div class="empty">Sin referencias todavía. Subí tu primer pin arriba.</div>';
+  if (refModalId) { const rr = references.find((x) => x._id === refModalId); if (rr) document.getElementById('refModalBody').innerHTML = refModalHtml(rr); else closeRefModal(); }
 }
+function refCard(ref) {
+  const dna = ref.dna || {};
+  const mini = dna.vibe || dna.location || dna.sneakers || dna.stance || 'analizando…';
+  return `<div class="refcard ${ref.active ? '' : 'off'} ${ref.avoid ? 'avoidref' : ''}" onclick="openRefModal('${ref._id}')">
+    <div class="refimg"><img src="/api/references/${ref._id}/image" loading="lazy" alt="" />
+      <span class="reftb">${RT_LBL[ref.type || 'outfit']}</span>
+      ${ref.favorite ? '<span class="refbadge fav">★</span>' : ''}${ref.avoid ? '<span class="refbadge av">⊘</span>' : ''}${!ref.active ? '<span class="refbadge off">off</span>' : ''}
+    </div>
+    <div class="refcb"><div class="refcl">${esc(ref.label || 'pin')}</div><div class="refcm">${esc(String(mini).slice(0, 60))}</div></div>
+  </div>`;
+}
+function refModalHtml(ref) {
+  const t = ref.type || 'outfit';
+  const dna = ref.dna;
+  const rows = (dna && typeof dna === 'object')
+    ? Object.entries(dna).filter(([k, v]) => DNA_LBL[k] && v).map(([k, v]) => `<div class="rmrow"><span class="rmk">${DNA_LBL[k][0]} ${DNA_LBL[k][1]}</span><span class="rmv">${esc(String(v))}</span></div>`).join('')
+    : '';
+  return `<div class="refm">
+    <div class="refm-img"><img src="/api/references/${ref._id}/image" onclick="openZoom('/api/references/${ref._id}/image')" alt="" /></div>
+    <div class="refm-info">
+      <div class="refm-title">${esc(ref.label || 'Referencia')}</div>
+      <div class="refm-sub">¿Qué dimensión del creativo inspira esta referencia?</div>
+      <div class="refm-types">${Object.keys(RT_LBL).map((tt) => `<button class="rt ${t === tt ? 'on' : ''}" onclick="setRefType('${ref._id}','${tt}')">${RT_LBL[tt]}</button>`).join('')}</div>
+      <div class="refm-seclbl">Lo que leyó de la referencia</div>
+      <div class="refm-dna">${rows || '<div class="muted" style="font-size:12.5px">Analizando… apretá ↻ Re-analizar.</div>'}</div>
+      <div class="refm-acts">
+        <button class="btn sm ${ref.favorite ? '' : 'ghost'}" onclick="toggleRefFlag('${ref._id}','favorite',${!ref.favorite})">★ ${ref.favorite ? 'Favorito' : 'Favorito'}</button>
+        <button class="btn sm ghost ${ref.avoid ? 'avoidbtn' : ''}" onclick="toggleRefFlag('${ref._id}','avoid',${!ref.avoid})">⊘ ${ref.avoid ? 'Evitando' : 'Evitar'}</button>
+        <label class="switch" title="Activa para generación"><input type="checkbox" ${ref.active ? 'checked' : ''} onchange="toggleRef('${ref._id}', this.checked)" /><span></span></label>
+        <span style="flex:1"></span>
+        <button class="btn sm ghost" onclick="reextractRef('${ref._id}', this)">↻ Re-analizar</button>
+        <button class="btn sm ghost" onclick="deleteRef('${ref._id}')" title="Eliminar">🗑</button>
+      </div>
+    </div>
+  </div>`;
+}
+function openRefModal(id) { refModalId = id; const r = references.find((x) => x._id === id); if (!r) return; document.getElementById('refModalBody').innerHTML = refModalHtml(r); document.getElementById('refModal').classList.add('open'); document.body.style.overflow = 'hidden'; }
+function closeRefModal() { refModalId = null; const m = document.getElementById('refModal'); if (m) m.classList.remove('open'); document.body.style.overflow = ''; }
 // Muestra QUÉ captó la referencia (zapas, accesorios, pose, vibe, paleta…).
 const DNA_LBL = {
   lane: ['◆', 'lane'], top: ['👕', 'top'], sneakers: ['👟', 'zapas'], accessories: ['⛓', 'accesorios'],
@@ -1360,7 +1419,7 @@ function openCarouselView(id, n) {
   document.getElementById('cviewer').classList.add('on');
 }
 function closeCViewer() { document.getElementById('cviewer').classList.remove('on'); document.getElementById('cstrip').innerHTML = ''; }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeCViewer(); closeQcModal(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeCViewer(); closeQcModal(); closeRefModal(); } });
 function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 async function saveCopy(id, field, value) {
