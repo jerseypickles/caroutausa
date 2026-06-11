@@ -674,9 +674,9 @@
     <section class="view" id="view-aprendizaje">
       <div class="admhero">
         <div class="admstat"><div class="admicon">📈</div><div class="admtxt"><div class="admk">Creativos con data</div><div class="admv" id="learnCount">0</div></div></div>
-        <div class="admstat"><div class="admtxt"><div class="admk">Estado</div><div class="admv" id="learnState" style="font-size:13px">—</div></div></div>
+        <div class="admstat"><div class="admtxt"><div class="admk">Actualización</div><div class="admv" id="learnState" style="font-size:13px">🟢 automática</div></div></div>
         <span style="flex:1"></span>
-        <button class="btn lg" onclick="syncLearning(this)">↻ Sincronizar métricas de Meta</button>
+        <button class="btn ghost sm" onclick="syncLearning(this)" title="Forzar ahora (igual se actualiza solo)">↻ Ahora</button>
       </div>
       <div class="hint" id="learnHint"></div>
       <div id="learnGrid"></div>
@@ -763,11 +763,12 @@ function showView(name) {
   document.getElementById('topTitle').textContent = TITLES[name][0];
   document.getElementById('topSub').textContent = TITLES[name][1];
   clearInterval(adsPoll); adsPoll = null;
+  clearInterval(learnPoll); learnPoll = null;
   if (name === 'productos') loadProducts();
   if (name === 'referencias') loadReferences();
   if (name === 'ads') { loadAdManager(); adsPoll = setInterval(() => { loadLaunched(); loadCampaigns(); }, 90000); } // refresca métricas cada 90s
   if (name === 'motor') loadMotor();
-  if (name === 'aprendizaje') loadLearning();
+  if (name === 'aprendizaje') openLearning();
   if (name === 'cola') renderMotorBar();
 }
 async function renderMotorBar() {
@@ -1698,14 +1699,25 @@ async function toggleAds(id, btn) {
 
 /* ===== APRENDIZAJE ===== */
 const DIM_LBL = { sceneTag: '🌊 Escena', castTag: '🧑 Casting', angle: '🎬 Ángulo', wash: '👖 Wash', format: '🖼 Formato' };
+let learnPoll = null;
+// Abre el tab: sincroniza una vez y queda auto-actualizándose (sin tocar nada).
+async function openLearning() {
+  await learnSyncSilent();          // fresco al instante
+  learnPoll = setInterval(learnSyncSilent, 180000); // re-sincroniza + refresca cada 3 min
+}
+async function learnSyncSilent() {
+  try { await fetch('/api/learning/sync', { method: 'POST' }); } catch (e) {}
+  loadLearning();
+}
 async function loadLearning() {
   let d = {};
   try { d = await (await fetch('/api/learning')).json(); } catch (e) {}
   document.getElementById('learnCount').textContent = d.totalCreatives || 0;
-  document.getElementById('learnState').textContent = d.totalCreatives ? 'aprendiendo' : 'sin data aún';
+  const hhmm = new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('learnState').innerHTML = `🟢 auto · ${hhmm}${d.totalCreatives ? '' : ' · sin data aún'}`;
   const grid = document.getElementById('learnGrid'), hint = document.getElementById('learnHint');
   if (!d.totalCreatives) {
-    hint.innerHTML = 'Todavía no hay métricas. <b>Lanzá y activá campañas</b> en el Ad Manager; cuando los ads corran, apretá <b>Sincronizar</b> y el CTR real se pega a cada creativo según su ADN.';
+    hint.innerHTML = 'Todavía no hay métricas. Tu campaña ya está corriendo — en cuanto los ads junten clicks, esto se llena <b>solo</b> (se actualiza cada pocos minutos) con el CTR real por ADN.';
     grid.innerHTML = ''; return;
   }
   hint.innerHTML = 'CTR real por cada dimensión del ADN — verde = el que mejor rinde. Con esto el sistema puede priorizar ganadores y retirar perdedores.';

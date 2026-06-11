@@ -3,6 +3,20 @@ import { Creative } from './models/creative.js';
 import { Carousel } from './models/carousel.js';
 import * as meta from './meta.js';
 
+// Cron en proceso: sincroniza las métricas de Meta cada N min (default 12) para que el
+// tab Aprendizaje esté siempre fresco SOLO, sin que el usuario apriete "sincronizar".
+let _metricsTimer = null;
+export function startMetricsCron() {
+  if (_metricsTimer || !meta.metaConfigured()) return;
+  const everyMin = Number(process.env.METRICS_SYNC_MIN || 12);
+  const run = () => syncCreativeMetrics()
+    .then((r) => { if (r.updated) console.log(`[metrics] sync auto: ${r.updated} creativos de ${r.campaigns} campañas`); })
+    .catch((e) => console.error('[metrics] sync auto fallo:', e.message));
+  run(); // al arranque
+  _metricsTimer = setInterval(run, everyMin * 60 * 1000);
+  console.log(`[metrics] cron auto cada ${everyMin}min`);
+}
+
 // WRITE-BACK: trae las métricas reales por ad de Meta y las pega al creativo/carrusel
 // (matcheando adId -> creativeId). Así cada creativo queda con su CTR/gasto/compras real.
 export async function syncCreativeMetrics() {

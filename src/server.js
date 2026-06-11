@@ -15,6 +15,7 @@ import { autopilotRouter } from './routes/autopilot.js';
 import { learningRouter } from './routes/learning.js';
 import { startProductCron } from './sync.js';
 import { startAutopilotCron } from './autopilot.js';
+import { startMetricsCron } from './learning.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, '..', 'public');
@@ -53,6 +54,7 @@ async function start() {
   await sweepOrphans(); // limpia generaciones cortadas por reinicios
   startProductCron(); // sincroniza Shopify al arranque y cada N min
   startAutopilotCron(); // motor autonomo: genera el mix de productos pendientes
+  startMetricsCron(); // sincroniza metricas de Meta -> tab Aprendizaje siempre fresco
   app.listen(config.port, () => {
     console.log(`[server] escuchando en :${config.port}`);
   });
