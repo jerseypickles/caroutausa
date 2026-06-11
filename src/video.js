@@ -8,6 +8,7 @@ import { planHook } from './hook.js';
 import { pickRefs, pickScene } from './refs.js';
 import { judgeFidelity } from './judge.js';
 import { createVideoTask, getVideoTask, piapiConfigured } from './piapi.js';
+import { judgeVideoFidelity, overlayHookVideo } from './videoproc.js';
 import { config } from './config.js';
 
 // Presets de movimiento SUTIL (nada de caminar/gestos -> no se ve IA). El movimiento de
@@ -19,6 +20,11 @@ export const MOTION_PRESETS = {
   'slow-push': 'The camera slowly and smoothly pushes in a little closer while the person stays mostly still with a tiny natural weight shift. Photoreal, cinematic but candid.',
 };
 const MOTION_GUARD = ' NO walking, NO big movements, NO morphing. The denim shorts keep the EXACT same shape, wash, rips, hem and length the whole time. Hands and face stay stable and natural.';
+
+// Rota los presets de movimiento (variedad + para que el loop aprenda cuál rinde).
+const PRESET_KEYS = Object.keys(MOTION_PRESETS);
+let _presetIdx = 0;
+function nextPreset() { const k = PRESET_KEYS[_presetIdx % PRESET_KEYS.length]; _presetIdx++; return k; }
 
 // CROP cerrado DETERMINÍSTICO: gpt-image no respeta el encuadre por texto, así que recorto yo.
 // Corta la cabeza arriba y hace zoom (bottom-aligned, mantiene los pies) -> el PRODUCTO llena
@@ -85,9 +91,15 @@ export async function generateVideoFrames(clipId) {
       startFidelity: startFid.score, lastFidelity: lastFid.score,
       fidelityIssues: [...(startFid.issues || []), ...(lastFid.issues || [])].slice(0, 6),
       castTag: 'lower-body', sceneTag: 'fit-check',
-      hookLine: hook?.hookLine || null, fontTag: hook?.fontTag || null,
+      hookLine: hook?.hookLine || null, callout: hook?.callout || null, fontTag: hook?.fontTag || null,
       stage: 'frames', genStatus: 'ready', error: null,
     });
+
+    // AUTO-GATE: si los dos frames pasan fidelidad, anima solo (no gasta Seedance en frames malos).
+    const bothPass = (startFid.score ?? 0) >= 85 && (lastFid.score ?? 0) >= 85;
+    if (config.videoAuto && bothPass) {
+      animateClip(clipId, { preset: nextPreset() }).catch((e) => console.error('[video] auto-animate:', e.message));
+    }
   } catch (err) {
     console.error(`[video] frames fallo (${clipId}):`, err.message);
     await VideoClip.findByIdAndUpdate(clipId, { genStatus: 'failed', stage: 'failed', error: err.message });
@@ -122,16 +134,34 @@ export async function finishAnimation(clipId) {
   }
   if (!t.videoUrl) return { done: false, status: t.status };
   // bajamos el mp4 para ser dueños (la URL de PiAPI puede expirar).
-  let videoData = null;
+  let videoBuf = null;
+  try { const res = await fetch(t.videoUrl); if (res.ok) videoBuf = Buffer.from(await res.arrayBuffer()); } catch (e) {}
+  if (!videoBuf) { await VideoClip.findByIdAndUpdate(clipId, { videoUrl: t.videoUrl, stage: 'qc' }); return { done: true }; }
+
+  // QC AUTOMÁTICO: muestrea frames del mp4 y verifica que el short se mantuvo fiel todo el clip.
+  const prod = clip.shopifyProductId ? await Product.findOne({ shopifyId: clip.shopifyProductId }).lean() : null;
+  const fitSpec = prod?.fitSpec || '';
+  let qc = { status: 'pending', fidelity: null, notes: '' };
   try {
-    const res = await fetch(t.videoUrl);
-    if (res.ok) videoData = Buffer.from(await res.arrayBuffer()).toString('base64');
-  } catch (e) {}
-  await VideoClip.findByIdAndUpdate(clipId, { videoUrl: t.videoUrl, videoData, stage: 'qc' });
-  return { done: true, videoUrl: t.videoUrl };
+    const r = await judgeVideoFidelity({ mp4Buffer: videoBuf, duration: clip.duration || 5, sourceImageUrl: clip.sourceImageUrl, fitSpec });
+    const pass = (r.score ?? 0) >= config.videoQcMin;
+    qc = { status: pass ? 'pass' : 'fail', fidelity: r.score, notes: r.issues.join('; ') };
+  } catch (e) { qc = { status: 'pending', fidelity: null, notes: 'QC error: ' + e.message }; }
+
+  // Si pasa el QC: HOOK overlay (texto nítido) -> ready. Si no: qc (revisión manual en el tab).
+  let finalBuf = videoBuf;
+  if (qc.status === 'pass' && clip.hookLine) {
+    try { finalBuf = await overlayHookVideo(videoBuf, { hookLine: clip.hookLine, callout: clip.callout || '' }); }
+    catch (e) { console.error('[video] hook overlay:', e.message); }
+  }
+  await VideoClip.findByIdAndUpdate(clipId, {
+    videoUrl: t.videoUrl, videoData: finalBuf.toString('base64'),
+    videoQc: qc, stage: qc.status === 'pass' ? 'ready' : 'qc',
+  });
+  return { done: true, qc: qc.status, fidelity: qc.fidelity };
 }
 
-// Cron liviano: avanza las tasks en 'animating'.
+// Cron liviano: avanza las tasks en 'animating' (poll Seedance -> baja mp4 -> QC -> ready/qc).
 let _videoTimer = null;
 export function startVideoCron() {
   if (_videoTimer || !piapiConfigured()) return;
@@ -141,4 +171,34 @@ export function startVideoCron() {
   };
   _videoTimer = setInterval(run, 30 * 1000);
   console.log('[video] cron de animación cada 30s');
+}
+
+// AUTOPILOT de video: cada N min crea UN clip nuevo del producto con menos videos (rota),
+// con un cap de en-vuelo para no saturar RAM/Seedance. Frames -> auto-gate -> animar -> QC -> ready.
+let _vauTimer = null;
+export function startVideoAutopilot() {
+  if (_vauTimer || !piapiConfigured() || !config.videoAuto) return;
+  const everyMin = Number(process.env.VIDEO_AUTOPILOT_MIN || 25);
+  const run = async () => {
+    try {
+      const inflight = await VideoClip.countDocuments({ stage: { $in: ['frames', 'animating'] } });
+      if (inflight >= 2) return; // no saturar (OOM + créditos)
+      const prods = await Product.find().select('shopifyId title wash image').lean();
+      if (!prods.length) return;
+      const counts = await Promise.all(prods.map(async (p) => ({ p, n: await VideoClip.countDocuments({ shopifyProductId: p.shopifyId }) })));
+      counts.sort((a, b) => a.n - b.n); // el producto con menos clips de video
+      const product = counts[0].p;
+      const [ref] = await pickRefs({ shopifyProductId: product.shopifyId, wash: product.wash, n: 1, type: 'outfit' });
+      const clip = await VideoClip.create({
+        shopifyProductId: product.shopifyId, product: product.title, wash: product.wash, sourceImageUrl: product.image,
+        referenceId: ref?.id || null, referenceDna: ref?.dna || '', referenceImageData: ref?.b64 || null,
+        stage: 'frames', genStatus: 'generating',
+      });
+      generateVideoFrames(clip._id).catch((e) => console.error('[video] autopilot frames:', e.message));
+      console.log('[video] autopilot: nuevo clip de', product.title);
+    } catch (e) { console.error('[video] autopilot:', e.message); }
+  };
+  run();
+  _vauTimer = setInterval(run, everyMin * 60 * 1000);
+  console.log(`[video] autopilot cada ${everyMin}min`);
 }

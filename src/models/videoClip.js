@@ -29,6 +29,7 @@ const videoClipSchema = new Schema(
     sceneTag: { type: String, default: null, index: true },
     fontTag: { type: String, default: null, index: true },
     hookLine: { type: String, default: null },
+    callout: { type: String, default: null }, // "{WASH} WASH · {fit}" para el overlay
 
     // Animación (Seedance via PiAPI).
     motionPreset: { type: String, default: 'mirror-sway' },

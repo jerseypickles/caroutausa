@@ -969,7 +969,8 @@ function vcard(c) {
   else if (c.stage === 'qc') acts = `<button class="btn sm" onclick="vQc('${c._id}','pass',this)">✓ OK</button><button class="btn ghost sm" onclick="vQc('${c._id}','fail',this)">✗</button>`;
   else if (c.stage === 'ready') acts = `<a class="btn ghost sm" href="/api/video/${c._id}/video" target="_blank">⬇ mp4</a><button class="btn ghost sm" onclick="vDel('${c._id}')">🗑</button>`;
   else acts = `<button class="btn ghost sm" onclick="vDel('${c._id}')">🗑 falló</button>`;
-  return `<div class="vcard"><div class="vimg">${media}</div><div class="vb"><div class="vt">${esc((c.product || '').replace(' Denim Short', ''))}</div><div class="vm">${esc(c.castTag || '')}${c.hookLine ? ' · "' + esc(c.hookLine) + '"' : ''}</div></div><div class="vacts">${acts}</div></div>`;
+  const qc = c.videoQc && c.videoQc.fidelity != null ? ` · QC ${c.videoQc.fidelity}` : '';
+  return `<div class="vcard"><div class="vimg">${media}</div><div class="vb"><div class="vt">${esc((c.product || '').replace(' Denim Short', ''))}</div><div class="vm">${c.hookLine ? '"' + esc(c.hookLine) + '"' : esc(c.castTag || 'fit-check')}${qc}</div></div><div class="vacts">${acts}</div></div>`;
 }
 async function newVideoClip(btn) { btn.disabled = true; btn.textContent = '…'; try { await fetch('/api/video/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); toast('Generando frames…'); loadVideo(); } finally { btn.disabled = false; btn.textContent = '+ Nuevo clip'; } }
 async function vAct(id, act, btn) { if (btn) btn.disabled = true; await fetch(`/api/video/${id}/${act}`, { method: 'POST' }); loadVideo(); }

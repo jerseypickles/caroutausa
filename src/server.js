@@ -17,7 +17,7 @@ import { videoRouter } from './routes/video.js';
 import { startProductCron } from './sync.js';
 import { startAutopilotCron } from './autopilot.js';
 import { startMetricsCron } from './learning.js';
-import { startVideoCron } from './video.js';
+import { startVideoCron, startVideoAutopilot } from './video.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, '..', 'public');
@@ -59,6 +59,7 @@ async function start() {
   startAutopilotCron(); // motor autonomo: genera el mix de productos pendientes
   startMetricsCron(); // sincroniza metricas de Meta -> tab Aprendizaje siempre fresco
   startVideoCron(); // avanza las tasks de Seedance (animating -> qc)
+  startVideoAutopilot(); // crea clips de video solo (frames -> animar -> QC -> ready)
   app.listen(config.port, () => {
     console.log(`[server] escuchando en :${config.port}`);
   });

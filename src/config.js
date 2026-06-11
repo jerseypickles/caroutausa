@@ -17,6 +17,8 @@ export const config = {
   hookAuto: process.env.HOOK_AUTO !== 'false', // genera la variante con hook auto en cada creativo (default ON)
   piapiKey: process.env.PIAPI_KEY || '', // PiAPI -> Seedance 2.0 (image-to-video). Opcional.
   publicBaseUrl: process.env.PUBLIC_BASE_URL || 'https://carota-ad-engine.onrender.com', // URLs públicas para PiAPI
+  videoQcMin: Number(process.env.VIDEO_QC_MIN || 80), // umbral de fidelidad del short en el QC de video
+  videoAuto: process.env.VIDEO_AUTO !== 'false', // cron auto de video (frames->animar->qc->ready)
   judgeModel: process.env.JUDGE_MODEL || 'gpt-5.1',
   // Director creativo (Anthropic): genera los prompts de imagen dinamicamente.
   // Las imagenes las sigue haciendo gpt-image. Opcional: sin key, cae al prompt fijo.
