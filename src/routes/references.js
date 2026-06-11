@@ -1,8 +1,22 @@
 import { Router } from 'express';
 import { Reference } from '../models/reference.js';
-import { extractAndStore } from '../refs.js';
+import { extractAndStore, pickRefs } from '../refs.js';
 
 export const referencesRouter = Router();
+
+// GET /api/references/picktest?wash=onyx&n=30 -> prueba la VARIEDAD del picker (sin generar
+// imágenes): llama pickRefs n veces y muestra cuántas refs distintas salen y la repartición.
+referencesRouter.get('/references/picktest', async (req, res) => {
+  const wash = req.query.wash || 'onyx';
+  const n = Math.min(Number(req.query.n) || 30, 100);
+  const cnt = {};
+  for (let i = 0; i < n; i++) {
+    const [r] = await pickRefs({ wash, n: 1, type: 'outfit' });
+    if (r) cnt[r.id] = (cnt[r.id] || 0) + 1;
+  }
+  const dist = Object.values(cnt).sort((a, b) => b - a);
+  res.json({ wash, picks: n, refsDistintas: Object.keys(cnt).length, reparticion: dist });
+});
 
 // GET /api/references -> biblioteca de pins (sin imageData)
 referencesRouter.get('/references', async (_req, res) => {
