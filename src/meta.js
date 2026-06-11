@@ -80,7 +80,15 @@ export function createAdSet({ name, campaignId, dailyBudgetCents, optimizationEv
     optimization_goal: 'OFFSITE_CONVERSIONS',
     bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
     promoted_object: { pixel_id: M.pixelId, custom_event_type: optimizationEvent },
-    targeting: { geo_locations: { countries } }, // amplio, Meta encuentra el publico
+    // Placements MANUALES que cubrimos con imagen propia (story 9:16 + feed 1:1).
+    // Excluye audience network (baja calidad en trafico frio) y deja cobertura 100%
+    // para la customizacion por placement del creative (sin error de cobertura).
+    targeting: {
+      geo_locations: { countries },
+      publisher_platforms: ['facebook', 'instagram'],
+      facebook_positions: ['feed', 'story', 'facebook_reels'],
+      instagram_positions: ['stream', 'story', 'explore', 'reels'],
+    },
     status: 'PAUSED',
   });
 }

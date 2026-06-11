@@ -68,6 +68,25 @@ metaRouter.delete('/meta/account-campaigns/:id', async (req, res) => {
   }
 });
 
+// POST /api/meta/test-placement -> valida la creacion de un creative con customizacion
+// por placement (story 9:16 + feed 1:1) SIN crear ad ni gastar. Devuelve ok o el error.
+metaRouter.post('/meta/test-placement', async (_req, res) => {
+  if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });
+  try {
+    const c = await Creative.findOne({ qcStatus: 'approved', genStatus: 'ready' })
+      .select('+imageData +feedImageData +squareImageData product shopifyProductId').lean();
+    if (!c) return res.status(404).json({ error: 'No hay single aprobado para testear' });
+    const prod = c.shopifyProductId ? await Product.findOne({ shopifyId: c.shopifyProductId }).lean() : null;
+    const link = productLink(prod?.handle);
+    const storyHash = await meta.uploadImage(await storyB64(c));
+    const feedHash = await meta.uploadImage(await feedB64(c));
+    const creative = await meta.createPlacementImageCreative({ name: 'TEST · placement (borrable)', storyHash, feedHash, link, messages: ['test'] });
+    res.json({ ok: true, creativeId: creative.id, product: c.product });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 // GET /api/meta/account-campaigns/:id/ads -> ads de una campaña (thumbnails + metricas)
 metaRouter.get('/meta/account-campaigns/:id/ads', async (req, res) => {
   try {
@@ -128,14 +147,15 @@ metaRouter.post('/meta/launch', async (req, res) => {
     const ads = [];
     // Agrega la promo activa (SUMMER25, etc.) al final de cada copy.
     const withPromo = (msg) => (config.metaPromo ? `${msg}\n\n${config.metaPromo}` : msg);
-    // Singles -> creative basico de imagen (1:1, va bien en todos los placements).
+    // Singles -> customizacion por placement: story 9:16 en Stories/Reels, feed 1:1 en el resto.
     for (const c of singles) {
       const prod = c.shopifyProductId ? await Product.findOne({ shopifyId: c.shopifyProductId }).lean() : null;
       const link = productLink(prod?.handle);
-      const imgHash = await meta.uploadImage(await feedB64(c));
+      const storyHash = await meta.uploadImage(await storyB64(c));
+      const feedHash = await meta.uploadImage(await feedB64(c));
       const message = withPromo(c.copy?.primaryTexts?.[0] || c.copy?.primaryText || `${c.product || 'CAROTA'} — shop now`);
-      const creative = await meta.createSingleImageCreative({
-        name: `${c.product || 'CAROTA'} · ${c.angle}`, imageHash: imgHash, link, message,
+      const creative = await meta.createPlacementImageCreative({
+        name: `${c.product || 'CAROTA'} · ${c.angle}`, storyHash, feedHash, link, messages: [message],
       });
       const ad = await meta.createAd({ name: `${c.product} · ${c.angle}`, adsetId: adSet.id, creativeId: creative.id });
       ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: c._id, product: c.product, link, format: 'single' });
