@@ -6,22 +6,13 @@ import { judgeHookFidelity } from './judge.js';
 
 // Estilos de fuente/diseño BASE — alineados a la identidad CAROTA (blackletter/gótico,
 // como el wordmark). El director explora nuevos PERO siempre on-brand (street/gótico).
+// El usuario eligió ESTA fuente: condensada bold tipo "LIGHT. LOOSE." (Anton/Archivo Black).
+// Es la única — sin rotación ni exploración (se puede re-activar si quiere testear más).
 const FONT_STYLES = [
-  { tag: 'blackletter', desc: 'a CLEAN classic BLACKLETTER / Old-English typeface exactly like the elegant CAROTA wordmark — solid, balanced, refined and legible (NOT a spiky death-metal gothic)' },
-  { tag: 'condensed-bold', desc: 'a HEAVY CONDENSED SANS-SERIF UPPERCASE (Anton / Archivo Black), bold confident streetwear impact' },
-  { tag: 'wide-heavy', desc: 'a bold WIDE / EXTENDED heavy grotesque sans-serif, modern premium streetwear, strong presence' },
-  { tag: 'varsity', desc: 'a collegiate VARSITY block-letter style with a subtle outline, clean street energy' },
+  { tag: 'condensed-bold', desc: 'a HEAVY CONDENSED SANS-SERIF UPPERCASE, exactly like a bold "LIGHT. LOOSE." ad headline (Anton / Archivo Black) — thick, tall, tightly stacked lines, off-white with a subtle soft shadow, premium streetwear' },
 ];
-// round-robin con arranque aleatorio; cada 5ta vez explora un estilo NUEVO (inventado).
-let _fontIdx = Math.floor(Math.random() * FONT_STYLES.length);
-let _calls = 0;
 async function pickFontStyle() {
-  _calls++;
-  if (_calls % 5 === 0) { // explore
-    const inv = await inventFontStyle();
-    if (inv) return inv;
-  }
-  return FONT_STYLES[_fontIdx++ % FONT_STYLES.length]; // exploit (rota los base)
+  return FONT_STYLES[0];
 }
 
 // Decide el HOOK (texto + fuente) ANTES de generar -> para bakearlo en la misma pasada.
