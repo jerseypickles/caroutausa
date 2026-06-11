@@ -169,8 +169,9 @@ const BRAND_SAFE = `BRAND-SAFE TOP: the top / upper clothing (tee, hoodie, knit,
 
 // Instrucción del HOOK para bakearlo EN la misma generación (una sola pasada). El texto
 // va en el espacio negativo, NUNCA sobre la cara ni sobre el short (no lo altera).
-export function hookOverlay({ hookLine, callout, fontDesc } = {}) {
-  if (!hookLine) return '';
+export function hookOverlay(spec) {
+  if (!spec || !spec.hookLine) return ''; // null-safe (el default {} no cubre null)
+  const { hookLine, callout, fontDesc } = spec;
   return `\n\nTEXT OVERLAY (part of the composition, like a high-end DTC ad): place a clean premium typographic overlay in the EMPTY negative space — NEVER over the model's face or over the denim shorts, and it must NOT change the shorts in any way. (1) the HOOK "${hookLine}" set in ${fontDesc}, color chosen to contrast its background with a subtle soft shadow, perfectly spelled and razor-sharp. (2) small and light just below: "${callout}" in a THIN uppercase sans-serif, generous letter-spacing, muted grey. Minimal, editorial, lots of breathing room.`;
 }
 
