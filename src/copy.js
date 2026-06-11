@@ -58,6 +58,24 @@ export async function generateHook({ product, wash }) {
   }
 }
 
+// EXPLORACIÓN: el director inventa un estilo de fuente/diseño NUEVO para el hook (más allá
+// de los 4 base), para seguir descubriendo qué rinde. Devuelve { tag, desc }.
+export async function inventFontStyle() {
+  try {
+    const r = await client.chat.completions.create({
+      model: config.judgeModel,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: 'You are an art director inventing a fresh TYPOGRAPHY treatment for a streetwear ad text-overlay. Be specific and renderable by an image model.' },
+        { role: 'user', content: 'Invent ONE distinctive font/design treatment for an ad hook (different from: heavy condensed sans, clean grotesque, high-fashion serif, graffiti handstyle). Return ONLY JSON {"tag":"short-kebab-slug","desc":"one concrete sentence describing the typeface style, weight, case and any treatment (outline, chrome, sticker, retro, etc.) — renderable, legible, premium"}.' },
+      ],
+    });
+    const j = JSON.parse(r.choices?.[0]?.message?.content || '{}');
+    if (!j.tag || !j.desc) return null;
+    return { tag: 'x-' + String(j.tag).toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20), desc: String(j.desc).slice(0, 200) };
+  } catch (e) { console.error('[copy] inventFontStyle:', e.message); return null; }
+}
+
 // Genera copy nativo (varias variaciones) para un creative.
 export async function generateCopy({ product, wash, angle, description }) {
   const ctx = [

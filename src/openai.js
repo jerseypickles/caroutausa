@@ -40,12 +40,12 @@ const HOOK_STYLE = `Add a clean, premium TEXT OVERLAY to this streetwear fitpic 
 
 // Agrega el HOOK de texto sobre una imagen YA generada (story 9:16 o square 1:1).
 // pngBuffer: la foto base en PNG. Devuelve b64 (webp) de la version con hook.
-export async function addHookOverlay(pngBuffer, { hook, callout, size = STORY_SIZE }) {
+export async function addHookOverlay(pngBuffer, { hook, callout, size = STORY_SIZE, fontDesc = 'a HEAVY CONDENSED SANS-SERIF UPPERCASE font (Anton / Archivo Black style)' }) {
   const src = await toFile(pngBuffer, 'src.png', { type: 'image/png' });
   const prompt = `${HOOK_STYLE}
 
 Text to add — ONLY these two elements (NO prices, NO discount codes, NO buttons, NO other text):
-1) A bold benefit HOOK in an open area, on up to two short lines: "${hook}" — in a HEAVY CONDENSED SANS-SERIF UPPERCASE font (Anton / Archivo Black style), tight leading, color chosen to contrast its background (off-white over darker areas, charcoal over light areas) with a subtle soft shadow for legibility.
+1) A bold HOOK in an open area, on up to two short lines: "${hook}" — set in ${fontDesc}. Color chosen to contrast its background (off-white over darker areas, charcoal over light areas) with a subtle soft shadow for legibility.
 2) Small and light, just below the hook: "${callout}" in a THIN uppercase sans-serif, generous letter-spacing, muted grey.
 
 Minimal, editorial, lots of breathing room. Like a designer made it.`;

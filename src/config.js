@@ -14,6 +14,7 @@ export const config = {
   mongoUri: required('MONGODB_URI'),
   imageModel: process.env.IMAGE_MODEL || 'gpt-image-2',
   realismPass: process.env.REALISM_PASS !== 'false', // pase de grano/tono organico (default ON)
+  hookAuto: process.env.HOOK_AUTO !== 'false', // genera la variante con hook auto en cada creativo (default ON)
   judgeModel: process.env.JUDGE_MODEL || 'gpt-5.1',
   // Director creativo (Anthropic): genera los prompts de imagen dinamicamente.
   // Las imagenes las sigue haciendo gpt-image. Opcional: sin key, cae al prompt fijo.

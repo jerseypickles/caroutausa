@@ -47,10 +47,10 @@ export async function syncCreativeMetrics() {
 // APRENDIZAJE: agrupa los creativos QUE YA CORRIERON por cada dimensión de su ADN
 // (escena, casting, ángulo, wash, formato) y calcula el CTR/CPA promedio ponderado ->
 // leaderboard de qué atributo gana.
-const DIMS = ['sceneTag', 'castTag', 'angle', 'wash', 'format'];
+const DIMS = ['sceneTag', 'castTag', 'angle', 'wash', 'format', 'fontTag'];
 export async function learningReport() {
   const [cs, ks] = await Promise.all([
-    Creative.find({ 'metrics.impressions': { $gt: 0 } }).select('sceneTag castTag angle wash format metrics').lean(),
+    Creative.find({ 'metrics.impressions': { $gt: 0 } }).select('sceneTag castTag angle wash format fontTag metrics').lean(),
     Carousel.find({ 'metrics.impressions': { $gt: 0 } }).select('sceneTag castTag wash metrics').lean(),
   ]);
   const items = [

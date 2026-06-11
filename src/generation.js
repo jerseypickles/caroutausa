@@ -5,6 +5,7 @@ import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
 import { directCreative } from './director.js';
 import { pickScene } from './refs.js';
+import { generateHookForCreative } from './hook.js';
 import { logActivity } from './models/activity.js';
 import { config } from './config.js';
 
@@ -48,6 +49,13 @@ export async function generateInBackground(creativeId, imageUrl, angleId, refere
     await Creative.findByIdAndUpdate(creativeId, { imageData: b64, feedImageData: feedB64, squareImageData: squareB64, genStatus: 'ready', genError: null });
     const d = await Creative.findById(creativeId).select('product').lean();
     logActivity('single', `Single listo (${angleId}) de ${d?.product || ''}`, { product: d?.product || '', refId: String(creativeId), level: 'ok' });
+    // Variante con HOOK (director del hook: rota/explora fuentes, + check de fidelidad).
+    // Fire-and-forget: no bloquea que el creativo ya esté listo en la cola.
+    if (config.hookAuto) {
+      generateHookForCreative(creativeId)
+        .then((r) => logActivity('single', `Hook (${r?.fontTag || '?'}) ${r?.discarded ? 'descartado (fidelidad)' : 'listo'} de ${d?.product || ''}`, { product: d?.product || '', refId: String(creativeId), level: r?.discarded ? 'warn' : 'ok' }))
+        .catch((e) => console.error(`[gen] hook auto (${creativeId}):`, e.message));
+    }
   } catch (err) {
     console.error(`[gen] fallo angulo ${angleId} (${creativeId}):`, err.message);
     await Creative.findByIdAndUpdate(creativeId, { genStatus: 'failed', genError: err.message, fidelityStatus: 'failed' });

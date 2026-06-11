@@ -39,6 +39,7 @@ const creativeSchema = new Schema(
     hookImageData: { type: String, default: null, select: false },       // 9:16 con hook
     hookSquareImageData: { type: String, default: null, select: false }, // 1:1 con hook
     hookLine: { type: String, default: null },                            // el texto del hook
+    fontTag: { type: String, default: null, index: true },                // ADN: estilo de fuente/diseño del hook (para aprender cuál rinde)
 
     // --- estado de generacion (async) ---
     genStatus: {

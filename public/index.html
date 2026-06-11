@@ -1052,8 +1052,8 @@ function tilePlaceholder(text, spin) {
 function setPlacement(btn, id, p) {
   const box = btn.closest('.imgbox');
   const img = box.querySelector('img');
-  box.classList.remove('ph-story', 'ph-feed'); box.classList.add('ph-' + p);
-  img.src = p === 'feed' ? `/api/creatives/${id}/image?p=feed` : `/api/creatives/${id}/image`;
+  box.classList.remove('ph-story', 'ph-feed'); box.classList.add('ph-' + (p === 'hook' ? 'story' : p));
+  img.src = p === 'feed' ? `/api/creatives/${id}/image?p=feed` : p === 'hook' ? `/api/creatives/${id}/hook-image` : `/api/creatives/${id}/image`;
   box.querySelectorAll('.phtoggle button').forEach(b => b.classList.toggle('on', b === btn));
 }
 function openZoom(src) { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').classList.add('on'); }
@@ -1123,6 +1123,7 @@ function singleTile(c) {
     <div class="phtoggle">
       <button class="on" onclick="event.stopPropagation();setPlacement(this,'${c._id}','story')">9:16</button>
       <button onclick="event.stopPropagation();setPlacement(this,'${c._id}','feed')">4:5</button>
+      ${c.hookLine ? `<button onclick="event.stopPropagation();setPlacement(this,'${c._id}','hook')" title="${esc(c.hookLine)} · ${c.fontTag||''}">✍️ hook</button>` : ''}
     </div>
     ${c.hasReference ? `<img class="refov" src="/api/creatives/${c._id}/reference" onclick="event.stopPropagation();openZoom('/api/creatives/${c._id}/reference')" title="Referencia de estilo usada" alt="ref" />` : ''}</div>`;
   const canQc = c.genStatus === 'ready' && c.qcStatus === 'generated';
@@ -1698,7 +1699,7 @@ async function toggleAds(id, btn) {
 }
 
 /* ===== APRENDIZAJE ===== */
-const DIM_LBL = { sceneTag: '🌊 Escena', castTag: '🧑 Casting', angle: '🎬 Ángulo', wash: '👖 Wash', format: '🖼 Formato' };
+const DIM_LBL = { sceneTag: '🌊 Escena', castTag: '🧑 Casting', angle: '🎬 Ángulo', wash: '👖 Wash', format: '🖼 Formato', fontTag: '🔤 Fuente/diseño' };
 let learnPoll = null;
 // Abre el tab: sincroniza una vez y queda auto-actualizándose (sin tocar nada).
 async function openLearning() {
