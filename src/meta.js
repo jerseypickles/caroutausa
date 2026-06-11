@@ -295,14 +295,17 @@ export async function exchangeLongLived() {
   return { token: r.access_token, expiresInDays: r.expires_in ? Math.round(r.expires_in / 86400) : null, type: r.token_type };
 }
 
-// Parsea actions de Meta a ATC / compras.
+// Parsea actions de Meta a ATC / compras. OJO: Meta devuelve el MISMO evento bajo varios
+// action_type (add_to_cart, offsite_conversion.fb_pixel_add_to_cart, omni_add_to_cart…).
+// Si sumás todos, contás 2-3x el mismo carrito. Elegimos UN action_type canónico por métrica.
 export function parseActions(row) {
-  const out = { addToCart: 0, purchases: 0 };
-  for (const a of row?.actions || []) {
-    if (/add_to_cart/.test(a.action_type)) out.addToCart += Number(a.value) || 0;
-    if (/purchase/.test(a.action_type)) out.purchases += Number(a.value) || 0;
-  }
-  return out;
+  const byType = {};
+  for (const a of row?.actions || []) byType[a.action_type] = Number(a.value) || 0;
+  const pick = (types) => { for (const t of types) if (byType[t] != null) return byType[t]; return 0; };
+  return {
+    addToCart: pick(['omni_add_to_cart', 'offsite_conversion.fb_pixel_add_to_cart', 'add_to_cart', 'web_add_to_cart']),
+    purchases: pick(['omni_purchase', 'offsite_conversion.fb_pixel_purchase', 'purchase', 'web_purchase']),
+  };
 }
 
 function normInsights(row) {
