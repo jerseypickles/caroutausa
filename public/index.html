@@ -604,12 +604,18 @@
 
     <!-- REFERENCIAS -->
     <section class="view" id="view-referencias">
-      <div class="secthead"><h2>Referencias de estilo</h2><span class="muted">Las activas se usan al generar. La receta toma las 2 más recientes.</span></div>
+      <div class="secthead">
+        <div><h2>Referencias de estilo</h2><span class="muted">El jean se mantiene; outfit · pose · escena · vibe se inspiran de tus refs (rotación variada, no siempre la misma).</span></div>
+        <span style="flex:1"></span>
+        <span class="muted" id="refStats" style="font-size:12px"></span>
+        <button class="btn ghost sm" onclick="loadReferences()" title="Recargar la lista">↻ Actualizar</button>
+        <button class="btn ghost sm" onclick="reextractAll(this)" title="Re-analizar el ADN de todas">🔁 Re-analizar todas</button>
+      </div>
       <input type="file" id="refInput" accept="image/*" hidden multiple onchange="onRefSelected(event)" />
       <div class="dropzone" id="dropzone" onclick="document.getElementById('refInput').click()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
         <div style="font-weight:600;color:var(--text)">Arrastrá pins acá o hacé clic para subir</div>
-        <div style="font-size:12px">Podés soltar varias imágenes. El jean se mantiene; el outfit, zapatillas y vibe se copian de la referencia.</div>
+        <div style="font-size:12px">El jean se mantiene; outfit, zapatillas, accesorios y vibe se inspiran de la ref. Tip: en cada ref podés marcar VARIOS tipos (outfit + pose…).</div>
       </div>
       <div class="refgrid" id="refgrid"></div>
     </section>
@@ -905,7 +911,26 @@ async function loadReferences() {
   document.getElementById('kRefs').textContent = data.activeCount;
   const grid = document.getElementById('refgrid');
   grid.innerHTML = references.length ? references.map(refCard).join('') : '<div class="empty">Sin referencias todavía. Subí tu primer pin arriba.</div>';
+  // Stats: total + por tipo (multi-tag, una ref puede contar en varios).
+  const stat = document.getElementById('refStats');
+  if (stat) {
+    const c = { outfit: 0, scene: 0, pose: 0 };
+    references.forEach((rf) => refTypes(rf).forEach((t) => { if (c[t] != null) c[t]++; }));
+    stat.textContent = `${references.length} refs · 👕 ${c.outfit} · 🌊 ${c.scene} · 🧍 ${c.pose}`;
+  }
   if (refModalId) { const rr = references.find((x) => x._id === refModalId); if (rr) document.getElementById('refModalBody').innerHTML = refModalHtml(rr); else closeRefModal(); }
+}
+// Re-analiza el ADN de TODAS las refs (una por una, con progreso).
+async function reextractAll(btn) {
+  if (!references.length) return;
+  const orig = btn.textContent; btn.disabled = true;
+  let done = 0;
+  for (const rf of references) {
+    btn.textContent = `Re-analizando ${++done}/${references.length}…`;
+    try { await fetch(`/api/references/${rf._id}/reextract`, { method: 'POST' }); } catch (e) {}
+  }
+  btn.textContent = orig; btn.disabled = false;
+  toast('Re-analizadas ' + done + ' refs'); loadReferences();
 }
 // types de una ref (multi-tag, con compat al campo legacy `type`).
 function refTypes(ref) { return (ref.types && ref.types.length) ? ref.types : (ref.type ? [ref.type] : ['outfit']); }
