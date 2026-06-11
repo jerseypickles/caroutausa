@@ -11,9 +11,9 @@ const openai = new OpenAI({ apiKey: config.openaiApiKey });
 // un brief para el director. Cada tipo captura su dimensión.
 const EXTRACT = {
   outfit: {
-    sys: `You are a streetwear stylist for a youth/street brand. Look at this fitpic and extract its STYLE DNA as GUIDANCE (not a literal copy). Capture what makes the look — the lane/vibe, the top type, the SNEAKERS, the ACCESSORIES, the model's vibe/energy (e.g. moreno street, clean prep), and the palette. Ignore the bottoms (we use our own denim shorts) and the background.`,
-    ask: 'Return ONLY JSON with short values: {"lane":"the vibe/caliber + the kinds of brands","top":"top/layer type (no need to copy logos)","sneakers":"the sneakers you see (brand+colorway)","accessories":"caps, chains, socks, watch, etc.","vibe":"the model energy/casting vibe (e.g. moreno youthful street, clean minimal)","palette":"main colors","family":"classify the lane into ONE word: edge (grunge/street/gangster/tattoo/Y2K-skater), clean (luxury-street/prep/minimal/elevated), or versatile (mid casual everyday)"}',
-    fields: ['lane', 'top', 'sneakers', 'accessories', 'vibe', 'palette'],
+    sys: `You are a streetwear stylist for a youth/street brand. Look at this fitpic and extract its STYLE DNA as GUIDANCE (not a literal copy). Capture what makes the look — the lane/vibe, the top type, the FIT/SILHOUETTE, the SNEAKERS, the ACCESSORIES, the model's vibe/energy (e.g. moreno street, clean prep), and the palette. Ignore the bottoms (we use our own denim shorts) and the background.`,
+    ask: 'Return ONLY JSON with short values: {"lane":"the vibe/caliber + the kinds of brands","top":"top/layer type (no need to copy logos)","fit":"the SILHOUETTE/FIT of the top and overall look — e.g. fitted/slim, regular, oversized/boxy, or baggy/relaxed","sneakers":"the sneakers you see (brand+colorway)","accessories":"caps, chains, socks, watch, bag, etc.","vibe":"the model energy/casting vibe (e.g. moreno youthful street, clean minimal)","palette":"main colors","family":"classify the lane into ONE word: edge (grunge/street/gangster/tattoo/Y2K-skater), clean (luxury-street/prep/minimal/elevated), or versatile (mid casual everyday)"}',
+    fields: ['lane', 'top', 'fit', 'sneakers', 'accessories', 'vibe', 'palette'],
   },
   scene: {
     sys: `You are a photographer. Look ONLY at the LOCATION / SCENE and its light & mood (NOT the person, outfit, pose or product). Capture it as a brief to recreate a similar setting.`,
