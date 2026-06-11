@@ -5,6 +5,7 @@ import { Product } from './models/product.js';
 import { judgeFidelity } from './judge.js';
 import { generateCopy } from './copy.js';
 import { directCreative } from './director.js';
+import { planHook } from './hook.js';
 import { pickScene } from './refs.js';
 import { config } from './config.js';
 
@@ -32,6 +33,7 @@ and color grading as the second image — like another photo taken the same minu
 place, same person.
 NOW change to a CLEARLY DIFFERENT shot: ${poseBrief || 'a new pose and camera angle'}.
 It must read as a distinct frame in the sequence, not a near-duplicate of the others.
+Do NOT include ANY text or typography overlay — keep this photo completely CLEAN (any text from the source frame belongs only on the first card).
 ${productDescription ? `\nThe product to preserve exactly: ${productDescription}` : ''}
 
 ${IPHONE}`;
@@ -48,6 +50,7 @@ on the shorts on the model's lower body (waist-to-knee), filling most of the fra
 a phone photo zoomed in to show the fit and fabric. Show the real denim texture and wash,
 the raw cutoff frayed hem, the stitching, pockets and any hardware up close and sharp.
 Same mood and color grading as the second image. It is the SAME shorts, just closer.
+Do NOT include ANY text or typography overlay — keep this photo completely CLEAN.
 ${productDescription ? `\nThe product: ${productDescription}` : ''}
 
 ${IPHONE}`;
@@ -62,7 +65,12 @@ export async function generateCarousel({ imageUrl, productBackUrl = '', productD
   const scene = await pickScene().catch(() => null);
   const dir = await directCreative({ product, wash, angle: 'realista', refDna, sceneDna: scene?.dna || '', mode: 'carouselHero' });
   const creativeDirection = dir?.text || '';
-  const hero = await generateVariant({ imageUrl, productBackUrl, angleId: 'realista', productDescription, creativeDirection, fitSpec });
+  // HOOK bakeado SOLO en el HERO (la 1ra card, el scroll-stopper). Las poses/close-up van limpias.
+  let hookSpec = null;
+  if (config.hookAuto) {
+    try { hookSpec = await planHook({ product, wash, fitSpec }); } catch (e) { console.error('[carousel] planHook:', e.message); }
+  }
+  const hero = await generateVariant({ imageUrl, productBackUrl, angleId: 'realista', productDescription, creativeDirection, fitSpec, hookSpec });
   const heroB64 = hero.b64;
 
   // 2. Set TIGHT (max 3): hero (look completo) + N poses + 1 close-up del short.
@@ -79,6 +87,7 @@ export async function generateCarousel({ imageUrl, productBackUrl = '', productD
   out.push({ role: 'detail', b64: close.b64 });
 
   out.castTag = dir?.castTag; out.sceneTag = dir?.sceneTag; // ADN para aprendizaje
+  out.hookLine = hookSpec?.hookLine || null; out.fontTag = hookSpec?.fontTag || null;
   return out;
 }
 
@@ -113,6 +122,7 @@ export async function generateCarouselInBackground(carouselId) {
   await Carousel.findByIdAndUpdate(carouselId, {
     cards: cards.map((c, i) => ({ role: c.role, order: i, imageData: c.b64 })),
     castTag: cards.castTag, sceneTag: cards.sceneTag,
+    hookLine: cards.hookLine, fontTag: cards.fontTag,
     genStatus: 'ready',
   });
 

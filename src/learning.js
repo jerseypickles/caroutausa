@@ -54,7 +54,7 @@ const MIN_IMPR = 80;
 export async function learningReport() {
   const [cs, ks] = await Promise.all([
     Creative.find({ 'metrics.impressions': { $gt: 0 } }).select('sceneTag castTag angle wash format fontTag metrics').lean(),
-    Carousel.find({ 'metrics.impressions': { $gt: 0 } }).select('sceneTag castTag wash metrics').lean(),
+    Carousel.find({ 'metrics.impressions': { $gt: 0 } }).select('sceneTag castTag wash fontTag metrics').lean(),
   ]);
   const items = [
     ...cs.map((c) => ({ ...c, format: c.format || 'single' })),
