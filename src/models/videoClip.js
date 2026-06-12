@@ -70,6 +70,10 @@ const videoClipSchema = new Schema(
       edited: { type: Boolean, default: false },
     },
 
+    // EDIT multi-clip (cortes rápidos cambiando jeans). Se arma a partir de clips ya listos.
+    isEdit: { type: Boolean, default: false, index: true },
+    editFrom: { type: [String], default: [] }, // ids de los clips fuente
+
     qcStatus: { type: String, enum: ['generated', 'approved', 'rejected'], default: 'generated', index: true },
     metaAdId: { type: String, default: null },       // ad de Meta (si se lanzó)
     metaCampaignId: { type: String, default: null }, // campaña de Meta

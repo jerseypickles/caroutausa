@@ -771,6 +771,7 @@
         <span style="flex:1"></span>
         <span class="muted" id="videoApi" style="font-size:12px"></span>
         <button class="btn ghost sm" onclick="loadVideo()" title="Actualizar">↻</button>
+        <button class="btn ghost sm" onclick="makeEdit(this)" title="Edit de cortes rápidos cambiando jeans (prueba)">🎬 Edit prueba</button>
         <button class="btn sm" onclick="newVideoClip(this)">+ Nuevo clip</button>
       </div>
       <div class="vsec">
@@ -1118,6 +1119,7 @@ function vPipeCard(c) {
   return `<div class="vpcard"><div class="vpimg"><span class="vpstage">${VPSTG[c.stage] || c.stage}</span>${media}</div><div class="vpb"><div class="vpt">${esc((c.product || '').replace(' Denim Short', ''))}</div><div class="vpm">${info}</div></div><div class="vpacts">${acts}</div></div>`;
 }
 async function newVideoClip(btn) { btn.disabled = true; btn.textContent = '…'; try { await fetch('/api/video/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); toast('Generando frames…'); loadVideo(); } finally { btn.disabled = false; btn.textContent = '+ Nuevo clip'; } }
+async function makeEdit(btn) { btn.disabled = true; const t = btn.textContent; btn.textContent = '🎬 armando…'; try { const r = await fetch('/api/video/edit-test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then((x) => x.json()); toast(r.error || `Armando edit con ${r.sources} jeans… (~40s, aparece como “EDIT · jeans cambiando”)`); loadVideo(); } finally { btn.disabled = false; btn.textContent = t; } }
 async function vAct(id, act, btn) { if (btn) btn.disabled = true; await fetch(`/api/video/${id}/${act}`, { method: 'POST' }); loadVideo(); }
 async function vDel(id) { if (!confirm('¿Borrar clip?')) return; await fetch(`/api/video/${id}`, { method: 'DELETE' }); loadVideo(); }
 async function vAnimate(id, btn) { btn.disabled = true; btn.textContent = '…'; const r = await fetch(`/api/video/${id}/animate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset: videoPresets[0] || 'mirror-sway' }) }).then((x) => x.json()); toast(r.error || 'Animando con Seedance…'); loadVideo(); }

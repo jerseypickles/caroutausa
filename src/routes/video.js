@@ -4,6 +4,7 @@ import { Product } from '../models/product.js';
 import { pickRefs } from '../refs.js';
 import { generateVideoFrames, animateClip, finishAnimation, MOTION_PRESETS } from '../video.js';
 import { overlayHookVideo } from '../videoproc.js';
+import { buildJeansEdit } from '../videoedit.js';
 import { piapiConfigured } from '../piapi.js';
 import * as meta from '../meta.js';
 import { MetaCampaign } from '../models/metaCampaign.js';
@@ -82,6 +83,47 @@ videoRouter.get('/video/:id/video', async (req, res) => {
     return res.redirect(doc.videoUrl);
   }
   res.status(404).json({ error: 'Sin video' });
+});
+
+// PROTOTIPO Edit Builder: arma un edit de cortes rápidos cambiando jeans a partir de clips ya
+// listos (de washes distintos), con beat sintetizado + hook. Background (ffmpeg tarda ~40s).
+videoRouter.post('/video/edit-test', async (req, res) => {
+  const { clipIds, hookLine, callout, bpm } = req.body || {};
+  // Elige clips listos con video; prioriza washes DISTINTOS para que se note el cambio de jean.
+  const q = { stage: 'ready', isEdit: { $ne: true }, videoData: { $ne: null } };
+  if (Array.isArray(clipIds) && clipIds.length) q._id = { $in: clipIds };
+  const ready = await VideoClip.find(q).sort({ createdAt: -1 }).select('+videoData wash product callout').limit(40).lean();
+  if (ready.length < 2) return res.status(400).json({ error: 'Necesito al menos 2 videos listos' });
+  // dedupe por wash (1 por wash) hasta 5; si faltan, completa con los demás.
+  const seen = new Set(); const picked = [];
+  for (const c of ready) { const w = c.wash || c._id; if (!seen.has(w)) { seen.add(w); picked.push(c); } if (picked.length >= 5) break; }
+  for (const c of ready) { if (picked.length >= 5) break; if (!picked.find((p) => String(p._id) === String(c._id))) picked.push(c); }
+  const sources = picked.slice(0, 5);
+
+  const edit = await VideoClip.create({
+    isEdit: true, editFrom: sources.map((c) => String(c._id)),
+    product: 'EDIT · jeans cambiando', wash: 'multi',
+    hookLine: hookLine || 'WHICH WASH?', callout: callout || `${sources.length} FITS · CAROTA`,
+    motionPreset: 'multi-edit', stage: 'animating', genStatus: 'generating', duration: 11,
+  });
+  res.status(201).json({ id: edit._id, status: 'building', sources: sources.length });
+
+  // build en background
+  (async () => {
+    try {
+      const clips = sources.map((c) => ({ buffer: Buffer.from(c.videoData, 'base64'), wash: c.wash }));
+      const r = await buildJeansEdit({
+        clips, hookLine: edit.hookLine, callout: edit.callout, bpm: Number(bpm) || 100, targetSec: 11,
+      });
+      await VideoClip.findByIdAndUpdate(edit._id, {
+        videoData: r.buffer.toString('base64'), duration: r.duration, stage: 'ready', genStatus: 'ready',
+      });
+      console.log(`[edit] listo ${edit._id}: ${r.segments} cortes, ${r.duration}s, ${r.bpm}bpm`);
+    } catch (e) {
+      await VideoClip.findByIdAndUpdate(edit._id, { stage: 'failed', genStatus: 'failed', error: e.message });
+      console.error('[edit] fallo:', e.message);
+    }
+  })();
 });
 
 // Curar: pasa de frames -> curated (gate humano antes de gastar Seedance).
