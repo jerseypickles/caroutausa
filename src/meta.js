@@ -333,9 +333,11 @@ export function parseActions(row) {
   const byType = {};
   for (const a of row?.actions || []) byType[a.action_type] = Number(a.value) || 0;
   const pick = (types) => { for (const t of types) if (byType[t] != null) return byType[t]; return 0; };
+  // Orden: el PIXEL web primero (matchea las órdenes de Shopify 1:1), luego el 'purchase' unificado
+  // (deduplicado por Meta), y omni al final (agrega app/offline, puede sobrecontar en multicanal).
   return {
-    addToCart: pick(['omni_add_to_cart', 'offsite_conversion.fb_pixel_add_to_cart', 'add_to_cart', 'web_add_to_cart']),
-    purchases: pick(['omni_purchase', 'offsite_conversion.fb_pixel_purchase', 'purchase', 'web_purchase']),
+    addToCart: pick(['offsite_conversion.fb_pixel_add_to_cart', 'add_to_cart', 'omni_add_to_cart', 'web_add_to_cart']),
+    purchases: pick(['offsite_conversion.fb_pixel_purchase', 'purchase', 'omni_purchase', 'web_purchase']),
   };
 }
 

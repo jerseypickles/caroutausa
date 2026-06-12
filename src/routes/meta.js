@@ -36,15 +36,9 @@ async function toJpgB64(src) {
 const storyB64 = (c) => toJpgB64(c.hookImageData || c.imageData);                              // 9:16 (hook si existe)
 const feedB64 = (c) => toJpgB64(c.hookSquareImageData || c.squareImageData || c.feedImageData || c.imageData); // 1:1 (hook si existe)
 
-// Parsea las actions de insights de Meta a numeros utiles.
-function parseActions(row) {
-  const out = { addToCart: 0, purchases: 0 };
-  for (const a of row?.actions || []) {
-    if (/add_to_cart/.test(a.action_type)) out.addToCart += Number(a.value) || 0;
-    if (/purchase/.test(a.action_type)) out.purchases += Number(a.value) || 0;
-  }
-  return out;
-}
+// NOTA: el parseo de actions vive en meta.js (meta.parseActions) y elige UN action_type canónico.
+// Antes había acá un duplicado que SUMABA todos los tipos /purchase/ y /add_to_cart/ -> inflaba
+// (1 venta real aparecía como 8, porque Meta devuelve el mismo evento bajo 8 action_types).
 
 // GET /api/meta/status -> esta configurado Meta?
 metaRouter.get('/meta/status', (_req, res) => {
@@ -349,7 +343,7 @@ metaRouter.get('/meta/campaigns/:id/insights', async (req, res) => {
   if (!doc) return res.status(404).json({ error: 'No encontrada' });
   try {
     const row = await meta.getInsights(doc.campaignId);
-    const acts = parseActions(row);
+    const acts = meta.parseActions(row);
     doc.insights = {
       impressions: Number(row?.impressions) || 0,
       clicks: Number(row?.clicks) || 0,
