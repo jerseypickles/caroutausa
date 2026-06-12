@@ -138,6 +138,7 @@
   .vrm { font-size: 11px; opacity: .85; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .vrqc { position: absolute; top: 9px; left: 9px; background: rgba(26,143,74,.94); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 7px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
   .vrmeta { position: absolute; top: 32px; left: 9px; background: rgba(20,22,26,.86); color: #fff; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 7px; }
+  .vrmeta.acc { background: rgba(63,106,255,.92); }
   .vract { position: absolute; top: 9px; right: 9px; display: flex; gap: 6px; opacity: 0; transition: opacity .15s; }
   .vrcard:hover .vract { opacity: 1; }
   .vract a, .vract button { background: rgba(255,255,255,.94); border: none; border-radius: 8px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; text-decoration: none; color: #14161a; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
@@ -784,6 +785,9 @@
         <div class="lmstep"><label>Carruseles</label>
           <div class="stepper"><button onclick="bumpQ('C',-1)">−</button><input id="qCarousels" type="number" value="0" min="0" oninput="renderLaunchPrev()"/><button onclick="bumpQ('C',1)">+</button></div>
           <span class="lmmax" id="maxC"></span></div>
+        <div class="lmstep"><label>🎬 Videos</label>
+          <div class="stepper"><button onclick="bumpQ('V',-1)">−</button><input id="qVideos" type="number" value="0" min="0" oninput="renderLaunchPrev()"/><button onclick="bumpQ('V',1)">+</button></div>
+          <span class="lmmax" id="maxV"></span></div>
         <div class="lmstep"><label>Presupuesto $/día</label>
           <div class="stepper"><button onclick="bumpB(-5)">−</button><input id="qBudget" type="number" value="30" min="1" oninput="renderLaunchPrev()"/><button onclick="bumpB(5)">+</button></div>
           <span class="lmmax">por ad set</span></div>
@@ -985,23 +989,19 @@ async function loadVideo() {
 // Card de VIDEO LISTO (galería): el mp4 reproduciéndose + hook + QC + acciones al hover.
 function vReadyCard(c) {
   const qc = c.videoQc && c.videoQc.fidelity != null ? `<span class="vrqc">QC ${c.videoQc.fidelity}</span>` : '';
-  const launched = c.metaAdId ? '<span class="vrmeta">🟢 en Meta (pausado)</span>' : '';
-  const launchBtn = c.metaAdId ? '' : `<button onclick="vLaunch('${c._id}',this)" title="Lanzar a Meta (campaña pausada)">🚀</button>`;
+  const accepted = c.metaAdId ? '<span class="vrmeta">🟢 en Meta</span>' : (c.qcStatus === 'approved' ? '<span class="vrmeta acc">✓ aceptado · en Ad Manager</span>' : '');
+  const acceptBtn = (c.metaAdId || c.qcStatus === 'approved') ? '' : `<button onclick="vAccept('${c._id}',this)" title="Aceptar → al Ad Manager para armar el adset">✓</button>`;
   return `<div class="vrcard">
     <video src="/api/video/${c._id}/video" muted loop autoplay playsinline preload="metadata"></video>
-    ${qc}${launched}
-    <div class="vract">${launchBtn}<a href="/api/video/${c._id}/video" target="_blank" title="Descargar mp4">⬇</a><button onclick="vDel('${c._id}')" title="Borrar">🗑</button></div>
+    ${qc}${accepted}
+    <div class="vract">${acceptBtn}<a href="/api/video/${c._id}/video" target="_blank" title="Descargar mp4">⬇</a><button onclick="vDel('${c._id}')" title="Borrar">🗑</button></div>
     <div class="vrover"><div class="vrt">${esc((c.product || '').replace(' Denim Short', ''))}</div><div class="vrm">${c.hookLine ? '“' + esc(c.hookLine) + '”' : 'fit-check'}</div></div>
   </div>`;
 }
-async function vLaunch(id, btn) {
-  if (!confirm('¿Lanzar este video a Meta?\n\nSe crea la campaña PAUSADA (con botón Comprar al producto). NO gasta hasta que la actives vos en Meta / Ad Manager.')) return;
-  btn.disabled = true; const orig = btn.textContent; btn.textContent = '⏳';
-  try {
-    const r = await fetch(`/api/video/${id}/launch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then((x) => x.json());
-    toast(r.error ? ('Error: ' + r.error) : '🚀 Lanzado (PAUSADO) — activalo en Meta cuando quieras');
-    loadVideo();
-  } catch (e) { toast('Error al lanzar'); } finally { btn.disabled = false; btn.textContent = orig; }
+async function vAccept(id, btn) {
+  btn.disabled = true; btn.textContent = '⏳';
+  try { await fetch(`/api/video/${id}/accept`, { method: 'POST' }); toast('✓ Aceptado — está en el Ad Manager para armar el adset'); loadVideo(); }
+  catch (e) { toast('Error'); btn.disabled = false; btn.textContent = '✓'; }
 }
 // Card de EN PROCESO (tira): thumbnail/estado + acciones según etapa.
 const VPSTG = { frames: '📸 Frames', curated: '⭐ Curado', animating: '🎬 Animando', qc: '🔍 QC', failed: '⚠️ Falló' };
@@ -1636,46 +1636,50 @@ async function loadEligible() {
 /* --- modal de lanzamiento --- */
 function singlesElig() { return eligItems.filter(i => i.type === 'single'); }
 function carouselsElig() { return eligItems.filter(i => i.type === 'carousel'); }
+function videosElig() { return eligItems.filter(i => i.type === 'video'); }
 function openLaunch() {
-  if (!eligItems.length) return toast('No hay piezas aprobadas — aprobá en la Cola de QC');
-  const s = singlesElig().length, c = carouselsElig().length;
-  document.getElementById('lmDetect').innerHTML = `Detectados <b>${s}</b> singles y <b>${c}</b> carruseles aprobados. Elegí cuántos incluir en el ad set.`;
-  const qs = document.getElementById('qSingles'), qc = document.getElementById('qCarousels');
-  qs.max = s; qs.value = s; qc.max = c; qc.value = c;
+  if (!eligItems.length) return toast('No hay piezas aprobadas — aprobá en la Cola de QC o aceptá videos en Video Sourcing');
+  const s = singlesElig().length, c = carouselsElig().length, v = videosElig().length;
+  document.getElementById('lmDetect').innerHTML = `Detectados <b>${s}</b> singles, <b>${c}</b> carruseles y <b>${v}</b> videos aprobados. Elegí cuántos incluir en el ad set.`;
+  const qs = document.getElementById('qSingles'), qc = document.getElementById('qCarousels'), qv = document.getElementById('qVideos');
+  qs.max = s; qs.value = s; qc.max = c; qc.value = c; qv.max = v; qv.value = v;
   document.getElementById('maxS').textContent = `máx ${s}`;
   document.getElementById('maxC').textContent = `máx ${c}`;
+  document.getElementById('maxV').textContent = `máx ${v}`;
   document.getElementById('launchModal').classList.add('open');
   renderLaunchPrev();
 }
 function closeLaunch() { document.getElementById('launchModal').classList.remove('open'); }
-function bumpQ(t, d) { const el = document.getElementById(t === 'S' ? 'qSingles' : 'qCarousels'); el.value = (Number(el.value) || 0) + d; renderLaunchPrev(); }
+function bumpQ(t, d) { const el = document.getElementById(t === 'S' ? 'qSingles' : (t === 'C' ? 'qCarousels' : 'qVideos')); el.value = Math.max(0, (Number(el.value) || 0) + d); renderLaunchPrev(); }
 function bumpB(d) { const el = document.getElementById('qBudget'); el.value = Math.max(1, (Number(el.value) || 25) + d); renderLaunchPrev(); }
 function pickItems() {
-  const sMax = singlesElig().length, cMax = carouselsElig().length;
+  const sMax = singlesElig().length, cMax = carouselsElig().length, vMax = videosElig().length;
   const ns = Math.max(0, Math.min(sMax, Number(document.getElementById('qSingles').value) || 0));
   const nc = Math.max(0, Math.min(cMax, Number(document.getElementById('qCarousels').value) || 0));
-  document.getElementById('qSingles').value = ns; document.getElementById('qCarousels').value = nc;
-  return { singles: singlesElig().slice(0, ns), carousels: carouselsElig().slice(0, nc), ns, nc };
+  const nv = Math.max(0, Math.min(vMax, Number(document.getElementById('qVideos').value) || 0));
+  document.getElementById('qSingles').value = ns; document.getElementById('qCarousels').value = nc; document.getElementById('qVideos').value = nv;
+  return { singles: singlesElig().slice(0, ns), carousels: carouselsElig().slice(0, nc), videos: videosElig().slice(0, nv), ns, nc, nv };
 }
 function renderLaunchPrev() {
-  const { singles, carousels, ns, nc } = pickItems();
-  const sel = [...singles, ...carousels];
+  const { singles, carousels, videos, ns, nc, nv } = pickItems();
+  const sel = [...singles, ...carousels, ...videos];
+  const total = ns + nc + nv;
   document.getElementById('lmPrevLbl').textContent = sel.length ? `Se van a lanzar:` : 'Elegí al menos una pieza.';
-  document.getElementById('lmPrev').innerHTML = sel.slice(0, 14).map(it => {
-    const img = it.type === 'carousel' ? `/api/carousels/${it.id}/cards/0/image` : `/api/creatives/${it.id}/image?p=square`;
-    return `<div class="lmthumb">${it.type === 'carousel' ? '<span class="lmcar">▦</span>' : ''}<img src="${img}" loading="lazy" alt=""/></div>`;
+  document.getElementById('lmPrev').innerHTML = sel.slice(0, 16).map(it => {
+    const img = it.type === 'carousel' ? `/api/carousels/${it.id}/cards/0/image` : (it.type === 'video' ? `/api/video/${it.id}/start-frame` : `/api/creatives/${it.id}/image?p=square`);
+    const tag = it.type === 'carousel' ? '<span class="lmcar">▦</span>' : (it.type === 'video' ? '<span class="lmcar">▶</span>' : '');
+    return `<div class="lmthumb">${tag}<img src="${img}" loading="lazy" alt=""/></div>`;
   }).join('');
   const b = Number(document.getElementById('qBudget').value) || 25;
-  document.getElementById('lmSummary').textContent = `${ns + nc} ad(s) en 1 ad set · $${b}/día · Compras`;
-  const lb = document.getElementById('lmLaunch'); if (lb) lb.disabled = !(ns + nc);
-  renderRec(ns, nc, b);
+  document.getElementById('lmSummary').textContent = `${total} ad(s) en 1 ad set · $${b}/día · Compras`;
+  const lb = document.getElementById('lmLaunch'); if (lb) lb.disabled = !total;
+  renderRec(total, b);
 }
 // Recomendacion para TRAFICO FRIO: 3-6 ads por ad set es el sweet spot (mas ads =
 // Meta reparte el budget muy fino y cuesta salir de aprendizaje). Y el budget tiene
 // que dar ~$8-10 por ad/dia.
-function renderRec(ns, nc, b) {
+function renderRec(total, b) {
   const box = document.getElementById('lmRec'); if (!box) return;
-  const total = ns + nc;
   const perAd = total ? b / total : 0;
   let state, head, sub;
   if (total === 0) { state = 'bad'; head = 'Elegí al menos 1 pieza'; sub = ''; }
@@ -1702,13 +1706,13 @@ function suggestMix() {
   renderLaunchPrev();
 }
 async function launchFromModal(btn) {
-  const { singles, carousels, ns, nc } = pickItems();
-  if (!ns && !nc) return toast('Elegí al menos una pieza');
+  const { singles, carousels, videos, ns, nc, nv } = pickItems();
+  if (!ns && !nc && !nv) return toast('Elegí al menos una pieza');
   const dailyBudget = Number(document.getElementById('qBudget').value) || 25;
-  if (!confirm(`Lanzar ${ns} single(s) + ${nc} carrusel(es) en un ad set, $${dailyBudget}/día, Compras?\n\nSe crea EN PAUSA — no gasta hasta que la actives.`)) return;
-  btn.disabled = true; btn.textContent = 'Lanzando…';
+  if (!confirm(`Lanzar ${ns} single(s) + ${nc} carrusel(es) + ${nv} video(s) en un ad set, $${dailyBudget}/día, Compras?\n\nSe crea EN PAUSA — no gasta hasta que la actives.${nv ? '\n(Los videos tardan ~1-2 min en subir a Meta.)' : ''}`)) return;
+  btn.disabled = true; btn.textContent = nv ? 'Subiendo videos…' : 'Lanzando…';
   try {
-    const r = await (await fetch('/api/meta/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dailyBudget, creativeIds: singles.map(i => i.id), carouselIds: carousels.map(i => i.id) }) })).json();
+    const r = await (await fetch('/api/meta/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dailyBudget, creativeIds: singles.map(i => i.id), carouselIds: carousels.map(i => i.id), videoIds: videos.map(i => i.id) }) })).json();
     if (r.error) toast(r.error);
     else { toast('Campaña creada en PAUSA ✓ · ' + (r.campaign?.name || '')); closeLaunch(); loadAdManager(); }
   } catch (e) { toast('Error lanzando la campaña'); }

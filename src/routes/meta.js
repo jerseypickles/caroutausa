@@ -2,6 +2,7 @@ import { Router } from 'express';
 import sharp from 'sharp';
 import { Creative } from '../models/creative.js';
 import { Carousel } from '../models/carousel.js';
+import { VideoClip } from '../models/videoClip.js';
 import { Product } from '../models/product.js';
 import { MetaCampaign } from '../models/metaCampaign.js';
 import { config } from '../config.js';
@@ -116,13 +117,15 @@ metaRouter.get('/meta/account-campaigns/:id/ads', async (req, res) => {
 
 // GET /api/meta/eligible -> singles Y carruseles aprobados, listos para anunciar
 metaRouter.get('/meta/eligible', async (_req, res) => {
-  const [singles, carousels] = await Promise.all([
+  const [singles, carousels, videos] = await Promise.all([
     Creative.find({ qcStatus: 'approved', genStatus: 'ready' }).sort({ updatedAt: -1 }).lean(),
     Carousel.find({ qcStatus: 'approved', genStatus: 'ready' }).sort({ updatedAt: -1 }).lean(),
+    VideoClip.find({ qcStatus: 'approved', stage: 'ready', metaAdId: null }).sort({ updatedAt: -1 }).lean(),
   ]);
   const items = [
     ...singles.map((c) => ({ id: String(c._id), type: 'single', product: c.product, angle: c.angle })),
     ...carousels.map((c) => ({ id: String(c._id), type: 'carousel', product: c.product, cards: (c.cards || []).length })),
+    ...videos.map((c) => ({ id: String(c._id), type: 'video', product: c.product, hookLine: c.hookLine })),
   ];
   res.json({ items, creatives: singles });
 });
@@ -136,7 +139,8 @@ metaRouter.post('/meta/launch', async (req, res) => {
   const body = req.body || {};
   const creativeIds = Array.isArray(body.creativeIds) ? body.creativeIds : [];
   const carouselIds = Array.isArray(body.carouselIds) ? body.carouselIds : [];
-  if (!creativeIds.length && !carouselIds.length) return res.status(400).json({ error: 'Elegí al menos una pieza' });
+  const videoIds = Array.isArray(body.videoIds) ? body.videoIds : [];
+  if (!creativeIds.length && !carouselIds.length && !videoIds.length) return res.status(400).json({ error: 'Elegí al menos una pieza' });
   const budget = Number(body.dailyBudget) || 25;
   const optimizationEvent = body.optimizationEvent || 'PURCHASE';
 
@@ -144,13 +148,16 @@ metaRouter.post('/meta/launch', async (req, res) => {
     ? await Creative.find({ _id: { $in: creativeIds }, genStatus: 'ready' }).select('+imageData +feedImageData +squareImageData +hookImageData +hookSquareImageData').lean() : [];
   const carousels = carouselIds.length
     ? await Carousel.find({ _id: { $in: carouselIds }, genStatus: 'ready' }).select('+cards.imageData').lean() : [];
-  if (!singles.length && !carousels.length) return res.status(400).json({ error: 'Sin piezas validas' });
+  const videos = videoIds.length
+    ? await VideoClip.find({ _id: { $in: videoIds }, stage: 'ready' }).select('shopifyProductId product hookLine').lean() : [];
+  if (!singles.length && !carousels.length && !videos.length) return res.status(400).json({ error: 'Sin piezas validas' });
 
   // Nombre auto: CAROTA · <wash/o N washes> · YYYY-MM-DD · NS+MC
   const date = new Date().toISOString().slice(0, 10);
-  const prods = [...new Set([...singles, ...carousels].map((x) => (x.product || '').replace(' Denim Short', '')))].filter(Boolean);
+  const prods = [...new Set([...singles, ...carousels, ...videos].map((x) => (x.product || '').replace(' Denim Short', '')))].filter(Boolean);
   const prodPart = prods.length === 1 ? prods[0] : `${prods.length} washes`;
-  const name = (body.name && body.name.trim()) || `CAROTA · ${prodPart} · ${date} · ${singles.length}S+${carousels.length}C`;
+  const vp = videos.length ? `+${videos.length}V` : '';
+  const name = (body.name && body.name.trim()) || `CAROTA · ${prodPart} · ${date} · ${singles.length}S+${carousels.length}C${vp}`;
 
   try {
     const campaign = await meta.createCampaign({ name });
@@ -199,6 +206,38 @@ metaRouter.post('/meta/launch', async (req, res) => {
       });
       const ad = await meta.createAd({ name: `${cr.product} · carrusel`, adsetId: adSet.id, creativeId: creative.id });
       ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: cr._id, product: cr.product, link, format: 'carousel' });
+    }
+
+    // Videos -> sube cada mp4 (por URL) en PARALELO, espera que Meta los procese, crea el video
+    // ad en el MISMO adset (varios videos = A/B en un adset). El short ya está fiel + hookeado.
+    if (videos.length) {
+      const base = config.publicBaseUrl.replace(/\/$/, '');
+      const ups = await Promise.all(videos.map(async (v) => {
+        const prod = v.shopifyProductId ? await Product.findOne({ shopifyId: v.shopifyProductId }).lean() : null;
+        const link = productLink(prod?.handle);
+        const videoId = await meta.uploadVideo({ fileUrl: `${base}/api/video/${v._id}/video` });
+        return { v, link, videoId };
+      }));
+      const pending = new Set(ups.map((u) => u.videoId));
+      for (let i = 0; i < 30 && pending.size; i++) {
+        await new Promise((r) => setTimeout(r, 4000));
+        await Promise.all([...pending].map(async (vid) => {
+          const s = await meta.getVideoStatus(vid).catch(() => 'processing');
+          if (s === 'ready' || s === 'error') pending.delete(vid);
+        }));
+      }
+      for (const u of ups) {
+        const s = await meta.getVideoStatus(u.videoId).catch(() => 'processing');
+        if (s !== 'ready') continue; // saltear los que Meta no procesó a tiempo
+        const creative = await meta.createVideoCreative({
+          name: `${u.v.product || 'CAROTA'} · video`, videoId: u.videoId,
+          thumbUrl: `${base}/api/video/${u.v._id}/start-frame`, link: u.link,
+          message: withPromo(u.v.hookLine || `${u.v.product || 'CAROTA'} — shop now`), igActorId,
+        });
+        const ad = await meta.createAd({ name: `${u.v.product} · video`, adsetId: adSet.id, creativeId: creative.id });
+        ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: u.v._id, product: u.v.product, link: u.link, format: 'video' });
+        await VideoClip.findByIdAndUpdate(u.v._id, { metaAdId: ad.id, metaCampaignId: campaign.id });
+      }
     }
 
     const doc = await MetaCampaign.create({
