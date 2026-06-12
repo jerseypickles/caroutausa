@@ -149,7 +149,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
   const carousels = carouselIds.length
     ? await Carousel.find({ _id: { $in: carouselIds }, genStatus: 'ready' }).select('+cards.imageData').lean() : [];
   const videos = videoIds.length
-    ? await VideoClip.find({ _id: { $in: videoIds }, stage: 'ready' }).select('shopifyProductId product hookLine wash castTag fontTag motionPreset').lean() : [];
+    ? await VideoClip.find({ _id: { $in: videoIds }, stage: 'ready' }).select('shopifyProductId product hookLine wash castTag fontTag motionPreset copy').lean() : [];
   if (!singles.length && !carousels.length && !videos.length) return res.status(400).json({ error: 'Sin piezas validas' });
 
   // Nombre auto: CAROTA · <wash/o N washes> · YYYY-MM-DD · NS+MC
@@ -234,7 +234,9 @@ metaRouter.post('/meta/launch', async (req, res) => {
         const creative = await meta.createVideoCreative({
           name: `${u.v.product || 'CAROTA'} · video`, videoId: u.videoId,
           thumbUrl: `${base}/api/video/${u.v._id}/start-frame`, link: u.link,
-          message: withPromo(u.v.hookLine || `${u.v.product || 'CAROTA'} — shop now`), igActorId,
+          message: withPromo(u.v.copy?.primaryTexts?.[0] || u.v.copy?.primaryText || u.v.hookLine || `${u.v.product || 'CAROTA'} — shop now`),
+          title: u.v.copy?.headlines?.[0] || u.v.copy?.headline || '',
+          igActorId,
         });
         const ad = await meta.createAd({ name: `${u.v.product} · video`, adsetId: adSet.id, creativeId: creative.id });
         ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: u.v._id, product: u.v.product, link: u.link, format: 'video',

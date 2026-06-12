@@ -10,7 +10,7 @@ import { judgeFidelity } from './judge.js';
 import { createVideoTask, getVideoTask, piapiConfigured } from './piapi.js';
 import { judgeVideoFidelity, overlayHookVideo } from './videoproc.js';
 import { bestMotionPreset } from './learning.js';
-import { inventMotionPrompt } from './copy.js';
+import { inventMotionPrompt, generateCopy } from './copy.js';
 import { MotionPreset } from './models/motionPreset.js';
 import { config } from './config.js';
 
@@ -157,6 +157,12 @@ export async function generateVideoFrames(clipId) {
       hookLine: hook?.hookLine || null, callout: hook?.callout || null, fontTag: hook?.fontTag || null,
       stage: 'frames', genStatus: 'ready', error: null,
     });
+
+    // Copy del ad (5 primary texts + 5 headlines, como los singles) -> Meta los A/B-testea.
+    try {
+      const copy = await generateCopy({ product: clip.product, wash: clip.wash, angle: 'video fit-check', description: productDescription });
+      await VideoClip.findByIdAndUpdate(clipId, { copy: { ...copy, edited: false } });
+    } catch (e) { console.error('[video] copy:', e.message); }
 
     // AUTO-GATE: si los dos frames pasan fidelidad, anima solo (no gasta Seedance en frames malos).
     const bothPass = (startFid.score ?? 0) >= 85 && (lastFid.score ?? 0) >= 85;

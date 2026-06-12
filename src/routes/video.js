@@ -7,6 +7,7 @@ import { overlayHookVideo } from '../videoproc.js';
 import { piapiConfigured } from '../piapi.js';
 import * as meta from '../meta.js';
 import { MetaCampaign } from '../models/metaCampaign.js';
+import { buildCopyUpdate } from '../copy.js';
 import { config } from '../config.js';
 
 function productLink(handle) { return handle ? `${config.storeUrl}/products/${handle}` : config.storeUrl; }
@@ -116,6 +117,13 @@ videoRouter.post('/video/:id/accept', async (req, res) => {
 videoRouter.post('/video/:id/unaccept', async (req, res) => {
   await VideoClip.findByIdAndUpdate(req.params.id, { qcStatus: 'generated' });
   res.json({ ok: true });
+});
+// Editar el copy del video (primary texts + headlines).
+videoRouter.post('/video/:id/copy', async (req, res) => {
+  const update = buildCopyUpdate(req.body || {});
+  const doc = await VideoClip.findByIdAndUpdate(req.params.id, { $set: update }, { new: true }).select('copy').lean();
+  if (!doc) return res.status(404).json({ error: 'no encontrado' });
+  res.json({ copy: doc.copy });
 });
 
 videoRouter.delete('/video/:id', async (req, res) => {

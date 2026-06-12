@@ -237,7 +237,7 @@ export async function getVideoStatus(videoId) {
   return json.status?.video_status || 'unknown';
 }
 // Creative de VIDEO: video_data con thumbnail + CTA SHOP_NOW al producto.
-export function createVideoCreative({ name, videoId, thumbUrl, link, message, igActorId = '' }) {
+export function createVideoCreative({ name, videoId, thumbUrl, link, message, title = '', igActorId = '' }) {
   return graph('POST', `${acct()}/adcreatives`, {
     name,
     object_story_spec: {
@@ -247,6 +247,7 @@ export function createVideoCreative({ name, videoId, thumbUrl, link, message, ig
         video_id: videoId,
         image_url: thumbUrl,
         message: message || '',
+        ...(title ? { title } : {}),
         call_to_action: { type: 'SHOP_NOW', value: { link } },
       },
     },

@@ -61,6 +61,14 @@ const videoClipSchema = new Schema(
       addToCart: Number, purchases: Number, cpa: Number, updatedAt: Date,
     },
 
+    copy: { // captions del ad (5 primary texts + 5 headlines que Meta A/B-testea)
+      primaryTexts: { type: [String], default: [] },
+      headlines: { type: [String], default: [] },
+      primaryText: { type: String, default: '' },
+      headline: { type: String, default: '' },
+      edited: { type: Boolean, default: false },
+    },
+
     qcStatus: { type: String, enum: ['generated', 'approved', 'rejected'], default: 'generated', index: true },
     metaAdId: { type: String, default: null },       // ad de Meta (si se lanzó)
     metaCampaignId: { type: String, default: null }, // campaña de Meta

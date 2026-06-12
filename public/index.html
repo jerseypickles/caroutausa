@@ -793,6 +793,20 @@
   </div>
 </div>
 
+<!-- Modal de copy de video -->
+<div class="qcmodal" id="vcopyModal" onclick="closeVCopy()">
+  <div class="qcmbox" style="width:560px;max-width:92vw" onclick="event.stopPropagation()">
+    <button class="qcmx" onclick="closeVCopy()" aria-label="Cerrar">&times;</button>
+    <h3 style="margin:0 0 4px">Copy del video</h3>
+    <div class="muted" style="font-size:12px;margin-bottom:14px">Meta A/B-testea las variantes. Una por línea. La promo se agrega sola al lanzar.</div>
+    <label style="font-size:12px;font-weight:600">Primary texts (captions)</label>
+    <textarea id="vcopyPrimary" rows="6" style="width:100%;margin:6px 0 14px;font-family:inherit;font-size:13px;padding:9px;border:1px solid var(--border);border-radius:9px;resize:vertical"></textarea>
+    <label style="font-size:12px;font-weight:600">Headlines (títulos cortos)</label>
+    <textarea id="vcopyHead" rows="5" style="width:100%;margin:6px 0 14px;font-family:inherit;font-size:13px;padding:9px;border:1px solid var(--border);border-radius:9px;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost sm" onclick="closeVCopy()">Cancelar</button><button class="btn sm" id="vcopySave" onclick="saveVCopy(this)">Guardar</button></div>
+  </div>
+</div>
+
 <!-- Modal de lanzamiento -->
 <div class="lmodal" id="launchModal" onclick="closeLaunch()">
   <div class="lmbox" onclick="event.stopPropagation()">
@@ -850,6 +864,7 @@ const TITLES = {
 };
 let adsPoll = null;
 let videoPoll = null;
+let videoClips = [];
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.view === name));
@@ -994,6 +1009,7 @@ async function loadVideo() {
   const clips = r.clips || [];
   videoPresets = r.presets && r.presets.length ? r.presets : videoPresets;
   document.getElementById('videoApi').textContent = r.piapi ? '🟢 Seedance conectado' : '⚠️ PIAPI_KEY no configurada';
+  videoClips = clips;
   const ready = clips.filter((c) => c.stage === 'ready');
   const proc = clips.filter((c) => VPIPE_STAGES.includes(c.stage));
   document.getElementById('vReadyCount').textContent = ready.length;
@@ -1016,7 +1032,7 @@ function vReadyCard(c) {
   return `<div class="vrcard">
     <video src="/api/video/${c._id}/video" muted loop autoplay playsinline preload="metadata"></video>
     ${qc}${accepted}
-    <div class="vract">${acceptBtn}<a href="/api/video/${c._id}/video" target="_blank" title="Descargar mp4">⬇</a><button onclick="vDel('${c._id}')" title="Borrar">🗑</button></div>
+    <div class="vract">${acceptBtn}<button onclick="vCopy('${c._id}')" title="Editar copy">✎</button><a href="/api/video/${c._id}/video" target="_blank" title="Descargar mp4">⬇</a><button onclick="vDel('${c._id}')" title="Borrar">🗑</button></div>
     <div class="vrover"><div class="vrt">${esc((c.product || '').replace(' Denim Short', ''))}</div><div class="vrm">${c.hookLine ? '“' + esc(c.hookLine) + '”' : 'fit-check'}</div></div>
   </div>`;
 }
@@ -1024,6 +1040,24 @@ async function vAccept(id, btn) {
   btn.disabled = true; btn.textContent = '⏳';
   try { await fetch(`/api/video/${id}/accept`, { method: 'POST' }); toast('✓ Aceptado — está en el Ad Manager para armar el adset'); loadVideo(); }
   catch (e) { toast('Error'); btn.disabled = false; btn.textContent = '✓'; }
+}
+let vcopyId = null;
+function vCopy(id) {
+  const c = videoClips.find((x) => x._id === id); if (!c) return;
+  vcopyId = id;
+  const cp = c.copy || {};
+  document.getElementById('vcopyPrimary').value = (cp.primaryTexts && cp.primaryTexts.length ? cp.primaryTexts : (cp.primaryText ? [cp.primaryText] : [])).join('\n');
+  document.getElementById('vcopyHead').value = (cp.headlines && cp.headlines.length ? cp.headlines : (cp.headline ? [cp.headline] : [])).join('\n');
+  document.getElementById('vcopyModal').classList.add('open'); document.body.style.overflow = 'hidden';
+}
+function closeVCopy() { vcopyId = null; document.getElementById('vcopyModal').classList.remove('open'); document.body.style.overflow = ''; }
+async function saveVCopy(btn) {
+  if (!vcopyId) return;
+  const primaryTexts = document.getElementById('vcopyPrimary').value.split('\n').map((s) => s.trim()).filter(Boolean);
+  const headlines = document.getElementById('vcopyHead').value.split('\n').map((s) => s.trim()).filter(Boolean);
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try { await fetch(`/api/video/${vcopyId}/copy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ primaryTexts, headlines }) }); toast('Copy guardado ✓'); closeVCopy(); loadVideo(); }
+  catch (e) { toast('Error'); } finally { btn.disabled = false; btn.textContent = 'Guardar'; }
 }
 // Card de EN PROCESO (tira): thumbnail/estado + acciones según etapa.
 const VPSTG = { frames: '📸 Frames', curated: '⭐ Curado', animating: '🎬 Animando', qc: '🔍 QC', failed: '⚠️ Falló' };
