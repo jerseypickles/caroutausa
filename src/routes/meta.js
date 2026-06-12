@@ -59,6 +59,13 @@ metaRouter.get('/meta/diagnose', async (_req, res) => {
 });
 
 
+// GET /api/meta/raw-actions/:campaignId -> diagnostico: todos los action_types crudos
+metaRouter.get('/meta/raw-actions/:campaignId', async (req, res) => {
+  if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });
+  try { res.json(await meta.rawActionsBreakdown(req.params.campaignId)); }
+  catch (err) { res.status(502).json({ error: err.message }); }
+});
+
 // GET /api/meta/account-campaigns -> campañas que YA existen en la cuenta (en vivo)
 metaRouter.get('/meta/account-campaigns', async (_req, res) => {
   if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no esta configurado' });

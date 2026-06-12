@@ -339,6 +339,20 @@ export function parseActions(row) {
   };
 }
 
+// DIAGNÓSTICO: vuelca TODOS los action_types crudos de Meta (campaña + cada ad) para ver si la
+// inflación viene del parsing (elegimos un tipo agregado) o del tracking (pixel multi-fire).
+export async function rawActionsBreakdown(campaignId) {
+  const campRow = await getInsights(campaignId);
+  const adsJson = await graph('GET', `${campaignId}/ads`, {
+    fields: 'name,insights.date_preset(maximum).action_attribution_windows(7d_click){actions}', limit: 50,
+  });
+  const dump = (row) => Object.fromEntries((row?.actions || []).map((a) => [a.action_type, Number(a.value) || 0]));
+  return {
+    campaign: { all: dump(campRow), picked: parseActions(campRow) },
+    ads: (adsJson.data || []).map((a) => ({ name: a.name, all: dump(a.insights?.data?.[0]), picked: parseActions(a.insights?.data?.[0]) })),
+  };
+}
+
 // Insights normalizados EN VIVO de una campaña (dedup + click-attribution).
 export async function getCampaignInsights(campaignId) {
   try { return normInsights(await getInsights(campaignId)); } catch { return null; }
