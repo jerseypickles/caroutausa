@@ -819,6 +819,14 @@
         <button class="btn ghost sm" onclick="loadEdits()" title="Actualizar">↻</button>
         <button class="btn sm" onclick="newEditProject(this)">+ Nuevo edit (por jean)</button>
       </div>
+      <div class="vsec" style="margin-bottom:14px">
+        <div class="vsech">🎵 Música<span class="vsecd">subí tus tracks · el edit corta EXACTO al beat de la canción</span></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input type="file" id="musicFile" accept="audio/*" style="display:none" onchange="uploadMusic(this)"/>
+          <button class="btn sm" onclick="document.getElementById('musicFile').click()">+ Subir música</button>
+          <div id="musicList" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
+      </div>
       <div class="vsec">
         <div class="vsech">🎬 Edits por jean<span class="vsecd">tomas waist-down del MISMO jean → animan → edit con beat → CTA a ese producto</span></div>
         <div id="editsList" class="editlist"></div>
@@ -1165,8 +1173,34 @@ async function makeEdit(btn) { btn.disabled = true; const t = btn.textContent; b
 
 /* ===== EDITS (flujo por jean) ===== */
 let editShotLabels = { 'fit-check': 'Fit-check', 'detalle': 'Detalle', 'walk': 'Walk', 'side': 'Side/back' };
+let musicTracks = [];
 function shotStageLabel(s) { return ({ frames: 'generando…', curated: 'curada', animating: 'animando…', qc: 'QC', ready: '✓ lista', failed: '✕ falló' })[s] || s; }
+async function loadMusic() {
+  try { const d = await (await fetch('/api/music')).json(); musicTracks = d.tracks || []; } catch (e) { musicTracks = []; }
+  document.getElementById('musicList').innerHTML = musicTracks.length
+    ? musicTracks.map(t => `<span class="ebadge ready" style="display:inline-flex;align-items:center;gap:6px">🎵 ${t.name}${t.bpm ? ' · ' + t.bpm + 'bpm' : ''}<span onclick="delMusic('${t._id}')" style="cursor:pointer;opacity:.6" title="Borrar">✕</span></span>`).join('')
+    : '<span class="muted" style="font-size:12px">sin tracks — subí una canción para que el edit corte a su beat</span>';
+}
+async function uploadMusic(input) {
+  const file = input.files[0]; if (!file) return;
+  if (file.size > 14 * 1024 * 1024) { toast('Audio muy grande (max ~14MB) — recortá la canción'); input.value = ''; return; }
+  toast('Analizando beat de la canción…');
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const r = await (await fetch('/api/music', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name.replace(/\.[^.]+$/, ''), base64: reader.result, mime: file.type }) })).json();
+      toast(r.error || `🎵 ${r.name} · ${r.bpm || '?'}bpm · ${r.beats} beats`); loadMusic();
+    } catch (e) { toast('Error subiendo'); }
+  };
+  reader.readAsDataURL(file); input.value = '';
+}
+async function delMusic(id) { if (!confirm('¿Borrar el track?')) return; await fetch(`/api/music/${id}`, { method: 'DELETE' }); loadMusic(); }
+async function setEditMusic(projId, trackId) {
+  await fetch(`/api/edits/${projId}/music`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trackId: trackId || null }) });
+  toast(trackId ? 'Música asignada ✓ (se usa al armar el edit)' : 'Música quitada');
+}
 async function loadEdits() {
+  loadMusic();
   let d = { projects: [] };
   try { d = await (await fetch('/api/edits')).json(); } catch (e) {}
   if (d.shotTypes) editShotLabels = d.shotTypes;
@@ -1178,6 +1212,11 @@ async function loadEdits() {
   const pill = document.getElementById('pillEdits'); if (pill) { pill.textContent = ready; pill.classList.toggle('zero', ready === 0); }
   document.getElementById('editsEmpty').style.display = projects.length ? 'none' : 'block';
   document.getElementById('editsList').innerHTML = projects.map(renderEditCard).join('');
+}
+function musicSelect(p) {
+  const opts = ['<option value="">🎵 beat sintetizado (default)</option>']
+    .concat(musicTracks.map(t => `<option value="${t._id}" ${String(p.musicTrackId) === String(t._id) ? 'selected' : ''}>🎵 ${t.name}${t.bpm ? ' · ' + t.bpm + 'bpm' : ''}</option>`));
+  return `<select onchange="setEditMusic('${p._id}', this.value)" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface)">${opts.join('')}</select>`;
 }
 function renderEditCard(p) {
   const shots = p.shots || [];
@@ -1199,10 +1238,12 @@ function renderEditCard(p) {
       <video src="/api/edits/${p._id}/video" muted loop autoplay playsinline controls></video>
       <div>
         <div class="muted" style="font-size:12px;margin-bottom:8px">${p.editDuration ? p.editDuration.toFixed(1) + 's' : ''} · hook: <b>${p.hookLine || '—'}</b></div>
-        <div class="eactions" style="margin-top:0">
+        <div class="muted" style="font-size:12px;margin-bottom:8px">música: <b>${p.musicName || 'beat sintetizado'}</b></div>
+        <div class="eactions" style="margin-top:0;flex-wrap:wrap">
           <button class="btn sm ${acc ? 'ghost' : ''}" onclick="acceptEdit('${p._id}', ${acc})">${acc ? '✓ Aceptado' : 'Aceptar'}</button>
           <a class="btn ghost sm" href="/api/edits/${p._id}/video?dl=1" download="carota-edit-${p._id}.mp4">⬇ Descargar</a>
-          <button class="btn ghost sm" onclick="buildEdit('${p._id}', this)" title="Rehacer el edit">↻ Rehacer</button>
+          ${musicSelect(p)}
+          <button class="btn ghost sm" onclick="buildEdit('${p._id}', this)" title="Rehacer el edit con la música elegida">↻ Rehacer</button>
           <button class="btn ghost sm" onclick="delEdit('${p._id}')">🗑</button>
         </div>
       </div>
@@ -1212,6 +1253,7 @@ function renderEditCard(p) {
     body = `<div class="eshots">${strip}</div>
       <div class="eactions">
         <button class="btn sm" onclick="buildEdit('${p._id}', this)" ${canBuild ? '' : 'disabled'}>${p.stage === 'editing' ? '🎬 armando edit…' : `Armar edit (${readyN}/${(p.shotTypes || []).length} listas)`}</button>
+        ${musicSelect(p)}
         <button class="btn ghost sm" onclick="delEdit('${p._id}')">🗑</button>
         ${p.error ? `<span class="muted" style="font-size:11px;color:#b91c1c">${p.error}</span>` : ''}
       </div>`;

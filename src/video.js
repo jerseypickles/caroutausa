@@ -13,6 +13,7 @@ import { bestMotionPreset } from './learning.js';
 import { inventMotionPrompt, generateCopy } from './copy.js';
 import { MotionPreset } from './models/motionPreset.js';
 import { EditProject } from './models/editProject.js';
+import { MusicTrack } from './models/musicTrack.js';
 import { buildJeansEdit } from './videoedit.js';
 import { config } from './config.js';
 
@@ -407,7 +408,16 @@ export async function buildProjectEdit(projectId, { bpm } = {}) {
 
     const hookLine = project.hookLine || 'THE ONLY SHORTS YOU NEED';
     const callout = project.callout || `${project.wash || ''} WASH · CAROTA`.trim();
-    const r = await buildJeansEdit({ clips, hookLine, callout, bpm: Number(bpm) || 100, targetSec: 11 });
+    // Música elegida -> corta a SUS beats. Si no hay, beat sintetizado.
+    let music = null;
+    if (project.musicTrackId) {
+      const tr = await MusicTrack.findById(project.musicTrackId).select('+data beats').lean();
+      if (tr?.data && tr.beats?.length) {
+        music = { buffer: Buffer.from(tr.data, 'base64'), beats: tr.beats };
+        MusicTrack.updateOne({ _id: tr._id }, { $inc: { uses: 1 } }).catch(() => {});
+      }
+    }
+    const r = await buildJeansEdit({ clips, hookLine, callout, bpm: Number(bpm) || 100, targetSec: 11, music });
     const b64 = r.buffer.toString('base64');
     if (b64.length > 15.5 * 1024 * 1024) throw new Error(`edit muy pesado (${(r.buffer.length / 1e6).toFixed(1)}MB)`);
 

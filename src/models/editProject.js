@@ -23,12 +23,9 @@ const editProjectSchema = new Schema(
     shotTypes: { type: [String], default: ['fit-check', 'detalle', 'walk', 'side'] },
     shotIds: { type: [Schema.Types.ObjectId], ref: 'VideoClip', default: [] },
 
-    // Música (la sube el usuario; el edit corta al beat de ESTA canción).
-    music: {
-      name: { type: String, default: null },
-      bpm: { type: Number, default: null },
-      data: { type: String, default: null, select: false }, // base64 del audio
-    },
+    // Música: referencia a una pista de la librería (el edit corta al beat de ESA canción).
+    musicTrackId: { type: Schema.Types.ObjectId, ref: 'MusicTrack', default: null },
+    musicName: { type: String, default: null }, // cacheado para mostrar sin populate
     preset: { type: String, default: 'build-to-drop' }, // build-to-drop | which-wash (futuro)
 
     hookLine: { type: String, default: null },

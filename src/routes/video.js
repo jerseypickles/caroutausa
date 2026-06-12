@@ -6,6 +6,8 @@ import { generateVideoFrames, animateClip, finishAnimation, MOTION_PRESETS, SHOT
 import { overlayHookVideo } from '../videoproc.js';
 import { buildJeansEdit } from '../videoedit.js';
 import { EditProject } from '../models/editProject.js';
+import { MusicTrack } from '../models/musicTrack.js';
+import { analyzeTrack } from '../music.js';
 import { piapiConfigured } from '../piapi.js';
 import * as meta from '../meta.js';
 import { MetaCampaign } from '../models/metaCampaign.js';
@@ -138,6 +140,45 @@ videoRouter.post('/video/edit-test', async (req, res) => {
       console.error('[edit] fallo:', e.message);
     }
   })();
+});
+
+// ============ MÚSICA (librería para los edits) ============
+
+// Lista de pistas (sin el audio pesado).
+videoRouter.get('/music', async (_req, res) => {
+  const tracks = await MusicTrack.find().sort({ createdAt: -1 }).select('-data').lean();
+  res.json({ tracks });
+});
+
+// Sube una pista (base64) -> analiza BPM + beats -> guarda. body: { name, base64, mime }.
+videoRouter.post('/music', async (req, res) => {
+  const { name, base64, mime } = req.body || {};
+  if (!base64) return res.status(400).json({ error: 'falta el audio' });
+  const data = base64.includes(',') ? base64.split(',')[1] : base64; // soporta data URL
+  const buf = Buffer.from(data, 'base64');
+  if (buf.length > 14 * 1024 * 1024) return res.status(400).json({ error: 'audio muy grande (max ~14MB) — recortá la canción' });
+  let an = { bpm: null, beats: [], duration: null };
+  try { an = await analyzeTrack(buf); } catch (e) { return res.status(500).json({ error: 'no pude analizar el audio: ' + e.message }); }
+  const track = await MusicTrack.create({
+    name: name || 'track', bpm: an.bpm, beats: an.beats, duration: an.duration, mime: mime || 'audio/mpeg', data,
+  });
+  res.status(201).json({ id: track._id, name: track.name, bpm: track.bpm, beats: an.beats.length, duration: track.duration });
+});
+
+videoRouter.delete('/music/:id', async (req, res) => {
+  await MusicTrack.findByIdAndDelete(req.params.id);
+  await EditProject.updateMany({ musicTrackId: req.params.id }, { musicTrackId: null, musicName: null });
+  res.json({ ok: true });
+});
+
+// Asigna una pista a un proyecto de edit (o la quita con trackId null).
+videoRouter.post('/edits/:id/music', async (req, res) => {
+  const { trackId } = req.body || {};
+  const tr = trackId ? await MusicTrack.findById(trackId).select('name').lean() : null;
+  const doc = await EditProject.findByIdAndUpdate(req.params.id,
+    { musicTrackId: tr?._id || null, musicName: tr?.name || null }, { new: true }).lean();
+  if (!doc) return res.status(404).json({ error: 'no encontrado' });
+  res.json({ ok: true, musicName: doc.musicName });
 });
 
 // ============ FLUJO POR-JEAN (Edits) ============
