@@ -3,6 +3,7 @@ import { VideoClip } from '../models/videoClip.js';
 import { Product } from '../models/product.js';
 import { pickRefs } from '../refs.js';
 import { generateVideoFrames, animateClip, finishAnimation, MOTION_PRESETS } from '../video.js';
+import { overlayHookVideo } from '../videoproc.js';
 import { piapiConfigured } from '../piapi.js';
 
 export const videoRouter = Router();
@@ -87,6 +88,17 @@ videoRouter.post('/video/:id/qc', async (req, res) => {
   }, { new: true }).lean();
   if (!doc) return res.status(404).json({ error: 'No encontrado' });
   res.json({ id: doc._id, stage: doc.stage });
+});
+
+// Re-aplica el hook overlay al video guardado (para clips que quedaron sin hook).
+videoRouter.post('/video/:id/rehook', async (req, res) => {
+  const doc = await VideoClip.findById(req.params.id).select('+videoData').lean();
+  if (!doc?.videoData || !doc.hookLine) return res.status(400).json({ error: 'sin video o sin hook' });
+  try {
+    const hooked = await overlayHookVideo(Buffer.from(doc.videoData, 'base64'), { hookLine: doc.hookLine, callout: doc.callout || '' });
+    await VideoClip.findByIdAndUpdate(req.params.id, { videoData: hooked.toString('base64') });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 videoRouter.delete('/video/:id', async (req, res) => {

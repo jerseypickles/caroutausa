@@ -5,11 +5,13 @@ import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import ffmpegPath from 'ffmpeg-static';
+import { createCanvas, GlobalFonts } from '@napi-rs/canvas';
 import { judgeFidelity } from './judge.js';
 
 const exec = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FONT = join(__dirname, '../assets/Anton-Regular.ttf'); // condensed-bold "LIGHT.LOOSE." style
+GlobalFonts.registerFromPath(FONT, 'Anton');
 
 // Extrae `count` frames distribuidos del mp4 (buffer) -> array de PNG buffers.
 export async function extractFrames(mp4Buffer, duration = 5, count = 3) {
@@ -44,26 +46,47 @@ export async function judgeVideoFidelity({ mp4Buffer, duration = 5, sourceImageU
   return { score: worst, frames: scores.length, issues: [...new Set(issues)].slice(0, 5) };
 }
 
-// Escapa texto para el filtro drawtext de ffmpeg.
-function escTxt(t) { return String(t || '').replace(/\\/g, '\\\\').replace(/:/g, '\\:').replace(/'/g, '’').replace(/%/g, '\\%'); }
+// Dibuja el hook + callout en un PNG transparente (fuente Anton, condensed-bold). El binario
+// ffmpeg-static de Render NO trae drawtext, así que el texto lo hacemos con canvas y lo
+// superponemos con el filtro `overlay` (que sí está). Determinístico, nítido, no toca el short.
+function fitFont(ctx, text, maxW, baseSize) {
+  let size = baseSize; ctx.font = `${size}px Anton`;
+  while (ctx.measureText(text).width > maxW && size > 12) { size -= 2; ctx.font = `${size}px Anton`; }
+  return size;
+}
+function hookPng(W, H, hookLine, callout) {
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext('2d');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  const maxW = Math.round(W * 0.9);
+  const hookY = Math.round(H * 0.095);
+  // HOOK (grande, blanco, sombra)
+  fitFont(ctx, hookLine.toUpperCase(), maxW, Math.round(H / 15));
+  ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = Math.round(H / 200); ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 3;
+  ctx.fillStyle = '#fff';
+  ctx.fillText(hookLine.toUpperCase(), W / 2, hookY);
+  // CALLOUT (chico, muted)
+  if (callout) {
+    fitFont(ctx, callout.toUpperCase(), maxW, Math.round(H / 46));
+    ctx.shadowBlur = Math.round(H / 350); ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.fillText(callout.toUpperCase(), W / 2, hookY + Math.round(H / 13));
+  }
+  return canvas.toBuffer('image/png');
+}
 
-// HOOK overlay DETERMINÍSTICO sobre el video (post): hook condensed-bold + callout, arriba,
-// blanco con sombra (no toca el short). Devuelve el nuevo mp4 buffer.
-export async function overlayHookVideo(mp4Buffer, { hookLine, callout = '' }) {
+// HOOK overlay DETERMINÍSTICO sobre el video (post). Devuelve el nuevo mp4 buffer.
+export async function overlayHookVideo(mp4Buffer, { hookLine, callout = '', width = 1080, height = 1920 }) {
   if (!hookLine) return mp4Buffer;
   const dir = await mkdtemp(join(tmpdir(), 'vhook-'));
   const inPath = join(dir, 'in.mp4');
+  const pngPath = join(dir, 'hook.png');
   const outPath = join(dir, 'out.mp4');
   await writeFile(inPath, mp4Buffer);
-  const F = FONT.replace(/\\/g, '/').replace(/:/g, '\\:');
-  const hook = escTxt(hookLine.toUpperCase());
-  const call = escTxt(callout.toUpperCase());
-  let vf = `drawtext=fontfile='${F}':text='${hook}':fontcolor=white:fontsize=h/15:x=(w-text_w)/2:y=h*0.055:shadowcolor=black@0.6:shadowx=3:shadowy=3`;
-  if (call) vf += `,drawtext=fontfile='${F}':text='${call}':fontcolor=white@0.9:fontsize=h/42:x=(w-text_w)/2:y=h*0.055+h/13:shadowcolor=black@0.5:shadowx=2:shadowy=2`;
+  await writeFile(pngPath, hookPng(width, height, hookLine, callout));
   try {
-    await exec(ffmpegPath, ['-y', '-i', inPath, '-vf', vf, '-c:a', 'copy', '-movflags', '+faststart', outPath], { timeout: 180000 });
-    const out = await readFile(outPath);
-    return out;
+    await exec(ffmpegPath, ['-y', '-i', inPath, '-i', pngPath, '-filter_complex', '[0][1]overlay=0:0', '-c:a', 'copy', '-movflags', '+faststart', outPath], { timeout: 180000 });
+    return await readFile(outPath);
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
