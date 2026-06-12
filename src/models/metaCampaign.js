@@ -18,10 +18,20 @@ const metaCampaignSchema = new Schema(
       {
         adId: String,
         metaCreativeId: String,
-        creativeId: { type: Schema.Types.ObjectId, ref: 'Creative' }, // nuestro creative
+        creativeId: { type: Schema.Types.ObjectId, ref: 'Creative' }, // nuestro creative (puede borrarse)
         product: String,
         link: String,
-        format: { type: String, default: 'single' }, // single | carousel
+        format: { type: String, default: 'single' }, // single | carousel | video
+        // SNAPSHOT del ADN al lanzar (durable -> el aprendizaje sobrevive aunque se borre el creativo).
+        adn: {
+          castTag: String, sceneTag: String, angle: String, wash: String,
+          fontTag: String, motionPreset: String,
+        },
+        // métricas reales de Meta por ad (la fuente del aprendizaje).
+        metrics: {
+          impressions: Number, clicks: Number, ctr: Number, spend: Number,
+          addToCart: Number, purchases: Number, cpa: Number, updatedAt: Date,
+        },
       },
     ],
 

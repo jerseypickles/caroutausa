@@ -149,7 +149,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
   const carousels = carouselIds.length
     ? await Carousel.find({ _id: { $in: carouselIds }, genStatus: 'ready' }).select('+cards.imageData').lean() : [];
   const videos = videoIds.length
-    ? await VideoClip.find({ _id: { $in: videoIds }, stage: 'ready' }).select('shopifyProductId product hookLine').lean() : [];
+    ? await VideoClip.find({ _id: { $in: videoIds }, stage: 'ready' }).select('shopifyProductId product hookLine wash castTag fontTag motionPreset').lean() : [];
   if (!singles.length && !carousels.length && !videos.length) return res.status(400).json({ error: 'Sin piezas validas' });
 
   // Nombre auto: CAROTA · <wash/o N washes> · YYYY-MM-DD · NS+MC
@@ -187,7 +187,8 @@ metaRouter.post('/meta/launch', async (req, res) => {
         name: `${c.product || 'CAROTA'} · ${c.angle}`, storyHash, feedHash, link, messages: [message], titles, igActorId,
       });
       const ad = await meta.createAd({ name: `${c.product} · ${c.angle}`, adsetId: adSet.id, creativeId: creative.id });
-      ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: c._id, product: c.product, link, format: 'single' });
+      ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: c._id, product: c.product, link, format: 'single',
+        adn: { castTag: c.castTag, sceneTag: c.sceneTag, angle: c.angle, wash: c.wash, fontTag: c.fontTag } });
     }
     // Carruseles -> sube cada card (JPG) y crea el creative de carrusel
     for (const cr of carousels) {
@@ -205,7 +206,8 @@ metaRouter.post('/meta/launch', async (req, res) => {
         message: withPromo(cr.copy?.primaryTexts?.[0] || cr.copy?.primaryText || `${cr.product || 'CAROTA'} — shop now`), link, cards, igActorId,
       });
       const ad = await meta.createAd({ name: `${cr.product} · carrusel`, adsetId: adSet.id, creativeId: creative.id });
-      ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: cr._id, product: cr.product, link, format: 'carousel' });
+      ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: cr._id, product: cr.product, link, format: 'carousel',
+        adn: { castTag: cr.castTag, sceneTag: cr.sceneTag, angle: 'carrusel', wash: cr.wash, fontTag: cr.fontTag } });
     }
 
     // Videos -> sube cada mp4 (por URL) en PARALELO, espera que Meta los procese, crea el video
@@ -235,7 +237,8 @@ metaRouter.post('/meta/launch', async (req, res) => {
           message: withPromo(u.v.hookLine || `${u.v.product || 'CAROTA'} — shop now`), igActorId,
         });
         const ad = await meta.createAd({ name: `${u.v.product} · video`, adsetId: adSet.id, creativeId: creative.id });
-        ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: u.v._id, product: u.v.product, link: u.link, format: 'video' });
+        ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: u.v._id, product: u.v.product, link: u.link, format: 'video',
+          adn: { castTag: u.v.castTag || 'lower-body', sceneTag: 'fit-check', angle: 'video', wash: u.v.wash, fontTag: u.v.fontTag, motionPreset: u.v.motionPreset } });
         await VideoClip.findByIdAndUpdate(u.v._id, { metaAdId: ad.id, metaCampaignId: campaign.id });
       }
     }
