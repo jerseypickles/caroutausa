@@ -129,6 +129,11 @@
   .vsech { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; margin-bottom: 15px; }
   .vsecn { background: var(--surface2); border-radius: 20px; padding: 1px 10px; font-size: 12px; color: var(--muted); font-weight: 600; }
   .vsecd { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .vtoggle { font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; padding: 4px 11px; border-radius: 20px; border: 1px solid transparent; }
+  .vtoggle b { color: var(--text); }
+  .vtoggle:hover { background: var(--surface2); }
+  .vtoggle.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .vtoggle.on b { color: #fff; }
   .vgallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 16px; }
   .vrcard { border-radius: 15px; overflow: hidden; background: #0c0d10; position: relative; box-shadow: 0 2px 10px rgba(16,24,40,.12); transition: transform .18s, box-shadow .18s; }
   .vrcard:hover { transform: translateY(-4px); box-shadow: 0 18px 38px rgba(16,24,40,.2); }
@@ -769,7 +774,11 @@
         <button class="btn sm" onclick="newVideoClip(this)">+ Nuevo clip</button>
       </div>
       <div class="vsec">
-        <div class="vsech">✅ Listos<span class="vsecn" id="vReadyN">0</span><span class="vsecd">video waist-down + hook, listo para Meta</span></div>
+        <div class="vsech">✅ Videos<span class="vsecd">waist-down + hook + copy, listos para Meta</span>
+          <span style="flex:1"></span>
+          <span class="vtoggle on" id="vtAvail" onclick="setVideoView('available')">Disponibles <b id="vAvailN">0</b></span>
+          <span class="vtoggle" id="vtUsed" onclick="setVideoView('used')">🚀 Usados <b id="vUsedN">0</b></span>
+        </div>
         <div class="vgallery" id="vReady"></div>
       </div>
       <div class="vsec">
@@ -873,6 +882,7 @@ const TITLES = {
 let adsPoll = null;
 let videoPoll = null;
 let videoClips = [];
+let videoView = 'available';
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
   document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.view === name));
@@ -1020,17 +1030,29 @@ async function loadVideo() {
   videoClips = clips;
   const ready = clips.filter((c) => c.stage === 'ready');
   const proc = clips.filter((c) => VPIPE_STAGES.includes(c.stage));
-  document.getElementById('vReadyCount').textContent = ready.length;
+  document.getElementById('vReadyCount').textContent = ready.filter((c) => !c.metaAdId).length;
   document.getElementById('vProcCount').textContent = proc.length;
-  document.getElementById('vReadyN').textContent = ready.length;
   document.getElementById('vProcN').textContent = proc.length;
   const pill = document.getElementById('pillVideo'); pill.textContent = clips.length; pill.classList.toggle('zero', clips.length === 0);
-  document.getElementById('vReady').innerHTML = ready.length
-    ? ready.map(vReadyCard).join('')
-    : '<div class="vempty">Todavía no hay videos listos. El autopilot los va generando solo — o tocá “+ Nuevo clip”.</div>';
+  renderVReady();
   document.getElementById('vPipe').innerHTML = proc.length
     ? proc.map(vPipeCard).join('')
     : '<div class="vempty">Nada en proceso ahora.</div>';
+}
+// Galería de videos listos: separa DISPONIBLES (no lanzados) de USADOS (ya en Meta).
+function setVideoView(v) { videoView = v; renderVReady(); }
+function renderVReady() {
+  const ready = (videoClips || []).filter((c) => c.stage === 'ready');
+  const available = ready.filter((c) => !c.metaAdId);
+  const used = ready.filter((c) => c.metaAdId);
+  document.getElementById('vAvailN').textContent = available.length;
+  document.getElementById('vUsedN').textContent = used.length;
+  document.getElementById('vtAvail').classList.toggle('on', videoView !== 'used');
+  document.getElementById('vtUsed').classList.toggle('on', videoView === 'used');
+  const shown = videoView === 'used' ? used : available;
+  document.getElementById('vReady').innerHTML = shown.length
+    ? shown.map(vReadyCard).join('')
+    : `<div class="vempty">${videoView === 'used' ? 'Todavía no lanzaste ningún video a Meta.' : 'No hay videos disponibles — el autopilot los genera solo (o tocá “+ Nuevo clip”). Los que ya usaste están en 🚀 Usados.'}</div>`;
 }
 // Card de VIDEO LISTO (galería): el mp4 reproduciéndose + hook + QC + acciones al hover.
 function vReadyCard(c) {
