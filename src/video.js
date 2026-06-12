@@ -58,10 +58,34 @@ async function tightCrop(b64, zoom = VIDEO_ZOOM) {
 
 // Prompt DIRECTO waist-down (SIN director/casting -> no genera persona completa). Modelado
 // en el prompt que probó el usuario: describe el ENCUADRE de la cintura para abajo + el short.
+// EXPLORACIÓN de composición: variamos setting/ángulo/luz/pose MANTENIENDO el waist-down ->
+// el modelo prueba muchas variantes del medio-cuerpo (no el mismo prompt fijo siempre).
+const V_SETTING = [
+  'a clean minimal bedroom with a soft cream rug and light wood floor',
+  'a hallway with light wood floor and a plain wall',
+  'against a plain white wall on a concrete floor',
+  'a sunlit room next to a big window with sheer curtains',
+  'a neutral apartment corner with a sofa edge and wood floor',
+  'a tiled bathroom-mirror area, clean and bright',
+];
+const V_ANGLE = [
+  'shot straight-on at hip level',
+  'shot from a slightly LOW angle looking up (makes the legs look longer and the shorts bigger)',
+  'shot at a slight 3/4 angle to the side',
+  'shot straight-on, camera a touch lower than the hips',
+];
+const V_LIGHT = ['soft window daylight from the side, soft shadows', 'bright even natural daylight', 'warm late-afternoon light', 'soft diffused indoor light'];
+const V_POSE = [
+  'weight on one leg, the other foot relaxed',
+  'feet about shoulder-width, one hand resting near the pocket',
+  'a slight turn into a 3/4 stance, weight shifted',
+  'casual relaxed stance, toes slightly apart',
+];
+const rand = (a) => a[Math.floor(Math.random() * a.length)];
 function videoStartPrompt(refDna = '') {
   const ref = refDna ? ` The sneakers, socks and lower-body styling vibe match the STYLE REFERENCE (last image): ${refDna}.` : '';
   return `${GARMENT_LOCK}
-Vertical mirror-selfie fit-check photo, casual iPhone quality. CROPPED FRAMING FROM THE WAIST DOWN — the head, chest and arms are NOT visible in the frame; show ONLY the very bottom edge of the torso/top, the legs and the feet. The subject wears the denim SHORTS from the FIRST product image EXACTLY: same wash, wide straight leg, knee length, raw frayed released hem, front button and zip fly, pockets. Only the BOTTOM HEM of an oversized top (hoodie or tee) is visible at the very top edge of the frame. Bare lower legs between the shorts hem and white crew socks, current chunky sneakers, standing on a soft rug / light wood floor in a clean minimal room. Natural window daylight from the side, soft shadows, amateur fit-check aesthetic, slight phone-camera grain, realistic denim fabric texture and wash detail. The denim SHORTS fill the frame and are the whole subject.${ref}
+Vertical mirror-selfie fit-check photo, casual iPhone quality. CROPPED FRAMING FROM THE WAIST DOWN — the head, chest and arms are NOT visible in the frame; show ONLY the very bottom edge of the torso/top, the legs and the feet. The subject wears the denim SHORTS from the FIRST product image EXACTLY: same wash, wide straight leg, knee length, raw frayed released hem, front button and zip fly, pockets. Only the BOTTOM HEM of an oversized top (hoodie or tee) is visible at the very top edge of the frame. Bare lower legs between the shorts hem and white crew socks, current chunky sneakers. ${rand(V_ANGLE)}; ${rand(V_POSE)}. Setting: ${rand(V_SETTING)}. Lighting: ${rand(V_LIGHT)}. Amateur fit-check aesthetic, slight phone-camera grain, realistic denim fabric texture and wash detail. The denim SHORTS fill the frame and are the whole subject.${ref}
 NO head, NO face, NO chest, NO arms, NO text overlay.`;
 }
 // Last frame: el siguiente momento (cambio de stance de piernas) — interpola movimiento.
