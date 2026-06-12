@@ -140,6 +140,9 @@
   .vrqc { position: absolute; top: 9px; left: 9px; background: rgba(26,143,74,.94); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 7px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
   .vrmeta { position: absolute; top: 32px; left: 9px; background: rgba(20,22,26,.86); color: #fff; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 7px; }
   .vrmeta.acc { background: rgba(63,106,255,.92); }
+  .vrexp { position: absolute; top: 9px; right: 9px; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 7px; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .15s; }
+  .vrcard:hover .vrexp { opacity: 0; }
+  .vrexp.exp { background: rgba(63,106,255,.92); } .vrexp.inv { background: rgba(150,80,230,.92); } .vrexp.win { background: rgba(26,143,74,.92); }
   .vract { position: absolute; top: 9px; right: 9px; display: flex; gap: 6px; opacity: 0; transition: opacity .15s; }
   .vrcard:hover .vract { opacity: 1; }
   .vract a, .vract button { background: rgba(255,255,255,.94); border: none; border-radius: 8px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; text-decoration: none; color: #14161a; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
@@ -1034,6 +1037,7 @@ function vReadyCard(c) {
     <video src="/api/video/${c._id}/video" muted loop autoplay playsinline preload="metadata"></video>
     ${qc}${accepted}
     <div class="vract">${acceptBtn}<button onclick="vCopy('${c._id}')" title="Editar copy">✎</button><a href="/api/video/${c._id}/video" target="_blank" title="Descargar mp4">⬇</a><button onclick="vDel('${c._id}')" title="Borrar">🗑</button></div>
+    ${vExpBadge(c)}
     <div class="vrover" onclick="vCopy('${c._id}')" title="Editar copy">
       <div class="vrt">${esc((c.product || '').replace(' Denim Short', ''))}</div>
       <div class="vrcap">💬 ${c.copy && c.copy.primaryTexts && c.copy.primaryTexts[0] ? esc(c.copy.primaryTexts[0]) : '<span style="opacity:.7">sin copy — clic para editar</span>'}</div>
@@ -1045,6 +1049,13 @@ async function vAccept(id, btn) {
   btn.disabled = true; btn.textContent = '⏳';
   try { await fetch(`/api/video/${id}/accept`, { method: 'POST' }); toast('✓ Aceptado — está en el Ad Manager para armar el adset'); loadVideo(); }
   catch (e) { toast('Error'); btn.disabled = false; btn.textContent = '✓'; }
+}
+// Badge de explore/exploit -> para ver qué está haciendo el sistema.
+function vExpBadge(c) {
+  const M = { explore: ['🔍', 'explorando', 'exp'], invent: ['✨', 'inventado', 'inv'], exploit: ['🏆', 'ganador', 'win'] };
+  const m = M[c.exploreMode]; if (!m) return '';
+  const mp = c.motionPreset ? ' · ' + esc(c.motionPreset) : '';
+  return `<span class="vrexp ${m[2]}" title="${m[1]}${mp}">${m[0]} ${m[1]}${mp}</span>`;
 }
 let vcopyId = null;
 function vCopy(id) {

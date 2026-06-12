@@ -48,21 +48,23 @@ async function inventMotion() {
 }
 // EXPLORE/EXPLOIT (ε-greedy): explota el ganador por CTR, o explora — a veces INVENTA un
 // movimiento nuevo (descubre), si no round-robin sobre fijos + inventados (cubre todos).
+// Devuelve { preset, mode }: mode = 'exploit' (ganador por CTR) | 'explore' (round-robin) |
+// 'invent' (movimiento nuevo descubierto). El modo se muestra en la card para ver qué hace.
 async function pickVideoPreset() {
   const eps = Number(process.env.VIDEO_EXPLORE || 0.35);
   const best = await bestMotionPreset().catch(() => null);
-  if (best && Math.random() > eps) return best; // explotar
+  if (best && Math.random() > eps) return { preset: best, mode: 'exploit' }; // explotar
   // explorar:
   const inventChance = Number(process.env.VIDEO_INVENT || 0.25);
   const count = await MotionPreset.countDocuments().catch(() => 0);
   if (Math.random() < inventChance && count < 12) {
     const t = await inventMotion().catch(() => null);
-    if (t) return t; // movimiento NUEVO descubierto
+    if (t) return { preset: t, mode: 'invent' }; // movimiento NUEVO descubierto
   }
   const invented = await MotionPreset.find().select('tag').lean().catch(() => []);
   const keys = [...PRESET_KEYS, ...invented.map((m) => m.tag)];
   const k = keys[_presetIdx % keys.length]; _presetIdx++;
-  return k;
+  return { preset: k, mode: 'explore' };
 }
 
 // CROP cerrado DETERMINÍSTICO: gpt-image no respeta el encuadre por texto, así que recorto yo.
@@ -167,8 +169,8 @@ export async function generateVideoFrames(clipId) {
     // AUTO-GATE: si los dos frames pasan fidelidad, anima solo (no gasta Seedance en frames malos).
     const bothPass = (startFid.score ?? 0) >= 85 && (lastFid.score ?? 0) >= 85;
     if (config.videoAuto && bothPass) {
-      const preset = await pickVideoPreset(); // ε-greedy: explota el ganador + explora variantes
-      animateClip(clipId, { preset }).catch((e) => console.error('[video] auto-animate:', e.message));
+      const { preset, mode } = await pickVideoPreset(); // ε-greedy: explota ganador + explora/inventa
+      animateClip(clipId, { preset, mode }).catch((e) => console.error('[video] auto-animate:', e.message));
     }
   } catch (err) {
     console.error(`[video] frames fallo (${clipId}):`, err.message);
@@ -177,7 +179,7 @@ export async function generateVideoFrames(clipId) {
 }
 
 // 2) ANIMAR: manda start+last a Seedance (URLs públicas de nuestros frames).
-export async function animateClip(clipId, { preset = 'mirror-sway' } = {}) {
+export async function animateClip(clipId, { preset = 'mirror-sway', mode = 'manual' } = {}) {
   if (!piapiConfigured()) throw new Error('PIAPI_KEY no configurada');
   const clip = await VideoClip.findById(clipId).lean();
   if (!clip) throw new Error('clip no encontrado');
@@ -189,7 +191,7 @@ export async function animateClip(clipId, { preset = 'mirror-sway' } = {}) {
     imageUrls: [startUrl, lastUrl], prompt, duration: clip.duration || 5,
     aspectRatio: '9:16', resolution: '1080p', fast: false, // seedance-2 (1080p; -fast no soporta 1080p)
   });
-  await VideoClip.findByIdAndUpdate(clipId, { taskId, motionPreset: preset, motionPrompt: prompt, stage: 'animating', error: null });
+  await VideoClip.findByIdAndUpdate(clipId, { taskId, motionPreset: preset, exploreMode: mode, motionPrompt: prompt, stage: 'animating', error: null });
   return taskId;
 }
 
@@ -249,7 +251,7 @@ export function startVideoCron() {
 let _vauTimer = null;
 export function startVideoAutopilot() {
   if (_vauTimer || !piapiConfigured() || !config.videoAuto) return;
-  const everyMin = Number(process.env.VIDEO_AUTOPILOT_MIN || 25);
+  const everyMin = Number(process.env.VIDEO_AUTOPILOT_MIN || 240); // ~6 veces/día (cada 4h)
   const run = async () => {
     try {
       const inflight = await VideoClip.countDocuments({ stage: { $in: ['frames', 'animating'] } });

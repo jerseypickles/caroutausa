@@ -33,6 +33,7 @@ const videoClipSchema = new Schema(
 
     // Animación (Seedance via PiAPI).
     motionPreset: { type: String, default: 'mirror-sway' },
+    exploreMode: { type: String, default: null }, // exploit | explore | invent | manual
     motionPrompt: { type: String, default: '' },
     duration: { type: Number, default: 5 },
     taskId: { type: String, default: null, index: true }, // task de PiAPI
