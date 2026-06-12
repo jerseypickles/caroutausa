@@ -322,7 +322,9 @@ metaRouter.get('/meta/campaigns/:id/ads', async (req, res) => {
         format: ours?.format || 'single',
         // imagen propia (linda y consistente) si la tenemos; si no, thumb de Meta
         image: ours?.creativeId
-          ? (ours.format === 'carousel' ? `/api/carousels/${ours.creativeId}/cards/0/image` : `/api/creatives/${ours.creativeId}/image?p=square`)
+          ? (ours.format === 'carousel' ? `/api/carousels/${ours.creativeId}/cards/0/image`
+            : ours.format === 'video' ? `/api/video/${ours.creativeId}/start-frame`
+            : `/api/creatives/${ours.creativeId}/image?p=square`)
           : a.thumbnail,
         product: ours?.product || '',
         insights: { ...i, cpa, cpatc },

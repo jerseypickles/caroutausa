@@ -1836,7 +1836,7 @@ function adRow(a, bestCtr) {
   const best = hasData && i.ctr > 0 && i.ctr === bestCtr;
   const angle = a.format === 'carousel' ? 'carrusel' : (a.name || '').split('·').pop().trim();
   return `<div class="adrow ${best ? 'best' : ''}">
-    <div class="adthumb">${a.format === 'carousel' ? '<span class="adcar">▦</span>' : ''}<img src="${a.image}" loading="lazy" onerror="this.style.opacity=.2" alt="" /></div>
+    <div class="adthumb">${a.format === 'carousel' ? '<span class="adcar">▦</span>' : (a.format === 'video' ? '<span class="adcar">▶</span>' : '')}<img src="${a.image}" loading="lazy" onerror="this.style.opacity=.2" alt="" /></div>
     <div class="adbody">
       <div class="adname">${(a.product || 'CAROTA').replace(' Denim Short', '')} · <span class="muted">${angle}</span>${best ? '<span class="adbest">★ mejor CTR</span>' : ''}<span class="adst ${(a.status || '').toLowerCase().includes('active') ? 'on' : ''}">${(a.status || '').toLowerCase().replace(/_/g, ' ')}</span></div>
       ${hasData ? `<div class="admetrics">
