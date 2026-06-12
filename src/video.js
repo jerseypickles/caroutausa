@@ -12,6 +12,8 @@ import { judgeVideoFidelity, overlayHookVideo } from './videoproc.js';
 import { bestMotionPreset } from './learning.js';
 import { inventMotionPrompt, generateCopy } from './copy.js';
 import { MotionPreset } from './models/motionPreset.js';
+import { EditProject } from './models/editProject.js';
+import { buildJeansEdit } from './videoedit.js';
 import { config } from './config.js';
 
 // Presets de movimiento SUTIL (nada de caminar/gestos -> no se ve IA). El movimiento de
@@ -24,8 +26,13 @@ export const MOTION_PRESETS = {
   'weight-shift': 'The person shifts their weight from one leg onto the other with a small natural sway, the denim moving slightly with the motion, gentle handheld camera. Photoreal, candid.',
   'slow-zoom-out': 'The camera very slowly and smoothly pulls back a little, revealing slightly more of the fit, while the person stays mostly still. Photoreal, candid fit-check.',
   'fabric-flow': 'Almost still — the focus is the denim and fabric subtly settling and catching the light, with a barely-there hip or hand movement and minimal handheld drift. Photoreal.',
+  // movimiento para la toma WALK (única que permite caminar) — denim en movimiento real.
+  'walk': 'The person walks at a natural steady pace, the legs moving in a smooth stride and the denim shorts swaying with each step, candid handheld street fit-check. Photoreal.',
 };
-const MOTION_GUARD = ' NO walking, NO big movements, NO morphing. The denim shorts keep the EXACT same shape, wash, rips, hem and length the whole time. Hands and face stay stable and natural.';
+// Guard base (siempre) + guard de quietud (todas menos walk).
+const FIDELITY_GUARD = ' NO morphing. The denim shorts keep the EXACT same shape, wash, rips, hem and length the whole time.';
+const STILL_GUARD = ' NO walking, NO big movements.' + FIDELITY_GUARD + ' Hands stay stable and natural.';
+const MOTION_GUARD = STILL_GUARD; // compat: el flujo de clip suelto sigue usando el guard de quietud
 
 // Rota los presets de movimiento (variedad + para que el loop aprenda cuál rinde).
 const PRESET_KEYS = Object.keys(MOTION_PRESETS);
@@ -109,16 +116,61 @@ const V_POSE = [
   'casual relaxed stance, toes slightly apart',
 ];
 const rand = (a) => a[Math.floor(Math.random() * a.length)];
-function videoStartPrompt(refDna = '') {
+
+// TOMAS por jean (todas WAIST-DOWN). La variedad sale de ángulo + distancia + acción, NO de
+// cambiar a cuerpo completo. frame = encuadre específico; motion = preset i2v; last = el siguiente
+// momento; allowWalk = la única que permite caminar (las demás se mantienen quietas).
+export const SHOT_TYPES = {
+  'fit-check': {
+    label: 'Fit-check',
+    frame: null, // null -> usa la exploración aleatoria de ángulo/pose (la toma héroe actual)
+    motion: 'weight-shift',
+    last: 'SHIFT the body weight onto the OTHER leg and change the stance slightly — a natural small movement, a different stance.',
+    allowWalk: false,
+  },
+  'detalle': {
+    label: 'Detalle',
+    frame: 'a TIGHTER, CLOSER crop on the upper part of the shorts: the wash, the front pocket, the button and zip fly, the waistband and the fabric texture FILL the frame, framed from roughly mid-thigh up to the waistband, one hand resting casually near the pocket. Macro fit-check detail.',
+    motion: 'slow-push',
+    last: 'keep the SAME tight detail framing; the hand near the pocket moves a little and the camera pushes in just slightly closer on the denim detail.',
+    allowWalk: false,
+  },
+  'walk': {
+    label: 'Walk',
+    frame: 'the legs and denim shorts in mid-WALK toward the camera, captured mid-stride with a natural candid street motion, dynamic fit-check from the waist down.',
+    motion: 'walk',
+    last: 'the SAME walk continues — the legs take the NEXT step, the opposite leg now forward, the denim shorts swaying with the stride.',
+    allowWalk: true,
+  },
+  'side': {
+    label: 'Side/back',
+    frame: 'shot from a 3/4 side-back angle showing the BACK POCKET, side seam and the back of the denim shorts, the body turned slightly away with the weight shifted onto one hip.',
+    motion: 'weight-shift',
+    last: 'the body turns just slightly more, showing the back pocket and side seam from a touch more of an angle; small natural movement.',
+    allowWalk: false,
+  },
+};
+
+function videoStartPrompt(refDna = '', shot = null) {
   const ref = refDna ? ` The sneakers, socks and lower-body styling vibe match the STYLE REFERENCE (last image): ${refDna}.` : '';
+  const def = shot && SHOT_TYPES[shot.shotType];
+  // Setting + luz: del proyecto (FIJOS para coherencia entre tomas) o aleatorios (clip suelto).
+  const setting = shot?.setting || rand(V_SETTING);
+  const lighting = shot?.lighting || rand(V_LIGHT);
+  // Encuadre: específico de la toma, o exploración aleatoria (fit-check / clip suelto).
+  const framing = def && def.frame
+    ? def.frame
+    : `${rand(V_ANGLE)}; ${rand(V_POSE)}`;
   return `${GARMENT_LOCK}
-Vertical mirror-selfie fit-check photo, casual iPhone quality. CROPPED FRAMING FROM THE WAIST DOWN — the head, chest and arms are NOT visible in the frame; show ONLY the very bottom edge of the torso/top, the legs and the feet. The subject wears the denim SHORTS from the FIRST product image EXACTLY: same wash, wide straight leg, knee length, raw frayed released hem, front button and zip fly, pockets. Only the BOTTOM HEM of an oversized top (hoodie or tee) is visible at the very top edge of the frame. Bare lower legs between the shorts hem and white crew socks, current chunky sneakers. ${rand(V_ANGLE)}; ${rand(V_POSE)}. Setting: ${rand(V_SETTING)}. Lighting: ${rand(V_LIGHT)}. Amateur fit-check aesthetic, slight phone-camera grain, realistic denim fabric texture and wash detail. The denim SHORTS fill the frame and are the whole subject.${ref}
+Vertical mirror-selfie fit-check photo, casual iPhone quality. CROPPED FRAMING FROM THE WAIST DOWN — the head, chest and arms are NOT visible in the frame; show ONLY the very bottom edge of the torso/top, the legs and the feet. The subject wears the denim SHORTS from the FIRST product image EXACTLY: same wash, wide straight leg, knee length, raw frayed released hem, front button and zip fly, pockets. Only the BOTTOM HEM of an oversized top (hoodie or tee) is visible at the very top edge of the frame. Bare lower legs between the shorts hem and white crew socks, current chunky sneakers. ${framing}. Setting: ${setting}. Lighting: ${lighting}. Amateur fit-check aesthetic, slight phone-camera grain, realistic denim fabric texture and wash detail. The denim SHORTS fill the frame and are the whole subject.${ref}
 NO head, NO face, NO chest, NO arms, NO text overlay.`;
 }
-// Last frame: el siguiente momento (cambio de stance de piernas) — interpola movimiento.
-function videoLastPrompt() {
+// Last frame: el siguiente momento — según la toma (cambio de stance / paso / push).
+function videoLastPrompt(shot = null) {
+  const def = shot && SHOT_TYPES[shot.shotType];
+  const move = def?.last || 'SHIFT the body weight onto the OTHER leg and change the stance slightly — a natural small movement, visibly a different stance, NOT a frozen copy of the previous frame.';
   return `${GARMENT_LOCK}
-The SECOND image is the previous frame of a vertical WAIST-DOWN fit-check clip (cropped from the waist down: no head, chest or arms — only the legs, the denim shorts and the feet). Generate the NEXT moment of the SAME clip: keep the SAME denim shorts, legs, socks, sneakers, floor, room and lighting IDENTICAL and the SAME waist-down framing, but SHIFT the body weight onto the OTHER leg and change the stance slightly — a natural small movement, visibly a different stance, NOT a frozen copy of the previous frame. Casual iPhone fit-check, realistic grain.
+The SECOND image is the previous frame of a vertical WAIST-DOWN fit-check clip (cropped from the waist down: no head, chest or arms — only the legs, the denim shorts and the feet). Generate the NEXT moment of the SAME clip: keep the SAME denim shorts, legs, socks, sneakers, floor, room and lighting IDENTICAL and the SAME waist-down framing, but ${move} Casual iPhone fit-check, realistic grain.
 NO head, NO face, NO chest, NO arms, NO text overlay.`;
 }
 
@@ -132,17 +184,20 @@ export async function generateVideoFrames(clipId) {
     const productDescription = [clip.product, prod?.description].filter(Boolean).join('. ');
     const imageUrl = clip.sourceImageUrl;
 
+    // Toma (shot) del flujo por-jean: encuadre + setting/luz FIJOS del proyecto. null -> clip suelto.
+    const shot = clip.shotType ? { shotType: clip.shotType, setting: clip.editSetting, lighting: clip.editLighting } : null;
+
     // SIN director (el casting describía una PERSONA COMPLETA y le ganaba al "waist-down").
     // Prompt DIRECTO de encuadre cintura-abajo, full resolución nativa (sin zoom-crop).
     const start = await generateVariant({
       imageUrl, productDescription, fitSpec, size: STORY_SIZE,
       referenceB64: clip.referenceImageData || null,
-      prompt: videoStartPrompt(clip.referenceDna || ''),
+      prompt: videoStartPrompt(clip.referenceDna || '', shot),
     });
-    // LAST frame: el siguiente momento DESDE el start (cambio de stance de piernas).
+    // LAST frame: el siguiente momento DESDE el start (según la toma).
     const last = await generateVariant({
       imageUrl, referenceB64: start.b64, productDescription, fitSpec,
-      prompt: videoLastPrompt(), size: STORY_SIZE,
+      prompt: videoLastPrompt(shot), size: STORY_SIZE,
     });
     const startFid = await judgeFidelity({ sourceImageUrl: imageUrl, b64: start.b64, fitSpec }).catch(() => ({ score: null, issues: [] }));
     const lastFid = await judgeFidelity({ sourceImageUrl: imageUrl, b64: last.b64, fitSpec }).catch(() => ({ score: null, issues: [] }));
@@ -155,7 +210,7 @@ export async function generateVideoFrames(clipId) {
       startImageData: start.b64, lastImageData: last.b64,
       startFidelity: startFid.score, lastFidelity: lastFid.score,
       fidelityIssues: [...(startFid.issues || []), ...(lastFid.issues || [])].slice(0, 6),
-      castTag: 'lower-body', sceneTag: 'fit-check',
+      castTag: 'lower-body', sceneTag: clip.shotType || 'fit-check',
       hookLine: hook?.hookLine || null, callout: hook?.callout || null, fontTag: hook?.fontTag || null,
       stage: 'frames', genStatus: 'ready', error: null,
     });
@@ -169,7 +224,10 @@ export async function generateVideoFrames(clipId) {
     // AUTO-GATE: si los dos frames pasan fidelidad, anima solo (no gasta Seedance en frames malos).
     const bothPass = (startFid.score ?? 0) >= 85 && (lastFid.score ?? 0) >= 85;
     if (config.videoAuto && bothPass) {
-      const { preset, mode } = await pickVideoPreset(); // ε-greedy: explota ganador + explora/inventa
+      // Toma del flujo por-jean -> movimiento FIJO de la toma. Clip suelto -> ε-greedy (explora/explota).
+      const { preset, mode } = clip.shotType && SHOT_TYPES[clip.shotType]
+        ? { preset: SHOT_TYPES[clip.shotType].motion, mode: 'shot' }
+        : await pickVideoPreset();
       animateClip(clipId, { preset, mode }).catch((e) => console.error('[video] auto-animate:', e.message));
     }
   } catch (err) {
@@ -186,7 +244,10 @@ export async function animateClip(clipId, { preset = 'mirror-sway', mode = 'manu
   const base = config.publicBaseUrl.replace(/\/$/, '');
   const startUrl = `${base}/api/video/${clipId}/start-frame`;
   const lastUrl = `${base}/api/video/${clipId}/last-frame`;
-  const prompt = (await getMotionPrompt(preset)) + MOTION_GUARD;
+  // Toma walk -> guard sin "NO walking"; el resto se mantiene quieto.
+  const def = clip.shotType && SHOT_TYPES[clip.shotType];
+  const guard = def?.allowWalk ? FIDELITY_GUARD : STILL_GUARD;
+  const prompt = (await getMotionPrompt(preset)) + guard;
   const taskId = await createVideoTask({
     imageUrls: [startUrl, lastUrl], prompt, duration: clip.duration || 5,
     aspectRatio: '9:16', resolution: '1080p', fast: false, // seedance-2 (1080p; -fast no soporta 1080p)
@@ -274,4 +335,94 @@ export function startVideoAutopilot() {
   // NO corremos al arranque (cada deploy/restart dispararía un clip). Solo en el intervalo.
   _vauTimer = setInterval(run, everyMin * 60 * 1000);
   console.log(`[video] autopilot cada ${everyMin}min (sin run al arranque)`);
+}
+
+// ============ FLUJO POR-JEAN (EditProject) ============
+
+// Crea un EditProject: 1 jean + N tomas (shots) del MISMO jean, setting/luz FIJOS (cohesión).
+// Genera los frames de cada toma en SECUENCIA (no satura RAM/Seedance); el auto-gate las anima.
+export async function createEditProject({ shopifyProductId, shotTypes } = {}) {
+  const product = shopifyProductId
+    ? await Product.findOne({ shopifyId: Number(shopifyProductId) }).lean()
+    : await Product.findOne().sort({ generatedCount: 1 }).lean();
+  if (!product) throw new Error('Producto no encontrado');
+  const [ref] = await pickRefs({ shopifyProductId: product.shopifyId, wash: product.wash, n: 1, type: 'outfit' });
+  const types = (shotTypes && shotTypes.length ? shotTypes : ['fit-check', 'detalle', 'walk', 'side']).filter((t) => SHOT_TYPES[t]);
+  // setting + luz FIJOS del proyecto -> todas las tomas comparten -> el edit se ve como UNA pieza.
+  const setting = rand(V_SETTING);
+  const lighting = rand(V_LIGHT);
+
+  const project = await EditProject.create({
+    shopifyProductId: product.shopifyId, product: product.title, wash: product.wash, sourceImageUrl: product.image,
+    referenceId: ref?.id || null, referenceDna: ref?.dna || '',
+    setting, lighting, shotTypes: types, stage: 'shots',
+  });
+
+  // crea una toma (VideoClip) por shotType
+  const shotIds = [];
+  for (const t of types) {
+    const clip = await VideoClip.create({
+      shopifyProductId: product.shopifyId, product: product.title, wash: product.wash, sourceImageUrl: product.image,
+      referenceId: ref?.id || null, referenceDna: ref?.dna || '', referenceImageData: ref?.b64 || null,
+      editProjectId: project._id, shotType: t, editSetting: setting, editLighting: lighting,
+      stage: 'frames', genStatus: 'generating',
+    });
+    shotIds.push(clip._id);
+  }
+  await EditProject.findByIdAndUpdate(project._id, { shotIds });
+
+  // genera los frames en SECUENCIA en background (cada uno se auto-anima si pasa fidelidad)
+  (async () => {
+    for (const id of shotIds) {
+      await generateVideoFrames(id).catch((e) => console.error('[edit] shot frames:', e.message));
+    }
+  })();
+
+  return { id: project._id, shots: shotIds.length, product: product.title };
+}
+
+// Arma el EDIT del proyecto a partir de sus tomas LISTAS (mismo jean) -> reel de retención.
+// CTA del ad = ese producto. v1: beat sintetizado (la música real la sube el usuario -> próximo).
+export async function buildProjectEdit(projectId, { bpm } = {}) {
+  const project = await EditProject.findById(projectId).lean();
+  if (!project) throw new Error('proyecto no encontrado');
+  const shots = await VideoClip.find({ _id: { $in: project.shotIds }, stage: 'ready' })
+    .select('+videoData videoUrl shotType').lean();
+  if (shots.length < 2) throw new Error('necesito al menos 2 tomas listas');
+  // ordena por el orden de shotTypes del proyecto (fit-check, detalle, walk, side)
+  const order = project.shotTypes;
+  shots.sort((a, b) => order.indexOf(a.shotType) - order.indexOf(b.shotType));
+
+  await EditProject.findByIdAndUpdate(projectId, { stage: 'editing', error: null });
+  try {
+    // fuente CRUDA (sin hook bakeado): videoUrl de Seedance; fallback a nuestra copia.
+    const clips = [];
+    for (const s of shots) {
+      let buffer = null;
+      if (s.videoUrl) { try { const r = await fetch(s.videoUrl); if (r.ok) buffer = Buffer.from(await r.arrayBuffer()); } catch {} }
+      if (!buffer && s.videoData) buffer = Buffer.from(s.videoData, 'base64');
+      if (buffer) clips.push({ buffer, wash: s.shotType });
+    }
+    if (clips.length < 2) throw new Error('no pude bajar las tomas crudas');
+
+    const hookLine = project.hookLine || 'THE ONLY SHORTS YOU NEED';
+    const callout = project.callout || `${project.wash || ''} WASH · CAROTA`.trim();
+    const r = await buildJeansEdit({ clips, hookLine, callout, bpm: Number(bpm) || 100, targetSec: 11 });
+    const b64 = r.buffer.toString('base64');
+    if (b64.length > 15.5 * 1024 * 1024) throw new Error(`edit muy pesado (${(r.buffer.length / 1e6).toFixed(1)}MB)`);
+
+    // copy del ad (como los singles) para Meta
+    let copy = {};
+    try { copy = await generateCopy({ product: project.product, wash: project.wash, angle: 'video edit', description: project.product }); } catch {}
+
+    await EditProject.findByIdAndUpdate(projectId, {
+      editVideoData: b64, editDuration: r.duration, stage: 'ready',
+      hookLine, callout, ...(copy.primaryTexts ? { copy: { ...copy, edited: false } } : {}),
+    });
+    console.log(`[edit] proyecto ${projectId} listo: ${r.segments} cortes, ${r.duration}s`);
+    return { ok: true, duration: r.duration, segments: r.segments };
+  } catch (e) {
+    await EditProject.findByIdAndUpdate(projectId, { stage: 'failed', error: e.message });
+    throw e;
+  }
 }

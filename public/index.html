@@ -637,6 +637,7 @@
     <a data-view="motor" onclick="showView('motor')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5L19 19M19 5l-2.5 2.5M7.5 16.5L5 19"/></svg>Motor<span class="dot" id="motorDot"></span></a>
     <a data-view="aprendizaje" onclick="showView('aprendizaje')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-3-3-4 4"/></svg>Aprendizaje</a>
     <a data-view="video" onclick="showView('video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Video<span class="pill zero" id="pillVideo">0</span></a>
+    <a data-view="edits" onclick="showView('edits')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/><path d="m14 12 4 2.5-4 2.5z" fill="currentColor"/></svg>Edits<span class="pill zero" id="pillEdits">0</span></a>
   </nav>
   <div class="foot"><span class="dot"></span>Cron Shopify activo</div>
 </aside>
@@ -788,6 +789,43 @@
       </div>
     </section>
 
+    <!-- EDITS (por jean) -->
+    <section class="view" id="view-edits">
+      <style>
+        .editlist { display:flex; flex-direction:column; gap:16px; }
+        .ecard { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; box-shadow:0 1px 3px rgba(16,24,40,.05); }
+        .ecard .etop { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+        .ecard .etop h3 { margin:0; font-size:15px; }
+        .ebadge { font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px; text-transform:capitalize; }
+        .ebadge.shots { background:#eef2ff; color:#4338ca; } .ebadge.editing { background:#fef3c7; color:#92400e; }
+        .ebadge.ready { background:#dcfce7; color:#166534; } .ebadge.failed { background:#fee2e2; color:#991b1b; }
+        .eshots { display:flex; gap:10px; flex-wrap:wrap; }
+        .eshot { width:108px; }
+        .eshot .ethumb { position:relative; width:108px; height:160px; border-radius:9px; overflow:hidden; background:#f1f5f9; border:1px solid var(--border); }
+        .eshot .ethumb img { width:100%; height:100%; object-fit:cover; }
+        .eshot .eshot-lbl { display:block; font-size:11px; font-weight:600; margin-top:5px; }
+        .eshot .eshot-st { display:block; font-size:10px; color:var(--muted); }
+        .eshot .ethumb .est { position:absolute; bottom:5px; left:5px; right:5px; font-size:9px; font-weight:600; text-align:center; padding:2px; border-radius:5px; background:rgba(0,0,0,.6); color:#fff; }
+        .eshot.ready .ethumb { border-color:#16a34a; }
+        .eactions { display:flex; align-items:center; gap:8px; margin-top:14px; }
+        .epreview { display:flex; gap:16px; align-items:flex-start; }
+        .epreview video { width:200px; border-radius:10px; background:#000; }
+      </style>
+      <div class="vhero">
+        <div class="vhstat"><div class="vhk">Edits listos</div><div class="vhv" id="ehReady">0</div></div>
+        <div class="vhstat"><div class="vhk">En proceso</div><div class="vhv" id="ehWip">0</div></div>
+        <span style="flex:1"></span>
+        <span class="muted" id="editsApi" style="font-size:12px"></span>
+        <button class="btn ghost sm" onclick="loadEdits()" title="Actualizar">↻</button>
+        <button class="btn sm" onclick="newEditProject(this)">+ Nuevo edit (por jean)</button>
+      </div>
+      <div class="vsec">
+        <div class="vsech">🎬 Edits por jean<span class="vsecd">tomas waist-down del MISMO jean → animan → edit con beat → CTA a ese producto</span></div>
+        <div id="editsList" class="editlist"></div>
+        <div class="vempty" id="editsEmpty" style="display:none">No hay edits todavía — tocá “+ Nuevo edit (por jean)”. Genera 4 tomas (fit-check, detalle, walk, side) del mismo jean y las edita.</div>
+      </div>
+    </section>
+
   </div>
 </div>
 
@@ -879,9 +917,11 @@ const TITLES = {
   motor: ['Motor', 'El engine trabajando solo · qué va desarrollando'],
   aprendizaje: ['Aprendizaje', 'Qué ADN (escena/casting/ángulo/wash) rinde mejor en Meta'],
   video: ['Video Sourcing', 'Frames con gpt → Seedance los anima → QC → export'],
+  edits: ['Edits', 'Por jean: set de tomas → animan → edit de retención con beat → CTA al producto'],
 };
 let adsPoll = null;
 let videoPoll = null;
+let editsPoll = null;
 let videoClips = [];
 let videoView = 'available';
 function showView(name) {
@@ -892,6 +932,8 @@ function showView(name) {
   clearInterval(adsPoll); adsPoll = null;
   clearInterval(learnPoll); learnPoll = null;
   clearInterval(videoPoll); videoPoll = null;
+  clearInterval(editsPoll); editsPoll = null;
+  if (name === 'edits') { loadEdits(); editsPoll = setInterval(loadEdits, 20000); }
   if (name === 'productos') loadProducts();
   if (name === 'referencias') loadReferences();
   if (name === 'ads') { loadAdManager(); adsPoll = setInterval(() => { loadLaunched(); loadCampaigns(); }, 90000); } // refresca métricas cada 90s
@@ -1120,6 +1162,84 @@ function vPipeCard(c) {
 }
 async function newVideoClip(btn) { btn.disabled = true; btn.textContent = '…'; try { await fetch('/api/video/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); toast('Generando frames…'); loadVideo(); } finally { btn.disabled = false; btn.textContent = '+ Nuevo clip'; } }
 async function makeEdit(btn) { btn.disabled = true; const t = btn.textContent; btn.textContent = '🎬 armando…'; try { const r = await fetch('/api/video/edit-test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then((x) => x.json()); toast(r.error || `Armando edit con ${r.sources} jeans… (~40s, aparece como “EDIT · jeans cambiando”)`); loadVideo(); } finally { btn.disabled = false; btn.textContent = t; } }
+
+/* ===== EDITS (flujo por jean) ===== */
+let editShotLabels = { 'fit-check': 'Fit-check', 'detalle': 'Detalle', 'walk': 'Walk', 'side': 'Side/back' };
+function shotStageLabel(s) { return ({ frames: 'generando…', curated: 'curada', animating: 'animando…', qc: 'QC', ready: '✓ lista', failed: '✕ falló' })[s] || s; }
+async function loadEdits() {
+  let d = { projects: [] };
+  try { d = await (await fetch('/api/edits')).json(); } catch (e) {}
+  if (d.shotTypes) editShotLabels = d.shotTypes;
+  const projects = d.projects || [];
+  const ready = projects.filter(p => p.stage === 'ready').length;
+  const wip = projects.filter(p => p.stage === 'shots' || p.stage === 'editing').length;
+  document.getElementById('ehReady').textContent = ready;
+  document.getElementById('ehWip').textContent = wip;
+  const pill = document.getElementById('pillEdits'); if (pill) { pill.textContent = ready; pill.classList.toggle('zero', ready === 0); }
+  document.getElementById('editsEmpty').style.display = projects.length ? 'none' : 'block';
+  document.getElementById('editsList').innerHTML = projects.map(renderEditCard).join('');
+}
+function renderEditCard(p) {
+  const shots = p.shots || [];
+  const readyN = shots.filter(s => s.stage === 'ready').length;
+  const strip = (p.shotTypes || []).map(t => {
+    const s = shots.find(x => x.shotType === t);
+    const id = s ? s._id : null;
+    const stg = s ? s.stage : '—';
+    const fid = s && s.startFidelity != null ? ` ${s.startFidelity}` : '';
+    return `<div class="eshot ${stg}">
+      <div class="ethumb">${id ? `<img src="/api/video/${id}/start-frame" loading="lazy" onerror="this.style.opacity=.15"/>` : ''}<span class="est">${shotStageLabel(stg)}${stg === 'ready' ? fid : ''}</span></div>
+      <span class="eshot-lbl">${editShotLabels[t] || t}</span>
+    </div>`;
+  }).join('');
+  let body;
+  if (p.stage === 'ready') {
+    const acc = p.qcStatus === 'approved';
+    body = `<div class="epreview">
+      <video src="/api/edits/${p._id}/video" muted loop autoplay playsinline controls></video>
+      <div>
+        <div class="muted" style="font-size:12px;margin-bottom:8px">${p.editDuration ? p.editDuration.toFixed(1) + 's' : ''} · hook: <b>${p.hookLine || '—'}</b></div>
+        <div class="eactions" style="margin-top:0">
+          <button class="btn sm ${acc ? 'ghost' : ''}" onclick="acceptEdit('${p._id}', ${acc})">${acc ? '✓ Aceptado' : 'Aceptar'}</button>
+          <a class="btn ghost sm" href="/api/edits/${p._id}/video?dl=1" download="carota-edit-${p._id}.mp4">⬇ Descargar</a>
+          <button class="btn ghost sm" onclick="buildEdit('${p._id}', this)" title="Rehacer el edit">↻ Rehacer</button>
+          <button class="btn ghost sm" onclick="delEdit('${p._id}')">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  } else {
+    const canBuild = readyN >= 2 && p.stage !== 'editing';
+    body = `<div class="eshots">${strip}</div>
+      <div class="eactions">
+        <button class="btn sm" onclick="buildEdit('${p._id}', this)" ${canBuild ? '' : 'disabled'}>${p.stage === 'editing' ? '🎬 armando edit…' : `Armar edit (${readyN}/${(p.shotTypes || []).length} listas)`}</button>
+        <button class="btn ghost sm" onclick="delEdit('${p._id}')">🗑</button>
+        ${p.error ? `<span class="muted" style="font-size:11px;color:#b91c1c">${p.error}</span>` : ''}
+      </div>`;
+  }
+  return `<div class="ecard">
+    <div class="etop"><h3>${(p.product || 'CAROTA').replace(' Denim Short', '')}</h3>
+      <span class="ebadge ${p.stage}">${p.stage === 'shots' ? 'tomas' : p.stage}</span>
+      <span class="muted" style="font-size:12px">${p.wash || ''} wash</span></div>
+    ${body}
+  </div>`;
+}
+async function newEditProject(btn) {
+  btn.disabled = true; const t = btn.textContent; btn.textContent = '…generando tomas';
+  try { const r = await fetch('/api/edits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(x => x.json());
+    toast(r.error || `Generando ${r.shots} tomas de ${r.product}… (animan solas, ~2-3 min)`); loadEdits();
+  } finally { btn.disabled = false; btn.textContent = t; }
+}
+async function buildEdit(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '🎬 armando…'; }
+  try { const r = await fetch(`/api/edits/${id}/build`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(x => x.json());
+    toast(r.error || 'Armando el edit… (~40s)'); loadEdits();
+  } catch (e) { toast('Error'); } finally { if (btn) btn.disabled = false; }
+}
+async function acceptEdit(id, isAcc) {
+  await fetch(`/api/edits/${id}/${isAcc ? 'unaccept' : 'accept'}`, { method: 'POST' });
+  toast(isAcc ? 'Quitado' : '✓ Aceptado'); loadEdits();
+}
+async function delEdit(id) { if (!confirm('¿Borrar el edit y sus tomas?')) return; await fetch(`/api/edits/${id}`, { method: 'DELETE' }); loadEdits(); }
 async function vAct(id, act, btn) { if (btn) btn.disabled = true; await fetch(`/api/video/${id}/${act}`, { method: 'POST' }); loadVideo(); }
 async function vDel(id) { if (!confirm('¿Borrar clip?')) return; await fetch(`/api/video/${id}`, { method: 'DELETE' }); loadVideo(); }
 async function vAnimate(id, btn) { btn.disabled = true; btn.textContent = '…'; const r = await fetch(`/api/video/${id}/animate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset: videoPresets[0] || 'mirror-sway' }) }).then((x) => x.json()); toast(r.error || 'Animando con Seedance…'); loadVideo(); }

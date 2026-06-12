@@ -74,6 +74,12 @@ const videoClipSchema = new Schema(
     isEdit: { type: Boolean, default: false, index: true },
     editFrom: { type: [String], default: [] }, // ids de los clips fuente
 
+    // FLUJO POR-JEAN: este clip es una TOMA (shot) de un EditProject (varias tomas del MISMO jean).
+    editProjectId: { type: Schema.Types.ObjectId, ref: 'EditProject', default: null, index: true },
+    shotType: { type: String, default: null },   // fit-check | detalle | walk | side
+    editSetting: { type: String, default: null }, // setting/lighting FIJOS del proyecto (cohesión entre tomas)
+    editLighting: { type: String, default: null },
+
     qcStatus: { type: String, enum: ['generated', 'approved', 'rejected'], default: 'generated', index: true },
     metaAdId: { type: String, default: null },       // ad de Meta (si se lanzó)
     metaCampaignId: { type: String, default: null }, // campaña de Meta

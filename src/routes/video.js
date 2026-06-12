@@ -2,9 +2,10 @@ import { Router } from 'express';
 import { VideoClip } from '../models/videoClip.js';
 import { Product } from '../models/product.js';
 import { pickRefs } from '../refs.js';
-import { generateVideoFrames, animateClip, finishAnimation, MOTION_PRESETS } from '../video.js';
+import { generateVideoFrames, animateClip, finishAnimation, MOTION_PRESETS, SHOT_TYPES, createEditProject, buildProjectEdit } from '../video.js';
 import { overlayHookVideo } from '../videoproc.js';
 import { buildJeansEdit } from '../videoedit.js';
+import { EditProject } from '../models/editProject.js';
 import { piapiConfigured } from '../piapi.js';
 import * as meta from '../meta.js';
 import { MetaCampaign } from '../models/metaCampaign.js';
@@ -137,6 +138,69 @@ videoRouter.post('/video/edit-test', async (req, res) => {
       console.error('[edit] fallo:', e.message);
     }
   })();
+});
+
+// ============ FLUJO POR-JEAN (Edits) ============
+
+// Lista de proyectos de edit (con el estado de cada toma para la tira del tab).
+videoRouter.get('/edits', async (_req, res) => {
+  const projects = await EditProject.find().sort({ createdAt: -1 }).limit(60)
+    .select('-editVideoData -copy').lean();
+  // adjunta el estado de cada toma (shot)
+  const allShotIds = projects.flatMap((p) => p.shotIds || []);
+  const shots = await VideoClip.find({ _id: { $in: allShotIds } })
+    .select('shotType stage genStatus startFidelity videoQc editProjectId').lean();
+  const byProj = {};
+  for (const s of shots) { (byProj[s.editProjectId] ||= []).push(s); }
+  const out = projects.map((p) => ({ ...p, shots: (byProj[p._id] || []) }));
+  res.json({ projects: out, shotTypes: Object.fromEntries(Object.entries(SHOT_TYPES).map(([k, v]) => [k, v.label])) });
+});
+
+// Crea un proyecto (1 jean -> N tomas).
+videoRouter.post('/edits', async (req, res) => {
+  try {
+    const r = await createEditProject({ shopifyProductId: req.body?.shopifyProductId, shotTypes: req.body?.shotTypes });
+    res.status(201).json(r);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// Sirve el mp4 del edit (con ?dl=1 para descarga forzada).
+videoRouter.get('/edits/:id/video', async (req, res) => {
+  const doc = await EditProject.findById(req.params.id).select('+editVideoData').lean();
+  if (!doc?.editVideoData) return res.status(404).json({ error: 'Sin edit' });
+  const buf = Buffer.from(doc.editVideoData, 'base64');
+  res.set('Content-Type', 'video/mp4');
+  res.set('Content-Length', String(buf.length));
+  res.set('Accept-Ranges', 'bytes');
+  if (req.query.dl || req.query.download) res.set('Content-Disposition', `attachment; filename="carota-edit-${req.params.id}.mp4"`);
+  res.send(buf);
+});
+
+// Arma el edit (background — ffmpeg + bajar tomas crudas tarda).
+videoRouter.post('/edits/:id/build', async (req, res) => {
+  const doc = await EditProject.findById(req.params.id).lean();
+  if (!doc) return res.status(404).json({ error: 'no encontrado' });
+  const ready = await VideoClip.countDocuments({ _id: { $in: doc.shotIds }, stage: 'ready' });
+  if (ready < 2) return res.status(400).json({ error: `solo ${ready} toma(s) lista(s) — esperá a que estén al menos 2` });
+  res.status(202).json({ id: req.params.id, status: 'building' });
+  buildProjectEdit(req.params.id, { bpm: req.body?.bpm }).catch((e) => console.error('[edit] build:', e.message));
+});
+
+videoRouter.post('/edits/:id/accept', async (req, res) => {
+  const doc = await EditProject.findByIdAndUpdate(req.params.id, { qcStatus: 'approved' }, { new: true }).lean();
+  if (!doc) return res.status(404).json({ error: 'no encontrado' });
+  res.json({ ok: true, qcStatus: doc.qcStatus });
+});
+videoRouter.post('/edits/:id/unaccept', async (req, res) => {
+  await EditProject.findByIdAndUpdate(req.params.id, { qcStatus: 'generated' });
+  res.json({ ok: true });
+});
+
+videoRouter.delete('/edits/:id', async (req, res) => {
+  const doc = await EditProject.findById(req.params.id).lean();
+  if (doc) await VideoClip.deleteMany({ _id: { $in: doc.shotIds } }); // borra también las tomas
+  await EditProject.findByIdAndDelete(req.params.id);
+  res.json({ ok: true });
 });
 
 // Curar: pasa de frames -> curated (gate humano antes de gastar Seedance).
