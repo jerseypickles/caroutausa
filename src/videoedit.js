@@ -98,8 +98,11 @@ export async function buildJeansEdit({ clips, hookLine = 'WHICH WASH?', callout 
     args.push('-f', 'lavfi', '-i', beatExpr(beat, total));      // input N+1 (audio)
     args.push('-filter_complex', fc.join(';'),
       '-map', '[vout]', '-map', `${N + 1}:a`,
-      '-c:v', 'libx264', '-crf', '18', '-preset', 'medium', '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac', '-b:a', '192k', '-t', String(total), '-movflags', '+faststart',
+      // Un solo encode, calidad alta PERO bitrate capado (~5.5Mbps) para que el mp4 quede <8MB y
+      // entre en el doc de Mongo (limite 16MB en base64). A esta tasa se ve nitido y las redes
+      // recomprimen a 3-4Mbps igual, asi que no se nota.
+      '-c:v', 'libx264', '-crf', '21', '-maxrate', '5500k', '-bufsize', '9000k', '-preset', 'medium', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '160k', '-t', String(total), '-movflags', '+faststart',
       join(dir, 'out.mp4'));
     await exec(ffmpegPath, args, { timeout: 240000 });
     return { buffer: await readFile(join(dir, 'out.mp4')), duration: total, segments: nSeg, bpm };

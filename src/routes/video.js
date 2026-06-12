@@ -126,8 +126,10 @@ videoRouter.post('/video/edit-test', async (req, res) => {
       const r = await buildJeansEdit({
         clips, hookLine: edit.hookLine, callout: edit.callout, bpm: Number(bpm) || 100, targetSec: 11,
       });
+      const b64 = r.buffer.toString('base64');
+      if (b64.length > 15.5 * 1024 * 1024) throw new Error(`edit muy pesado (${(r.buffer.length / 1e6).toFixed(1)}MB) para guardar`);
       await VideoClip.findByIdAndUpdate(edit._id, {
-        videoData: r.buffer.toString('base64'), duration: r.duration, stage: 'ready', genStatus: 'ready',
+        videoData: b64, duration: r.duration, stage: 'ready', genStatus: 'ready',
       });
       console.log(`[edit] listo ${edit._id}: ${r.segments} cortes, ${r.duration}s, ${r.bpm}bpm`);
     } catch (e) {
