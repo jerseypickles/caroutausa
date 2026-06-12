@@ -9,6 +9,7 @@ import { pickRefs, pickScene } from './refs.js';
 import { judgeFidelity } from './judge.js';
 import { createVideoTask, getVideoTask, piapiConfigured } from './piapi.js';
 import { judgeVideoFidelity, overlayHookVideo } from './videoproc.js';
+import { bestMotionPreset } from './learning.js';
 import { config } from './config.js';
 
 // Presets de movimiento SUTIL (nada de caminar/gestos -> no se ve IA). El movimiento de
@@ -98,7 +99,8 @@ export async function generateVideoFrames(clipId) {
     // AUTO-GATE: si los dos frames pasan fidelidad, anima solo (no gasta Seedance en frames malos).
     const bothPass = (startFid.score ?? 0) >= 85 && (lastFid.score ?? 0) >= 85;
     if (config.videoAuto && bothPass) {
-      animateClip(clipId, { preset: nextPreset() }).catch((e) => console.error('[video] auto-animate:', e.message));
+      const preset = (await bestMotionPreset().catch(() => null)) || nextPreset(); // sesga al ganador si hay data
+      animateClip(clipId, { preset }).catch((e) => console.error('[video] auto-animate:', e.message));
     }
   } catch (err) {
     console.error(`[video] frames fallo (${clipId}):`, err.message);

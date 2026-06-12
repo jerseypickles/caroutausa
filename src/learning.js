@@ -1,6 +1,7 @@
 import { MetaCampaign } from './models/metaCampaign.js';
 import { Creative } from './models/creative.js';
 import { Carousel } from './models/carousel.js';
+import { VideoClip } from './models/videoClip.js';
 import * as meta from './meta.js';
 
 // Cron en proceso: sincroniza las métricas de Meta cada N min (default 12) para que el
@@ -36,7 +37,7 @@ export async function syncCreativeMetrics() {
         addToCart: i.addToCart || 0, purchases: i.purchases || 0,
         cpa: i.purchases > 0 ? +(i.spend / i.purchases).toFixed(2) : null, updatedAt: new Date(),
       };
-      const Model = ours.format === 'carousel' ? Carousel : Creative;
+      const Model = ours.format === 'carousel' ? Carousel : (ours.format === 'video' ? VideoClip : Creative);
       await Model.findByIdAndUpdate(ours.creativeId, { metrics: m });
       updated++;
     }
@@ -47,18 +48,20 @@ export async function syncCreativeMetrics() {
 // APRENDIZAJE: agrupa los creativos QUE YA CORRIERON por cada dimensión de su ADN
 // (escena, casting, ángulo, wash, formato) y calcula el CTR/CPA promedio ponderado ->
 // leaderboard de qué atributo gana.
-const DIMS = ['sceneTag', 'castTag', 'angle', 'wash', 'format', 'fontTag'];
+const DIMS = ['format', 'sceneTag', 'castTag', 'angle', 'wash', 'fontTag', 'motionPreset'];
 // Umbral mínimo de impresiones para que un valor sea "confiable" (no coronar ruido).
 // 80 es un piso bajo para filtrar samples de 3-20 impr; lo ideal son cientos/miles.
 const MIN_IMPR = 80;
 export async function learningReport() {
-  const [cs, ks] = await Promise.all([
+  const [cs, ks, vs] = await Promise.all([
     Creative.find({ 'metrics.impressions': { $gt: 0 } }).select('sceneTag castTag angle wash format fontTag metrics').lean(),
     Carousel.find({ 'metrics.impressions': { $gt: 0 } }).select('sceneTag castTag wash fontTag metrics').lean(),
+    VideoClip.find({ 'metrics.impressions': { $gt: 0 } }).select('castTag wash fontTag motionPreset metrics').lean(),
   ]);
   const items = [
     ...cs.map((c) => ({ ...c, format: c.format || 'single' })),
     ...ks.map((c) => ({ ...c, angle: 'carrusel', format: 'carousel' })),
+    ...vs.map((c) => ({ ...c, angle: 'video', format: 'video', sceneTag: 'fit-check' })),
   ];
   const report = {};
   for (const dim of DIMS) {
@@ -77,4 +80,23 @@ export async function learningReport() {
     })).sort((a, b) => (a.low - b.low) || (b.ctr - a.ctr)); // primero los confiables, luego por CTR
   }
   return { totalCreatives: items.length, minImpr: MIN_IMPR, report };
+}
+
+// CIERRA EL LOOP: el preset de movimiento con mejor CTR (con data suficiente). null si no hay
+// data -> la generación cae al round-robin. Lo usa el autopilot de video para sesgar al ganador.
+export async function bestMotionPreset() {
+  const vs = await VideoClip.find({ 'metrics.impressions': { $gte: MIN_IMPR } }).select('motionPreset metrics').lean();
+  if (!vs.length) return null;
+  const g = {};
+  for (const v of vs) {
+    if (!v.motionPreset) continue;
+    const m = v.metrics || {};
+    const x = g[v.motionPreset] || (g[v.motionPreset] = { impr: 0, clicks: 0 });
+    x.impr += m.impressions || 0; x.clicks += m.clicks || 0;
+  }
+  const ranked = Object.entries(g)
+    .map(([k, x]) => ({ k, ctr: x.impr ? x.clicks / x.impr : 0, impr: x.impr }))
+    .filter((x) => x.impr >= MIN_IMPR)
+    .sort((a, b) => b.ctr - a.ctr);
+  return ranked.length ? ranked[0].k : null;
 }
