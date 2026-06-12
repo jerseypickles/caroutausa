@@ -1888,10 +1888,10 @@ async function loadLearning() {
   document.getElementById('learnState').innerHTML = `🟢 auto · ${hhmm}${d.totalCreatives ? '' : ' · sin data aún'}`;
   const grid = document.getElementById('learnGrid'), hint = document.getElementById('learnHint');
   if (!d.totalCreatives) {
-    hint.innerHTML = 'Todavía no hay métricas. Tu campaña ya está corriendo — en cuanto los ads junten clicks, esto se llena <b>solo</b> (se actualiza cada pocos minutos) con el CTR real por ADN.';
+    hint.innerHTML = 'Todavía no hay métricas. En cuanto los ads (fotos, carruseles y <b>videos</b>) junten clicks en Meta, esto se llena <b>solo</b> (cada pocos minutos) con el CTR real por ADN — incluyendo <b>formato</b> (foto vs carrusel vs video) y <b>movimiento</b> de los videos.';
     grid.innerHTML = ''; return;
   }
-  hint.innerHTML = `CTR real por dimensión del ADN. Solo se corona (verde) un valor con data confiable (≥${d.minImpr || 80} impresiones); el resto figura como <b>juntando data</b>. Con esto el sistema prioriza ganadores reales, no ruido.`;
+  hint.innerHTML = `CTR real por dimensión del ADN (fotos + carruseles + <b>videos</b>). Solo se corona (verde) un valor con data confiable (≥${d.minImpr || 80} impr); el resto figura como <b>juntando data</b>. El sistema <b>explota</b> el ganador y <b>explora</b> variantes nuevas (movimiento, refs) para seguir descubriendo — no se queda solo con lo conocido.`;
   grid.innerHTML = Object.entries(d.report).map(([dim, rows]) => {
     if (!rows.length) return '';
     const best = (rows.find((r) => !r.low)?.ctr) || 0; // mejor entre los confiables

@@ -19,6 +19,9 @@ export const MOTION_PRESETS = {
   'mirror-sway': 'Subtle realistic micro-movement: the person shifts their weight slightly and the fabric of the clothing sways naturally, very gentle handheld phone-camera motion. Photoreal candid fitpic.',
   'breath-fabric': 'Almost still, only a natural breathing motion and the clothing fabric settling softly, with a barely-there handheld camera drift. Photoreal.',
   'slow-push': 'The camera slowly and smoothly pushes in a little closer while the person stays mostly still with a tiny natural weight shift. Photoreal, cinematic but candid.',
+  'weight-shift': 'The person shifts their weight from one leg onto the other with a small natural sway, the denim moving slightly with the motion, gentle handheld camera. Photoreal, candid.',
+  'slow-zoom-out': 'The camera very slowly and smoothly pulls back a little, revealing slightly more of the fit, while the person stays mostly still. Photoreal, candid fit-check.',
+  'fabric-flow': 'Almost still — the focus is the denim and fabric subtly settling and catching the light, with a barely-there hip or hand movement and minimal handheld drift. Photoreal.',
 };
 const MOTION_GUARD = ' NO walking, NO big movements, NO morphing. The denim shorts keep the EXACT same shape, wash, rips, hem and length the whole time. Hands and face stay stable and natural.';
 
@@ -26,6 +29,16 @@ const MOTION_GUARD = ' NO walking, NO big movements, NO morphing. The denim shor
 const PRESET_KEYS = Object.keys(MOTION_PRESETS);
 let _presetIdx = 0;
 function nextPreset() { const k = PRESET_KEYS[_presetIdx % PRESET_KEYS.length]; _presetIdx++; return k; }
+
+// EXPLORE/EXPLOIT (ε-greedy): explora una variante nueva ~VIDEO_EXPLORE del tiempo (round-robin
+// asegura cubrir TODOS los presets), explota el ganador por CTR el resto. Sin data -> siempre
+// explora (round-robin). Así el modelo APRENDE (explota) y SIGUE DESCUBRIENDO (explora).
+async function pickVideoPreset() {
+  const eps = Number(process.env.VIDEO_EXPLORE || 0.35);
+  const best = await bestMotionPreset().catch(() => null);
+  if (!best || Math.random() < eps) return nextPreset(); // explorar
+  return best; // explotar el ganador
+}
 
 // CROP cerrado DETERMINÍSTICO: gpt-image no respeta el encuadre por texto, así que recorto yo.
 // Corta la cabeza arriba y hace zoom (bottom-aligned, mantiene los pies) -> el PRODUCTO llena
@@ -99,7 +112,7 @@ export async function generateVideoFrames(clipId) {
     // AUTO-GATE: si los dos frames pasan fidelidad, anima solo (no gasta Seedance en frames malos).
     const bothPass = (startFid.score ?? 0) >= 85 && (lastFid.score ?? 0) >= 85;
     if (config.videoAuto && bothPass) {
-      const preset = (await bestMotionPreset().catch(() => null)) || nextPreset(); // sesga al ganador si hay data
+      const preset = await pickVideoPreset(); // ε-greedy: explota el ganador + explora variantes
       animateClip(clipId, { preset }).catch((e) => console.error('[video] auto-animate:', e.message));
     }
   } catch (err) {
