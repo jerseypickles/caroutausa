@@ -52,13 +52,35 @@ videoRouter.get('/video/:id/start-frame', (req, res) => serveFrame('startImageDa
 videoRouter.get('/video/:id/last-frame', (req, res) => serveFrame('lastImageData', req, res));
 
 // El mp4 final (de nuestra copia, o redirige a la URL de Seedance).
+// ?dl=1 -> fuerza descarga real (Content-Disposition attachment). Sin eso, Safari abre el
+// video inline y al "Guardar como" baja un archivo parcial/roto. Con attachment baja completo.
 videoRouter.get('/video/:id/video', async (req, res) => {
   const doc = await VideoClip.findById(req.params.id).select('+videoData videoUrl').lean();
+  const dl = req.query.dl || req.query.download;
   if (doc?.videoData) {
+    const buf = Buffer.from(doc.videoData, 'base64');
     res.set('Content-Type', 'video/mp4');
-    return res.send(Buffer.from(doc.videoData, 'base64'));
+    res.set('Content-Length', String(buf.length));
+    res.set('Accept-Ranges', 'bytes');
+    if (dl) res.set('Content-Disposition', `attachment; filename="carota-${req.params.id}.mp4"`);
+    return res.send(buf);
   }
-  if (doc?.videoUrl) return res.redirect(doc.videoUrl);
+  if (doc?.videoUrl) {
+    // Seedance: para descarga, hacemos proxy del mp4 con header attachment (un redirect a la URL
+    // de Seedance abre inline en el navegador y vuelve a romper el "Guardar como").
+    if (dl) {
+      try {
+        const r = await fetch(doc.videoUrl);
+        if (!r.ok) return res.redirect(doc.videoUrl);
+        const buf = Buffer.from(await r.arrayBuffer());
+        res.set('Content-Type', 'video/mp4');
+        res.set('Content-Length', String(buf.length));
+        res.set('Content-Disposition', `attachment; filename="carota-${req.params.id}.mp4"`);
+        return res.send(buf);
+      } catch { return res.redirect(doc.videoUrl); }
+    }
+    return res.redirect(doc.videoUrl);
+  }
   res.status(404).json({ error: 'Sin video' });
 });
 

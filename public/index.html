@@ -1062,7 +1062,7 @@ function vReadyCard(c) {
   return `<div class="vrcard">
     <video src="/api/video/${c._id}/video" muted loop autoplay playsinline preload="metadata"></video>
     ${qc}${accepted}
-    <div class="vract">${acceptBtn}<button onclick="vCopy('${c._id}')" title="Editar copy">✎</button><a href="/api/video/${c._id}/video" target="_blank" title="Descargar mp4">⬇</a><button onclick="vDel('${c._id}')" title="Borrar">🗑</button></div>
+    <div class="vract">${acceptBtn}<button onclick="vCopy('${c._id}')" title="Editar copy">✎</button><a href="/api/video/${c._id}/video?dl=1" download="carota-${c._id}.mp4" title="Descargar mp4">⬇</a><button onclick="vDel('${c._id}')" title="Borrar">🗑</button></div>
     ${vExpBadge(c)}
     <div class="vrover" onclick="vCopy('${c._id}')" title="Editar copy">
       <div class="vrt">${esc((c.product || '').replace(' Denim Short', ''))}</div>
