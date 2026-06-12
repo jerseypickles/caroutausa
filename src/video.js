@@ -271,7 +271,7 @@ export function startVideoAutopilot() {
       console.log('[video] autopilot: nuevo clip de', product.title);
     } catch (e) { console.error('[video] autopilot:', e.message); }
   };
-  run();
+  // NO corremos al arranque (cada deploy/restart dispararía un clip). Solo en el intervalo.
   _vauTimer = setInterval(run, everyMin * 60 * 1000);
-  console.log(`[video] autopilot cada ${everyMin}min`);
+  console.log(`[video] autopilot cada ${everyMin}min (sin run al arranque)`);
 }
