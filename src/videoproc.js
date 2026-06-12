@@ -6,7 +6,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import ffmpegPath from 'ffmpeg-static';
 import { createCanvas, GlobalFonts } from '@napi-rs/canvas';
-import { judgeFidelity } from './judge.js';
+import { judgeVideoFrames } from './judge.js';
 
 const exec = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -35,15 +35,9 @@ export async function extractFrames(mp4Buffer, duration = 5, count = 3) {
 // QC AUTOMÁTICO del video: muestrea frames y juzga la fidelidad del short en cada uno.
 // Devuelve el PEOR score (el frame más deformado manda) + issues.
 export async function judgeVideoFidelity({ mp4Buffer, duration = 5, sourceImageUrl, fitSpec = '' }) {
-  const frames = await extractFrames(mp4Buffer, duration, 3);
-  const scores = [];
-  const issues = [];
-  for (const f of frames) {
-    const v = await judgeFidelity({ sourceImageUrl, b64: f.toString('base64'), fitSpec }).catch(() => null);
-    if (v) { scores.push(v.score ?? 0); if (v.issues?.length) issues.push(...v.issues); }
-  }
-  const worst = scores.length ? Math.min(...scores) : null;
-  return { score: worst, frames: scores.length, issues: [...new Set(issues)].slice(0, 5) };
+  const frames = await extractFrames(mp4Buffer, duration, 5); // 5 frames (era 3) -> más fino
+  const r = await judgeVideoFrames({ sourceImageUrl, frameB64s: frames.map((f) => f.toString('base64')), fitSpec });
+  return { score: r.score, morphScore: r.morphScore, frames: frames.length, issues: r.issues };
 }
 
 // Dibuja el hook + callout en un PNG transparente (fuente Anton, condensed-bold). El binario

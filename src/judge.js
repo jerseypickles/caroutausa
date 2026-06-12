@@ -101,3 +101,29 @@ export async function judgeFidelity({ sourceImageUrl, b64, fitSpec = '' }) {
     summary: typeof parsed.summary === 'string' ? parsed.summary : '',
   };
 }
+
+// QC de VIDEO multi-frame: pasa el producto + N frames del clip JUNTOS y juzga (A) fidelidad
+// del short y (B) MORPHING — que el short no se deforme/cambie ENTRE frames. Un solo call.
+export async function judgeVideoFrames({ sourceImageUrl, frameB64s = [], fitSpec = '' }) {
+  if (!frameB64s.length) return { score: null, morphScore: null, verdict: 'pass', issues: [] };
+  const content = [
+    { type: 'text', text: `You QC an AI-generated short VIDEO ad. Image 1 is the ORIGINAL denim short PRODUCT that must be preserved. The rest are FRAMES sampled across the video (a person wearing it, waist-down). Check TWO things:
+A) FIDELITY: in each frame, do the shorts match the product — wash/fade, rips, hem, and FIT (width through hip/thigh, leg width, LENGTH/where the hem hits)?${fitSpec ? ` The product's true fit: "${fitSpec}".` : ''}
+B) MORPHING / STABILITY: do the shorts stay IDENTICAL ACROSS the frames, or do they warp / morph / flicker — changing shape, wash, hem, seams or LENGTH from one frame to the next? Any melting, shifting seams, or length/width change between frames = morphing = FAIL.
+Return ONLY JSON {"score": <0-100, WORST short fidelity across the frames>, "morphScore": <0-100, 100 = perfectly stable no morphing>, "verdict": "pass" | "fail", "issues": [<short strings naming fidelity OR morphing problems; empty if none>]}.` },
+    { type: 'text', text: 'Image 1 — ORIGINAL product:' },
+    { type: 'image_url', image_url: { url: sourceImageUrl } },
+  ];
+  frameB64s.forEach((b, i) => content.push({ type: 'text', text: `Video frame ${i + 1}:` }, { type: 'image_url', image_url: { url: toDataUrl(b) } }));
+  try {
+    const r = await client.chat.completions.create({ model: config.judgeModel, response_format: { type: 'json_object' }, messages: [{ role: 'user', content }] });
+    const j = JSON.parse(r.choices?.[0]?.message?.content || '{}');
+    const clamp = (n) => Math.max(0, Math.min(100, Math.round(Number(n) || 0)));
+    const score = clamp(j.score);
+    const morphScore = j.morphScore != null ? clamp(j.morphScore) : 100;
+    return { score, morphScore, verdict: (score >= config.fidelityPass && morphScore >= 80) ? 'pass' : 'fail', issues: Array.isArray(j.issues) ? j.issues.slice(0, 8).map(String) : [] };
+  } catch (e) {
+    console.error('[judge] judgeVideoFrames:', e.message);
+    return { score: null, morphScore: null, verdict: 'pass', issues: ['QC error: ' + e.message] }; // best-effort, no bloquea
+  }
+}

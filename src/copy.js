@@ -76,6 +76,24 @@ export async function inventFontStyle() {
   } catch (e) { console.error('[copy] inventFontStyle:', e.message); return null; }
 }
 
+// EXPLORACIÓN: la IA inventa un MOVIMIENTO de video SUTIL nuevo (más allá de los fijos) para
+// que el loop descubra movimientos que no se nos ocurrieron. Devuelve { tag, prompt }.
+export async function inventMotionPrompt() {
+  try {
+    const r = await client.chat.completions.create({
+      model: config.judgeModel,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: 'You direct SUBTLE motion for short looping fit-check VIDEO ads (a person standing, waist-down, wearing denim shorts). Motion must be SUBTLE and realistic — a small natural movement, NEVER walking, NEVER big gestures, NEVER morphing or changing the shorts. Living-photo / cinemagraph energy.' },
+        { role: 'user', content: 'Invent ONE NEW subtle motion idea for the clip, different from: weight shift, fabric sway, breathing, slow camera push-in, slow zoom-out. Return ONLY JSON {"tag":"short-kebab-slug","prompt":"one concrete sentence: what moves and how, gently. Photoreal, no walking, no big movement, shorts stay identical."}.' },
+      ],
+    });
+    const j = JSON.parse(r.choices?.[0]?.message?.content || '{}');
+    if (!j.tag || !j.prompt) return null;
+    return { tag: 'x-' + String(j.tag).toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 22), prompt: String(j.prompt).slice(0, 280) };
+  } catch (e) { console.error('[copy] inventMotionPrompt:', e.message); return null; }
+}
+
 // Genera copy nativo (varias variaciones) para un creative.
 export async function generateCopy({ product, wash, angle, description }) {
   const ctx = [

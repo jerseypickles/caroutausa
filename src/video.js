@@ -10,6 +10,8 @@ import { judgeFidelity } from './judge.js';
 import { createVideoTask, getVideoTask, piapiConfigured } from './piapi.js';
 import { judgeVideoFidelity, overlayHookVideo } from './videoproc.js';
 import { bestMotionPreset } from './learning.js';
+import { inventMotionPrompt } from './copy.js';
+import { MotionPreset } from './models/motionPreset.js';
 import { config } from './config.js';
 
 // Presets de movimiento SUTIL (nada de caminar/gestos -> no se ve IA). El movimiento de
@@ -30,14 +32,37 @@ const PRESET_KEYS = Object.keys(MOTION_PRESETS);
 let _presetIdx = 0;
 function nextPreset() { const k = PRESET_KEYS[_presetIdx % PRESET_KEYS.length]; _presetIdx++; return k; }
 
-// EXPLORE/EXPLOIT (ε-greedy): explora una variante nueva ~VIDEO_EXPLORE del tiempo (round-robin
-// asegura cubrir TODOS los presets), explota el ganador por CTR el resto. Sin data -> siempre
-// explora (round-robin). Así el modelo APRENDE (explota) y SIGUE DESCUBRIENDO (explora).
+// Resuelve el prompt de un preset: fijo o INVENTADO (de la DB).
+async function getMotionPrompt(tag) {
+  if (MOTION_PRESETS[tag]) return MOTION_PRESETS[tag];
+  const m = await MotionPreset.findOne({ tag }).lean().catch(() => null);
+  return m?.prompt || MOTION_PRESETS['mirror-sway'];
+}
+// El director INVENTA un movimiento nuevo y lo guarda (para reusar + que aprenda). Devuelve el tag.
+async function inventMotion() {
+  const inv = await inventMotionPrompt();
+  if (!inv?.tag || !inv.prompt) return null;
+  await MotionPreset.updateOne({ tag: inv.tag }, { $setOnInsert: { tag: inv.tag, prompt: inv.prompt, invented: true } }, { upsert: true });
+  console.log('[video] movimiento inventado:', inv.tag);
+  return inv.tag;
+}
+// EXPLORE/EXPLOIT (ε-greedy): explota el ganador por CTR, o explora — a veces INVENTA un
+// movimiento nuevo (descubre), si no round-robin sobre fijos + inventados (cubre todos).
 async function pickVideoPreset() {
   const eps = Number(process.env.VIDEO_EXPLORE || 0.35);
   const best = await bestMotionPreset().catch(() => null);
-  if (!best || Math.random() < eps) return nextPreset(); // explorar
-  return best; // explotar el ganador
+  if (best && Math.random() > eps) return best; // explotar
+  // explorar:
+  const inventChance = Number(process.env.VIDEO_INVENT || 0.25);
+  const count = await MotionPreset.countDocuments().catch(() => 0);
+  if (Math.random() < inventChance && count < 12) {
+    const t = await inventMotion().catch(() => null);
+    if (t) return t; // movimiento NUEVO descubierto
+  }
+  const invented = await MotionPreset.find().select('tag').lean().catch(() => []);
+  const keys = [...PRESET_KEYS, ...invented.map((m) => m.tag)];
+  const k = keys[_presetIdx % keys.length]; _presetIdx++;
+  return k;
 }
 
 // CROP cerrado DETERMINÍSTICO: gpt-image no respeta el encuadre por texto, así que recorto yo.
@@ -153,7 +178,7 @@ export async function animateClip(clipId, { preset = 'mirror-sway' } = {}) {
   const base = config.publicBaseUrl.replace(/\/$/, '');
   const startUrl = `${base}/api/video/${clipId}/start-frame`;
   const lastUrl = `${base}/api/video/${clipId}/last-frame`;
-  const prompt = (MOTION_PRESETS[preset] || MOTION_PRESETS['mirror-sway']) + MOTION_GUARD;
+  const prompt = (await getMotionPrompt(preset)) + MOTION_GUARD;
   const taskId = await createVideoTask({
     imageUrls: [startUrl, lastUrl], prompt, duration: clip.duration || 5,
     aspectRatio: '9:16', resolution: '1080p', fast: false, // seedance-2 (1080p; -fast no soporta 1080p)
@@ -183,8 +208,9 @@ export async function finishAnimation(clipId) {
   let qc = { status: 'pending', fidelity: null, notes: '' };
   try {
     const r = await judgeVideoFidelity({ mp4Buffer: videoBuf, duration: clip.duration || 5, sourceImageUrl: clip.sourceImageUrl, fitSpec });
-    const pass = (r.score ?? 0) >= config.videoQcMin;
-    qc = { status: pass ? 'pass' : 'fail', fidelity: r.score, notes: r.issues.join('; ') };
+    const pass = (r.score ?? 0) >= config.videoQcMin && (r.morphScore ?? 100) >= 80; // fidelidad + sin morphing
+    const note = [r.morphScore != null && r.morphScore < 80 ? `morphing ${r.morphScore}` : '', ...(r.issues || [])].filter(Boolean).join('; ');
+    qc = { status: pass ? 'pass' : 'fail', fidelity: r.score, notes: note };
   } catch (e) { qc = { status: 'pending', fidelity: null, notes: 'QC error: ' + e.message }; }
 
   // Si pasa el QC: HOOK overlay (texto nítido) -> ready. Si no: qc (revisión manual en el tab).
