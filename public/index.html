@@ -313,6 +313,28 @@
   .lrbar span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
   .learnrow.win .lrbar span { background: var(--ok); }
   .learnrow.low { opacity: .5; }
+  /* Aprendizaje — rediseño */
+  .lhero { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+  .lfcard { background: var(--surface); border: 1px solid var(--border); border-radius: 15px; padding: 17px 19px; position: relative; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+  .lfcard.win { border-color: var(--ok); box-shadow: 0 3px 16px rgba(26,143,74,.13); }
+  .lfcard.low { opacity: .6; }
+  .lfk { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+  .lfctr { font-size: 31px; font-weight: 750; margin-top: 9px; line-height: 1; }
+  .lfpc { font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 2px; }
+  .lfsub { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+  .lfwin { position: absolute; top: 13px; right: 15px; font-size: 17px; }
+  .ldimgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+  .ldimgrid .learnsec { margin-bottom: 0; }
+  .lrow2 { padding: 8px 10px; border-radius: 9px; }
+  .lrow2.win { background: var(--ok-soft); } .lrow2.low { opacity: .55; }
+  .lr2top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .lr2v { font-size: 12.5px; font-weight: 650; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lr2c { font-size: 13px; font-weight: 750; flex-shrink: 0; }
+  .lr2bar { height: 6px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin: 5px 0 3px; }
+  .lr2bar span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+  .lrow2.win .lr2bar span { background: var(--ok); }
+  .lr2n { font-size: 10.5px; color: var(--muted); }
+  @media (max-width: 720px) { .lhero { grid-template-columns: 1fr; } }
   .lrctr { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; text-align: right; }
   .lrctr .muted { font-size: 9px; }
   .lrn { font-size: 11px; color: var(--muted); text-align: right; }
@@ -1892,19 +1914,37 @@ async function loadLearning() {
     grid.innerHTML = ''; return;
   }
   hint.innerHTML = `CTR real por dimensión del ADN (fotos + carruseles + <b>videos</b>). Solo se corona (verde) un valor con data confiable (≥${d.minImpr || 80} impr); el resto figura como <b>juntando data</b>. El sistema <b>explota</b> el ganador y <b>explora</b> variantes nuevas (movimiento, refs) para seguir descubriendo — no se queda solo con lo conocido.`;
-  grid.innerHTML = Object.entries(d.report).map(([dim, rows]) => {
-    if (!rows.length) return '';
-    const best = (rows.find((r) => !r.low)?.ctr) || 0; // mejor entre los confiables
-    return `<div class="learnsec"><div class="learnsechd">${DIM_LBL[dim] || dim}</div>
-      <div class="learnrows">${rows.map((r) => {
-        const isWin = !r.low && r.ctr === best && best > 0;
-        return `<div class="learnrow ${isWin ? 'win' : ''} ${r.low ? 'low' : ''}">
-        <span class="lrv">${isWin ? '🏆 ' : ''}${esc(String(r.value))}</span>
-        <span class="lrbar"><span style="width:${(!r.low && best) ? Math.round(r.ctr / best * 100) : 0}%"></span></span>
-        <span class="lrctr">${r.ctr}% <span class="muted">CTR</span></span>
-        <span class="lrn">${r.low ? `<span class="muted">juntando data · ${r.impressions} impr</span>` : `${r.n} ads · $${r.spend}${r.cpa != null ? ' · CPA $' + r.cpa : ''}`}</span>
-      </div>`; }).join('')}</div></div>`;
+  const others = Object.entries(d.report).filter(([dim, rows]) => dim !== 'format' && rows.length).map(([dim, rows]) => renderDimCard(dim, rows)).join('');
+  grid.innerHTML = `<div class="lhero">${renderFormatHero(d.report.format || [])}</div>${others ? `<div class="ldimgrid">${others}</div>` : ''}`;
+}
+// Hero: comparación de FORMATO (foto vs carrusel vs video) — la pregunta #1.
+function renderFormatHero(rows) {
+  const FMT = { single: ['📷', 'Foto'], carousel: ['▦', 'Carrusel'], video: ['🎬', 'Video'] };
+  const best = (rows.find((r) => !r.low)?.ctr) || 0;
+  return ['single', 'carousel', 'video'].map((f) => {
+    const r = rows.find((x) => x.value === f); const [ic, nm] = FMT[f];
+    if (!r) return `<div class="lfcard low"><div class="lfk">${ic} ${nm}</div><div class="lfctr">—</div><div class="lfsub">sin data todavía</div></div>`;
+    const win = !r.low && r.ctr === best && best > 0;
+    return `<div class="lfcard ${win ? 'win' : ''} ${r.low ? 'low' : ''}">${win ? '<span class="lfwin">🏆</span>' : ''}
+      <div class="lfk">${ic} ${nm}</div>
+      <div class="lfctr">${r.ctr}<span class="lfpc">% CTR</span></div>
+      <div class="lfsub">${r.low ? `juntando data · ${r.impressions} impr` : `${r.n} ad${r.n > 1 ? 's' : ''} · ${r.impressions} impr${r.cpa != null ? ' · CPA $' + r.cpa : ''}`}</div>
+    </div>`;
   }).join('');
+}
+// Card de una dimensión (wash, escena, casting, movimiento…) en el grid.
+function renderDimCard(dim, rows) {
+  const best = (rows.find((r) => !r.low)?.ctr) || 0;
+  const body = rows.map((r) => {
+    const win = !r.low && r.ctr === best && best > 0;
+    const w = (!r.low && best) ? Math.round(r.ctr / best * 100) : 0;
+    return `<div class="lrow2 ${win ? 'win' : ''} ${r.low ? 'low' : ''}">
+      <div class="lr2top"><span class="lr2v">${win ? '🏆 ' : ''}${esc(String(r.value))}</span><span class="lr2c">${r.ctr}%</span></div>
+      <div class="lr2bar"><span style="width:${w}%"></span></div>
+      <div class="lr2n">${r.low ? `juntando · ${r.impressions} impr` : `${r.n} ad${r.n > 1 ? 's' : ''} · ${r.impressions} impr${r.cpa != null ? ' · CPA $' + r.cpa : ''}`}</div>
+    </div>`;
+  }).join('');
+  return `<div class="learnsec"><div class="learnsechd">${DIM_LBL[dim] || dim}</div><div class="learnrows">${body}</div></div>`;
 }
 async function syncLearning(btn) {
   btn.disabled = true; btn.textContent = 'Sincronizando…';
