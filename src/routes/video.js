@@ -92,7 +92,7 @@ videoRouter.post('/video/edit-test', async (req, res) => {
   // Elige clips listos con video; prioriza washes DISTINTOS para que se note el cambio de jean.
   const q = { stage: 'ready', isEdit: { $ne: true }, videoData: { $ne: null } };
   if (Array.isArray(clipIds) && clipIds.length) q._id = { $in: clipIds };
-  const ready = await VideoClip.find(q).sort({ createdAt: -1 }).select('+videoData wash product callout').limit(40).lean();
+  const ready = await VideoClip.find(q).sort({ createdAt: -1 }).select('+videoData wash product callout videoUrl').limit(40).lean();
   if (ready.length < 2) return res.status(400).json({ error: 'Necesito al menos 2 videos listos' });
   // dedupe por wash (1 por wash) hasta 5; si faltan, completa con los demás.
   const seen = new Set(); const picked = [];
@@ -111,7 +111,18 @@ videoRouter.post('/video/edit-test', async (req, res) => {
   // build en background
   (async () => {
     try {
-      const clips = sources.map((c) => ({ buffer: Buffer.from(c.videoData, 'base64'), wash: c.wash }));
+      // Fuente CRUDA (sin hook bakeado): el mp4 de Seedance (videoUrl). Así el edit lleva UN solo
+      // hook limpio y conserva la calidad original. Fallback a nuestra copia si la URL ya expiró.
+      const clips = [];
+      for (const c of sources) {
+        let buffer = null;
+        if (c.videoUrl) {
+          try { const rr = await fetch(c.videoUrl); if (rr.ok) buffer = Buffer.from(await rr.arrayBuffer()); } catch {}
+        }
+        if (!buffer && c.videoData) buffer = Buffer.from(c.videoData, 'base64');
+        if (buffer) clips.push({ buffer, wash: c.wash });
+      }
+      if (clips.length < 2) throw new Error('no pude bajar los videos crudos (URLs expiradas)');
       const r = await buildJeansEdit({
         clips, hookLine: edit.hookLine, callout: edit.callout, bpm: Number(bpm) || 100, targetSec: 11,
       });

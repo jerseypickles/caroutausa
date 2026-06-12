@@ -14,7 +14,7 @@ GlobalFonts.registerFromPath(FONT, 'Anton');
 
 const W = 1080, H = 1920, FPS = 30;
 
-// Hook PNG (mismo estilo que el overlay de un clip: Anton condensed, blanco con sombra).
+// Hook PNG (Anton condensed, blanco con sombra) — UN solo hook para todo el edit.
 function fitFont(ctx, text, maxW, baseSize) {
   let size = baseSize; ctx.font = `${size}px Anton`;
   while (ctx.measureText(text).width > maxW && size > 12) { size -= 2; ctx.font = `${size}px Anton`; }
@@ -39,58 +39,70 @@ function hookPng(hookLine, callout) {
   return canvas.toBuffer('image/png');
 }
 
-// EDIT de cortes rápidos: cicla por N clips (jeans/washes distintos) cortando ~1 beat cada uno,
-// con un zoom-punch alternado en cada corte, beat sintetizado (four-on-floor) para que pegue, y
-// el hook arriba todo el clip. PROTOTIPO para ver el formato antes de desarrollarlo grande.
+// Beat ELECTRÓNICO sintetizado (kick con pitch-drop + sub + hats offbeat + stab), soft-clip con
+// tanh para drive. Placeholder para ver el sync — la música real va en TikTok (su librería).
+function beatExpr(beat, total) {
+  const B = beat.toFixed(3), H2 = (beat / 2).toFixed(3), B2 = (beat * 2).toFixed(3);
+  const kick = `0.9*sin(2*PI*(45+55*exp(-26*mod(t\\,${B})))*t)*exp(-7*mod(t\\,${B}))`;
+  const sub = `0.30*sin(2*PI*55*t)*exp(-3.2*mod(t\\,${B}))`;
+  const hat = `0.16*sin(2*PI*9000*t)*exp(-95*mod(t+${H2}\\,${B}))`;
+  const stab = `0.16*(sin(2*PI*220*t)+sin(2*PI*329*t))*exp(-6*mod(t\\,${B2}))`;
+  return `aevalsrc=tanh(${kick}+${sub}+${hat}+${stab}):d=${total}:s=44100`;
+}
+
+// EDIT de cortes rápidos cambiando jeans. UN SOLO ffmpeg (sin pérdida generacional): trim+scale de
+// cada segmento, concat, overlay del hook, mux del beat -> encode único a CRF alto. clips = buffers
+// CRUDOS (sin hook bakeado) para no duplicar el caption.
 export async function buildJeansEdit({ clips, hookLine = 'WHICH WASH?', callout = '', bpm = 100, targetSec = 11 }) {
   if (!clips || clips.length < 2) throw new Error('necesito al menos 2 clips');
-  const beat = +(60 / bpm).toFixed(3);          // largo de cada corte (1 beat)
-  const half = +(beat / 2).toFixed(3);
-  const nSeg = Math.max(clips.length, Math.round(targetSec / beat));
+  const N = clips.length;
+  const beat = +(60 / bpm).toFixed(3);
+  const nSeg = Math.max(N, Math.round(targetSec / beat));
   const total = +(nSeg * beat).toFixed(3);
-  const offsets = [0.6, 2.4, 3.7, 1.5];         // distintos puntos del clip de 5s (varía las repeticiones)
+  const offsets = [0.6, 2.4, 3.6, 1.5];
 
   const dir = await mkdtemp(join(tmpdir(), 'vedit-'));
   try {
-    // 1) escribe los clips fuente
     const srcPaths = [];
-    for (let i = 0; i < clips.length; i++) {
-      const p = join(dir, `src${i}.mp4`);
-      await writeFile(p, clips[i].buffer);
-      srcPaths.push(p);
-    }
-    // 2) corta cada segmento normalizado (1080x1920, 30fps) con zoom-punch alternado
-    const segPaths = [];
-    for (let s = 0; s < nSeg; s++) {
-      const srcIdx = s % clips.length;
-      const off = offsets[Math.floor(s / clips.length) % offsets.length];
-      const Z = (s % 2 === 0) ? 1.0 : 1.12;     // pop de tamaño en cada corte
-      const zoomVf = Z > 1.0 ? `,crop=iw/${Z}:ih/${Z},scale=${W}:${H}` : '';
-      const vf = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1${zoomVf},fps=${FPS}`;
-      const segPath = join(dir, `seg${String(s).padStart(2, '0')}.mp4`);
-      await exec(ffmpegPath, ['-y', '-ss', String(off), '-t', String(beat), '-i', srcPaths[srcIdx],
-        '-an', '-vf', vf, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'veryfast', segPath], { timeout: 60000 });
-      segPaths.push(segPath);
-    }
-    // 3) concatena (re-encode para robustez)
-    const listPath = join(dir, 'list.txt');
-    await writeFile(listPath, segPaths.map((p) => `file '${p}'`).join('\n'));
-    const silentPath = join(dir, 'silent.mp4');
-    await exec(ffmpegPath, ['-y', '-f', 'concat', '-safe', '0', '-i', listPath,
-      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-r', String(FPS), silentPath], { timeout: 120000 });
-    // 4) beat four-on-floor sintetizado (kick + hat) — placeholder para ver el sync; la música real
-    //    va en TikTok (su librería) o se licencia para Meta.
-    const expr = `0.7*sin(2*PI*58*t)*exp(-9*mod(t\\,${beat}))+0.18*sin(2*PI*3800*t)*exp(-70*mod(t+${half}\\,${beat}))`;
-    const beatPath = join(dir, 'beat.wav');
-    await exec(ffmpegPath, ['-y', '-f', 'lavfi', '-i', `aevalsrc=${expr}:d=${total}:s=44100`, beatPath], { timeout: 60000 });
-    // 5) overlay del hook + mux del beat
+    for (let i = 0; i < N; i++) { const p = join(dir, `src${i}.mp4`); await writeFile(p, clips[i].buffer); srcPaths.push(p); }
     const pngPath = join(dir, 'hook.png');
     await writeFile(pngPath, hookPng(hookLine, callout));
-    const outPath = join(dir, 'out.mp4');
-    await exec(ffmpegPath, ['-y', '-i', silentPath, '-i', beatPath, '-i', pngPath,
-      '-filter_complex', '[0:v][2:v]overlay=0:0[v]', '-map', '[v]', '-map', '1:a',
-      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', '-movflags', '+faststart', outPath], { timeout: 180000 });
-    return { buffer: await readFile(outPath), duration: total, segments: nSeg, bpm };
+
+    // plan de segmentos
+    const segs = [];
+    const counts = new Array(N).fill(0);
+    for (let s = 0; s < nSeg; s++) {
+      const srcIdx = s % N;
+      const off = offsets[Math.floor(s / N) % offsets.length];
+      const Z = (s % 2 === 0) ? 1.0 : 1.08;
+      segs.push({ srcIdx, off, Z });
+      counts[srcIdx]++;
+    }
+    // filtergraph: split de cada fuente segun cuantas veces se usa (no se puede consumir 2 veces)
+    const fc = [];
+    const splitPtr = new Array(N).fill(0);
+    const splitNames = srcPaths.map((_, i) => Array.from({ length: counts[i] }, (__, k) => `s${i}_${k}`));
+    for (let i = 0; i < N; i++) fc.push(`[${i}:v]split=${counts[i]}${splitNames[i].map((n) => `[${n}]`).join('')}`);
+    // cada segmento: trim -> normaliza 1080x1920 -> zoom-punch -> fps
+    segs.forEach((sg, s) => {
+      const label = splitNames[sg.srcIdx][splitPtr[sg.srcIdx]++];
+      const zoom = sg.Z > 1.0 ? `crop=iw/${sg.Z}:ih/${sg.Z},scale=${W}:${H},` : '';
+      fc.push(`[${label}]trim=start=${sg.off}:end=${(sg.off + beat).toFixed(3)},setpts=PTS-STARTPTS,scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},${zoom}setsar=1,fps=${FPS}[v${s}]`);
+    });
+    fc.push(`${segs.map((_, s) => `[v${s}]`).join('')}concat=n=${nSeg}:v=1:a=0[vc]`);
+    fc.push(`[vc][${N}:v]overlay=0:0[vout]`); // input N = hook.png
+
+    const args = ['-y'];
+    for (const p of srcPaths) args.push('-i', p);
+    args.push('-i', pngPath);                                   // input N
+    args.push('-f', 'lavfi', '-i', beatExpr(beat, total));      // input N+1 (audio)
+    args.push('-filter_complex', fc.join(';'),
+      '-map', '[vout]', '-map', `${N + 1}:a`,
+      '-c:v', 'libx264', '-crf', '18', '-preset', 'medium', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-b:a', '192k', '-t', String(total), '-movflags', '+faststart',
+      join(dir, 'out.mp4'));
+    await exec(ffmpegPath, args, { timeout: 240000 });
+    return { buffer: await readFile(join(dir, 'out.mp4')), duration: total, segments: nSeg, bpm };
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
