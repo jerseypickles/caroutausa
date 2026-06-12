@@ -119,28 +119,36 @@
   .refgrad { position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 12px 11px; background: linear-gradient(to top, rgba(0,0,0,.82), rgba(0,0,0,.38) 55%, transparent); color: #fff; z-index: 1; }
   .refgrad .refcl { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .refgrad .refcm { font-size: 11px; opacity: .85; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .vboard { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 14px; align-items: start; }
-  .vcol { background: var(--surface2); border-radius: 12px; padding: 10px; min-height: 120px; }
-  .vcolh { font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-  .vcolh .vcount { background: var(--surface); border-radius: 20px; padding: 1px 8px; font-size: 10.5px; }
-  .vcard { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
-  .vcard .vimg { aspect-ratio: 9/16; background: var(--surface2); position: relative; }
-  .vcard .vimg img, .vcard .vimg video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .vfid { position: absolute; bottom: 6px; left: 6px; display: flex; gap: 4px; }
-  .vfid span { background: rgba(0,0,0,.7); color: #fff; font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
-  .vfid span.bad { background: var(--bad); } .vfid span.ok { background: #1a8f4a; }
-  .vpair { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; background: var(--surface2); }
-  .vhalf { position: relative; aspect-ratio: 9/16; background: var(--surface2); cursor: zoom-in; }
-  .vhalf img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .vhalf .vlbl { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,.7); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 5px; }
-  .vhalf .vfb { position: absolute; bottom: 4px; left: 4px; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 5px; color: #fff; background: rgba(0,0,0,.7); }
-  .vhalf .vfb.ok { background: #1a8f4a; } .vhalf .vfb.bad { background: var(--bad); }
-  .vb { padding: 7px 9px; font-size: 11px; }
-  .vb .vt { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .vb .vm { color: var(--muted); font-size: 10.5px; margin-top: 1px; }
-  .vacts { display: flex; gap: 6px; padding: 0 9px 9px; }
-  .vacts .btn { flex: 1; padding: 5px 4px; font-size: 11px; }
-  .vspin { font-size: 11px; color: var(--muted); padding: 7px 9px; }
+  /* Video Sourcing — rediseño */
+  .vhero { display: flex; align-items: center; gap: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 22px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(16,24,40,.05); }
+  .vhstat .vhk { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .vhstat .vhv { font-size: 25px; font-weight: 750; margin-top: 3px; line-height: 1; }
+  #vAutoState { font-size: 14px; font-weight: 600; }
+  .vhdiv { width: 1px; height: 34px; background: var(--border); }
+  .vsec { margin-bottom: 28px; }
+  .vsech { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; margin-bottom: 15px; }
+  .vsecn { background: var(--surface2); border-radius: 20px; padding: 1px 10px; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .vsecd { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .vgallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 16px; }
+  .vrcard { border-radius: 15px; overflow: hidden; background: #0c0d10; position: relative; box-shadow: 0 2px 10px rgba(16,24,40,.12); transition: transform .18s, box-shadow .18s; }
+  .vrcard:hover { transform: translateY(-4px); box-shadow: 0 18px 38px rgba(16,24,40,.2); }
+  .vrcard video { width: 100%; aspect-ratio: 9/16; object-fit: cover; display: block; }
+  .vrover { position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 13px 12px; background: linear-gradient(to top, rgba(0,0,0,.82), transparent); color: #fff; pointer-events: none; }
+  .vrt { font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vrm { font-size: 11px; opacity: .85; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vrqc { position: absolute; top: 9px; left: 9px; background: rgba(26,143,74,.94); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 7px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .vract { position: absolute; top: 9px; right: 9px; display: flex; gap: 6px; opacity: 0; transition: opacity .15s; }
+  .vrcard:hover .vract { opacity: 1; }
+  .vract a, .vract button { background: rgba(255,255,255,.94); border: none; border-radius: 8px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; text-decoration: none; color: #14161a; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+  .vpipe { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 13px; }
+  .vpcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+  .vpimg { aspect-ratio: 9/16; background: var(--surface2); position: relative; display: flex; align-items: center; justify-content: center; }
+  .vpimg img, .vpimg video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .vpstage { position: absolute; top: 7px; left: 7px; background: rgba(0,0,0,.74); color: #fff; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; z-index: 1; }
+  .vpb { padding: 8px 10px 4px; } .vpt { font-weight: 650; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .vpm { color: var(--muted); font-size: 10.5px; margin-top: 1px; }
+  .vpacts { display: flex; gap: 6px; padding: 6px 10px 10px; } .vpacts .btn { padding: 5px 4px; font-size: 11px; }
+  .vspin { font-size: 10.5px; color: var(--muted); padding: 10px; text-align: center; }
+  .vempty { color: var(--muted); font-size: 13px; padding: 26px; text-align: center; background: var(--surface2); border-radius: 12px; }
   /* Referencias — modal */
   .refmbox { width: 760px; }
   .refm { display: grid; grid-template-columns: 300px 1fr; gap: 22px; }
@@ -717,13 +725,25 @@
     </section>
 
     <section class="view" id="view-video">
-      <div class="secthead">
-        <div><h2>Video Sourcing</h2><span class="muted">gpt crea 2 frames (start+last) fieles → Seedance los anima → QC del short → export. <b id="videoApi"></b></span></div>
+      <div class="vhero">
+        <div class="vhstat"><div class="vhk">Listos</div><div class="vhv" id="vReadyCount">0</div></div>
+        <div class="vhdiv"></div>
+        <div class="vhstat"><div class="vhk">En proceso</div><div class="vhv" id="vProcCount">0</div></div>
+        <div class="vhdiv"></div>
+        <div class="vhstat"><div class="vhk">Pipeline auto</div><div class="vhv" id="vAutoState">🟢 cada 25min</div></div>
         <span style="flex:1"></span>
-        <button class="btn ghost sm" onclick="loadVideo()">↻ Actualizar</button>
+        <span class="muted" id="videoApi" style="font-size:12px"></span>
+        <button class="btn ghost sm" onclick="loadVideo()" title="Actualizar">↻</button>
         <button class="btn sm" onclick="newVideoClip(this)">+ Nuevo clip</button>
       </div>
-      <div class="vboard" id="vboard"></div>
+      <div class="vsec">
+        <div class="vsech">✅ Listos<span class="vsecn" id="vReadyN">0</span><span class="vsecd">video waist-down + hook, listo para Meta</span></div>
+        <div class="vgallery" id="vReady"></div>
+      </div>
+      <div class="vsec">
+        <div class="vsech">⏳ En proceso<span class="vsecn" id="vProcN">0</span><span class="vsecd">frames → animando → QC del short</span></div>
+        <div class="vpipe" id="vPipe"></div>
+      </div>
     </section>
 
   </div>
@@ -940,37 +960,52 @@ async function syncNow() {
 }
 
 /* ===== VIDEO SOURCING ===== */
-const VSTAGES = [['frames', '📸 Frames'], ['curated', '⭐ Curados'], ['animating', '🎬 Animando'], ['qc', '🔍 QC Video'], ['ready', '✅ Listos']];
 let videoPresets = ['mirror-sway'];
+const VPIPE_STAGES = ['frames', 'curated', 'animating', 'qc', 'failed'];
 async function loadVideo() {
   const r = await fetch('/api/video').then((x) => x.json()).catch(() => ({ clips: [] }));
   const clips = r.clips || [];
   videoPresets = r.presets && r.presets.length ? r.presets : videoPresets;
-  document.getElementById('videoApi').textContent = r.piapi ? '' : '⚠️ PIAPI_KEY no configurada en Render';
+  document.getElementById('videoApi').textContent = r.piapi ? '🟢 Seedance conectado' : '⚠️ PIAPI_KEY no configurada';
+  const ready = clips.filter((c) => c.stage === 'ready');
+  const proc = clips.filter((c) => VPIPE_STAGES.includes(c.stage));
+  document.getElementById('vReadyCount').textContent = ready.length;
+  document.getElementById('vProcCount').textContent = proc.length;
+  document.getElementById('vReadyN').textContent = ready.length;
+  document.getElementById('vProcN').textContent = proc.length;
   const pill = document.getElementById('pillVideo'); pill.textContent = clips.length; pill.classList.toggle('zero', clips.length === 0);
-  document.getElementById('vboard').innerHTML = VSTAGES.map(([st, lbl]) => {
-    const items = clips.filter((c) => c.stage === st);
-    return `<div class="vcol"><div class="vcolh">${lbl}<span class="vcount">${items.length}</span></div>${items.map(vcard).join('')}</div>`;
-  }).join('');
+  document.getElementById('vReady').innerHTML = ready.length
+    ? ready.map(vReadyCard).join('')
+    : '<div class="vempty">Todavía no hay videos listos. El autopilot los va generando solo — o tocá “+ Nuevo clip”.</div>';
+  document.getElementById('vPipe').innerHTML = proc.length
+    ? proc.map(vPipeCard).join('')
+    : '<div class="vempty">Nada en proceso ahora.</div>';
 }
-function vfb(s) { if (s == null) return ''; const cls = s >= 85 ? 'ok' : (s >= 70 ? '' : 'bad'); return `<span class="vfb ${cls}">fid ${s}</span>`; }
-function vcard(c) {
+// Card de VIDEO LISTO (galería): el mp4 reproduciéndose + hook + QC + acciones al hover.
+function vReadyCard(c) {
+  const qc = c.videoQc && c.videoQc.fidelity != null ? `<span class="vrqc">QC ${c.videoQc.fidelity}</span>` : '';
+  return `<div class="vrcard">
+    <video src="/api/video/${c._id}/video" muted loop autoplay playsinline preload="metadata"></video>
+    ${qc}
+    <div class="vract"><a href="/api/video/${c._id}/video" target="_blank" title="Descargar mp4">⬇</a><button onclick="vDel('${c._id}')" title="Borrar">🗑</button></div>
+    <div class="vrover"><div class="vrt">${esc((c.product || '').replace(' Denim Short', ''))}</div><div class="vrm">${c.hookLine ? '“' + esc(c.hookLine) + '”' : 'fit-check'}</div></div>
+  </div>`;
+}
+// Card de EN PROCESO (tira): thumbnail/estado + acciones según etapa.
+const VPSTG = { frames: '📸 Frames', curated: '⭐ Curado', animating: '🎬 Animando', qc: '🔍 QC', failed: '⚠️ Falló' };
+function vPipeCard(c) {
   const generating = c.genStatus === 'generating' && c.stage === 'frames';
   let media, acts = '';
-  if (c.stage === 'ready' || c.stage === 'qc') media = `<video src="/api/video/${c._id}/video" muted loop autoplay playsinline></video>`;
+  if (c.stage === 'qc') media = `<video src="/api/video/${c._id}/video" muted loop autoplay playsinline></video>`;
   else if (generating) media = `<div class="vspin">generando 2 frames…</div>`;
-  else media = `<div class="vpair">
-      <div class="vhalf" onclick="openZoom('/api/video/${c._id}/start-frame')"><img src="/api/video/${c._id}/start-frame" loading="lazy" onerror="this.style.opacity=.2"/><span class="vlbl">START</span>${vfb(c.startFidelity)}</div>
-      <div class="vhalf" onclick="openZoom('/api/video/${c._id}/last-frame')"><img src="/api/video/${c._id}/last-frame" loading="lazy" onerror="this.style.opacity=.2"/><span class="vlbl">LAST</span>${vfb(c.lastFidelity)}</div>
-    </div>`;
-  if (c.stage === 'frames' && !generating) acts = `<button class="btn sm" onclick="vAct('${c._id}','curate',this)">Curar ⭐</button><button class="btn ghost sm" onclick="vDel('${c._id}')">🗑</button>`;
-  else if (c.stage === 'curated') acts = `<button class="btn sm" onclick="vAnimate('${c._id}',this)">Animar 🎬</button><button class="btn ghost sm" onclick="vDel('${c._id}')">🗑</button>`;
-  else if (c.stage === 'animating') acts = `<button class="btn ghost sm" onclick="vAct('${c._id}','refresh',this)">↻ estado</button>`;
-  else if (c.stage === 'qc') acts = `<button class="btn sm" onclick="vQc('${c._id}','pass',this)">✓ OK</button><button class="btn ghost sm" onclick="vQc('${c._id}','fail',this)">✗</button>`;
-  else if (c.stage === 'ready') acts = `<a class="btn ghost sm" href="/api/video/${c._id}/video" target="_blank">⬇ mp4</a><button class="btn ghost sm" onclick="vDel('${c._id}')">🗑</button>`;
-  else acts = `<button class="btn ghost sm" onclick="vDel('${c._id}')">🗑 falló</button>`;
-  const qc = c.videoQc && c.videoQc.fidelity != null ? ` · QC ${c.videoQc.fidelity}` : '';
-  return `<div class="vcard"><div class="vimg">${media}</div><div class="vb"><div class="vt">${esc((c.product || '').replace(' Denim Short', ''))}</div><div class="vm">${c.hookLine ? '"' + esc(c.hookLine) + '"' : esc(c.castTag || 'fit-check')}${qc}</div></div><div class="vacts">${acts}</div></div>`;
+  else if (c.stage === 'failed') media = `<div class="vspin">${esc((c.error || 'falló').slice(0, 50))}</div>`;
+  else media = `<img src="/api/video/${c._id}/start-frame" loading="lazy" onerror="this.style.opacity=.2"/>`;
+  if (c.stage === 'qc') acts = `<button class="btn sm" style="flex:1" onclick="vQc('${c._id}','pass',this)">✓ OK</button><button class="btn ghost sm" onclick="vQc('${c._id}','fail',this)">✗</button>`;
+  else if (c.stage === 'animating') acts = `<button class="btn ghost sm" style="flex:1" onclick="vAct('${c._id}','refresh',this)">↻ estado</button>`;
+  else if ((c.stage === 'frames' || c.stage === 'curated') && !generating) acts = `<button class="btn sm" style="flex:1" onclick="vAnimate('${c._id}',this)">Animar 🎬</button><button class="btn ghost sm" onclick="vDel('${c._id}')">🗑</button>`;
+  else if (!generating) acts = `<button class="btn ghost sm" style="flex:1" onclick="vDel('${c._id}')">🗑 borrar</button>`;
+  const info = c.videoQc && c.videoQc.fidelity != null ? `QC ${c.videoQc.fidelity}` : (c.startFidelity != null ? `fid ${c.startFidelity}/${c.lastFidelity ?? '-'}` : 'procesando…');
+  return `<div class="vpcard"><div class="vpimg"><span class="vpstage">${VPSTG[c.stage] || c.stage}</span>${media}</div><div class="vpb"><div class="vpt">${esc((c.product || '').replace(' Denim Short', ''))}</div><div class="vpm">${info}</div></div><div class="vpacts">${acts}</div></div>`;
 }
 async function newVideoClip(btn) { btn.disabled = true; btn.textContent = '…'; try { await fetch('/api/video/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); toast('Generando frames…'); loadVideo(); } finally { btn.disabled = false; btn.textContent = '+ Nuevo clip'; } }
 async function vAct(id, act, btn) { if (btn) btn.disabled = true; await fetch(`/api/video/${id}/${act}`, { method: 'POST' }); loadVideo(); }
