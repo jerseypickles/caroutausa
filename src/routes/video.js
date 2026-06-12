@@ -5,6 +5,11 @@ import { pickRefs } from '../refs.js';
 import { generateVideoFrames, animateClip, finishAnimation, MOTION_PRESETS } from '../video.js';
 import { overlayHookVideo } from '../videoproc.js';
 import { piapiConfigured } from '../piapi.js';
+import * as meta from '../meta.js';
+import { MetaCampaign } from '../models/metaCampaign.js';
+import { config } from '../config.js';
+
+function productLink(handle) { return handle ? `${config.storeUrl}/products/${handle}` : config.storeUrl; }
 
 export const videoRouter = Router();
 
@@ -99,6 +104,44 @@ videoRouter.post('/video/:id/rehook', async (req, res) => {
     await VideoClip.findByIdAndUpdate(req.params.id, { videoData: hooked.toString('base64') });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Lanza el video a Meta: sube el mp4 + crea campaña/adset/ad PAUSADO con SHOP_NOW al producto.
+// NO activa (queda pausado para que el usuario lo prenda cuando quiera).
+videoRouter.post('/video/:id/launch', async (req, res) => {
+  if (!meta.metaConfigured()) return res.status(400).json({ error: 'Meta no está configurado' });
+  const clip = await VideoClip.findById(req.params.id).lean();
+  if (!clip) return res.status(404).json({ error: 'clip no encontrado' });
+  if (clip.stage !== 'ready') return res.status(400).json({ error: 'el video no está listo (ready)' });
+  if (clip.metaAdId) return res.status(400).json({ error: 'este video ya fue lanzado' });
+  let campaignId = null;
+  try {
+    const prod = clip.shopifyProductId ? await Product.findOne({ shopifyId: clip.shopifyProductId }).lean() : null;
+    const link = productLink(prod?.handle);
+    const base = config.publicBaseUrl.replace(/\/$/, '');
+    const igActorId = await meta.getIgActorId();
+    // 1) subir el video a Meta (por URL) + esperar a que lo procese.
+    const videoId = await meta.uploadVideo({ fileUrl: `${base}/api/video/${clip._id}/video` });
+    let st = 'processing';
+    for (let i = 0; i < 30 && st !== 'ready'; i++) {
+      await new Promise((r) => setTimeout(r, 4000));
+      st = await meta.getVideoStatus(videoId).catch(() => 'processing');
+      if (st === 'error') throw new Error('Meta no pudo procesar el video');
+    }
+    if (st !== 'ready') throw new Error('el video sigue procesándose en Meta — reintentá en un minuto');
+    // 2) creative de video + cadena campaña/adset/ad (PAUSED).
+    const name = `CAROTA VIDEO · ${clip.product} · ${clip.hookLine || 'fit-check'}`.slice(0, 90);
+    const creative = await meta.createVideoCreative({ name, videoId, thumbUrl: `${base}/api/video/${clip._id}/start-frame`, link, message: clip.hookLine ? `${clip.hookLine} 🔥` : '', igActorId });
+    const campaign = await meta.createCampaign({ name }); campaignId = campaign.id;
+    const adSet = await meta.createAdSet({ name: name + ' · adset', campaignId: campaign.id, dailyBudgetCents: 1000, optimizationEvent: req.body?.optimizationEvent || 'ADD_TO_CART' });
+    const ad = await meta.createAd({ name: name + ' · ad', adsetId: adSet.id, creativeId: creative.id });
+    await MetaCampaign.create({ campaignId: campaign.id, name, status: 'PAUSED', ads: [{ adId: ad.id, creativeId: clip._id, format: 'video' }] });
+    await VideoClip.findByIdAndUpdate(clip._id, { metaAdId: ad.id, metaCampaignId: campaign.id });
+    res.json({ ok: true, campaignId: campaign.id, adId: ad.id, status: 'PAUSED', note: 'Creado PAUSADO. Activalo en Meta / Ad Manager cuando quieras.' });
+  } catch (err) {
+    if (campaignId) { try { await meta.deleteObject(campaignId); } catch { /* noop */ } }
+    res.status(502).json({ error: err.message });
+  }
 });
 
 videoRouter.delete('/video/:id', async (req, res) => {

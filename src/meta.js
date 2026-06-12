@@ -224,6 +224,35 @@ export function createCarouselCreative({ name, message, link, cards, igActorId =
   });
 }
 
+// --- VIDEO ---
+// Sube un video al ad account vía URL pública (Meta lo baja). Devuelve el video_id.
+export async function uploadVideo({ fileUrl }) {
+  const json = await graph('POST', `${acct()}/advideos`, { file_url: fileUrl });
+  if (!json.id) throw new Error('Meta no devolvio video_id');
+  return json.id;
+}
+// Estado de procesamiento del video (Meta lo procesa async: processing -> ready).
+export async function getVideoStatus(videoId) {
+  const json = await graph('GET', `${videoId}`, { fields: 'status' });
+  return json.status?.video_status || 'unknown';
+}
+// Creative de VIDEO: video_data con thumbnail + CTA SHOP_NOW al producto.
+export function createVideoCreative({ name, videoId, thumbUrl, link, message, igActorId = '' }) {
+  return graph('POST', `${acct()}/adcreatives`, {
+    name,
+    object_story_spec: {
+      page_id: M.pageId,
+      ...(igActorId ? { instagram_user_id: igActorId } : {}),
+      video_data: {
+        video_id: videoId,
+        image_url: thumbUrl,
+        message: message || '',
+        call_to_action: { type: 'SHOP_NOW', value: { link } },
+      },
+    },
+  });
+}
+
 export function createAd({ name, adsetId, creativeId }) {
   return graph('POST', `${acct()}/ads`, {
     name, adset_id: adsetId, creative: { creative_id: creativeId }, status: 'PAUSED',

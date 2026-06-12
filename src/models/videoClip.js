@@ -62,6 +62,8 @@ const videoClipSchema = new Schema(
     },
 
     qcStatus: { type: String, enum: ['generated', 'approved', 'rejected'], default: 'generated', index: true },
+    metaAdId: { type: String, default: null },       // ad de Meta (si se lanzó)
+    metaCampaignId: { type: String, default: null }, // campaña de Meta
   },
   { timestamps: true }
 );

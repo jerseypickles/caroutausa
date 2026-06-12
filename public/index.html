@@ -137,6 +137,7 @@
   .vrt { font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .vrm { font-size: 11px; opacity: .85; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .vrqc { position: absolute; top: 9px; left: 9px; background: rgba(26,143,74,.94); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 7px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .vrmeta { position: absolute; top: 32px; left: 9px; background: rgba(20,22,26,.86); color: #fff; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 7px; }
   .vract { position: absolute; top: 9px; right: 9px; display: flex; gap: 6px; opacity: 0; transition: opacity .15s; }
   .vrcard:hover .vract { opacity: 1; }
   .vract a, .vract button { background: rgba(255,255,255,.94); border: none; border-radius: 8px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; text-decoration: none; color: #14161a; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
@@ -984,12 +985,23 @@ async function loadVideo() {
 // Card de VIDEO LISTO (galería): el mp4 reproduciéndose + hook + QC + acciones al hover.
 function vReadyCard(c) {
   const qc = c.videoQc && c.videoQc.fidelity != null ? `<span class="vrqc">QC ${c.videoQc.fidelity}</span>` : '';
+  const launched = c.metaAdId ? '<span class="vrmeta">🟢 en Meta (pausado)</span>' : '';
+  const launchBtn = c.metaAdId ? '' : `<button onclick="vLaunch('${c._id}',this)" title="Lanzar a Meta (campaña pausada)">🚀</button>`;
   return `<div class="vrcard">
     <video src="/api/video/${c._id}/video" muted loop autoplay playsinline preload="metadata"></video>
-    ${qc}
-    <div class="vract"><a href="/api/video/${c._id}/video" target="_blank" title="Descargar mp4">⬇</a><button onclick="vDel('${c._id}')" title="Borrar">🗑</button></div>
+    ${qc}${launched}
+    <div class="vract">${launchBtn}<a href="/api/video/${c._id}/video" target="_blank" title="Descargar mp4">⬇</a><button onclick="vDel('${c._id}')" title="Borrar">🗑</button></div>
     <div class="vrover"><div class="vrt">${esc((c.product || '').replace(' Denim Short', ''))}</div><div class="vrm">${c.hookLine ? '“' + esc(c.hookLine) + '”' : 'fit-check'}</div></div>
   </div>`;
+}
+async function vLaunch(id, btn) {
+  if (!confirm('¿Lanzar este video a Meta?\n\nSe crea la campaña PAUSADA (con botón Comprar al producto). NO gasta hasta que la actives vos en Meta / Ad Manager.')) return;
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = '⏳';
+  try {
+    const r = await fetch(`/api/video/${id}/launch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then((x) => x.json());
+    toast(r.error ? ('Error: ' + r.error) : '🚀 Lanzado (PAUSADO) — activalo en Meta cuando quieras');
+    loadVideo();
+  } catch (e) { toast('Error al lanzar'); } finally { btn.disabled = false; btn.textContent = orig; }
 }
 // Card de EN PROCESO (tira): thumbnail/estado + acciones según etapa.
 const VPSTG = { frames: '📸 Frames', curated: '⭐ Curado', animating: '🎬 Animando', qc: '🔍 QC', failed: '⚠️ Falló' };
