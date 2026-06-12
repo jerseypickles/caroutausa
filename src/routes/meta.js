@@ -3,12 +3,25 @@ import sharp from 'sharp';
 import { Creative } from '../models/creative.js';
 import { Carousel } from '../models/carousel.js';
 import { VideoClip } from '../models/videoClip.js';
+import { Reference } from '../models/reference.js';
 import { Product } from '../models/product.js';
 import { MetaCampaign } from '../models/metaCampaign.js';
 import { config } from '../config.js';
 import * as meta from '../meta.js';
 
 export const metaRouter = Router();
+
+// ADN extra del REF para el aprendizaje (familia/lane, sneakers, gráfico del top).
+async function refTags(referenceId) {
+  if (!referenceId) return {};
+  const ref = await Reference.findById(referenceId).select('dna').lean().catch(() => null);
+  const o = ref?.dna?.outfit || ref?.dna || {};
+  return {
+    refLane: o.family || null,
+    sneakers: o.sneakers ? String(o.sneakers).slice(0, 40) : null,
+    graphic: o.graphic ? String(o.graphic).slice(0, 40) : null,
+  };
+}
 
 function productLink(handle) {
   return handle ? `${config.storeUrl}/products/${handle}` : config.storeUrl;
@@ -149,7 +162,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
   const carousels = carouselIds.length
     ? await Carousel.find({ _id: { $in: carouselIds }, genStatus: 'ready' }).select('+cards.imageData').lean() : [];
   const videos = videoIds.length
-    ? await VideoClip.find({ _id: { $in: videoIds }, stage: 'ready' }).select('shopifyProductId product hookLine wash castTag fontTag motionPreset copy').lean() : [];
+    ? await VideoClip.find({ _id: { $in: videoIds }, stage: 'ready' }).select('shopifyProductId product hookLine wash castTag fontTag motionPreset copy referenceId').lean() : [];
   if (!singles.length && !carousels.length && !videos.length) return res.status(400).json({ error: 'Sin piezas validas' });
 
   // Nombre auto: CAROTA · <wash/o N washes> · YYYY-MM-DD · NS+MC
@@ -188,7 +201,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
       });
       const ad = await meta.createAd({ name: `${c.product} · ${c.angle}`, adsetId: adSet.id, creativeId: creative.id });
       ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: c._id, product: c.product, link, format: 'single',
-        adn: { castTag: c.castTag, sceneTag: c.sceneTag, angle: c.angle, wash: c.wash, fontTag: c.fontTag } });
+        adn: { castTag: c.castTag, sceneTag: c.sceneTag, angle: c.angle, wash: c.wash, fontTag: c.fontTag, ...(await refTags(c.referenceId)) } });
     }
     // Carruseles -> sube cada card (JPG) y crea el creative de carrusel
     for (const cr of carousels) {
@@ -207,7 +220,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
       });
       const ad = await meta.createAd({ name: `${cr.product} · carrusel`, adsetId: adSet.id, creativeId: creative.id });
       ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: cr._id, product: cr.product, link, format: 'carousel',
-        adn: { castTag: cr.castTag, sceneTag: cr.sceneTag, angle: 'carrusel', wash: cr.wash, fontTag: cr.fontTag } });
+        adn: { castTag: cr.castTag, sceneTag: cr.sceneTag, angle: 'carrusel', wash: cr.wash, fontTag: cr.fontTag, ...(await refTags(cr.referenceId)) } });
     }
 
     // Videos -> sube cada mp4 (por URL) en PARALELO, espera que Meta los procese, crea el video
@@ -240,7 +253,7 @@ metaRouter.post('/meta/launch', async (req, res) => {
         });
         const ad = await meta.createAd({ name: `${u.v.product} · video`, adsetId: adSet.id, creativeId: creative.id });
         ads.push({ adId: ad.id, metaCreativeId: creative.id, creativeId: u.v._id, product: u.v.product, link: u.link, format: 'video',
-          adn: { castTag: u.v.castTag || 'lower-body', sceneTag: 'fit-check', angle: 'video', wash: u.v.wash, fontTag: u.v.fontTag, motionPreset: u.v.motionPreset } });
+          adn: { castTag: u.v.castTag || 'lower-body', sceneTag: 'fit-check', angle: 'video', wash: u.v.wash, fontTag: u.v.fontTag, motionPreset: u.v.motionPreset, ...(await refTags(u.v.referenceId)) } });
         await VideoClip.findByIdAndUpdate(u.v._id, { metaAdId: ad.id, metaCampaignId: campaign.id });
       }
     }

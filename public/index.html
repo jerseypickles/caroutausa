@@ -339,6 +339,10 @@
   .lrow2.win .lr2bar span { background: var(--ok); }
   .lr2n { font-size: 10.5px; color: var(--muted); }
   @media (max-width: 720px) { .lhero { grid-template-columns: 1fr; } }
+  .lwfilter { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
+  .lwchip { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 12px; font-weight: 600; cursor: pointer; text-transform: capitalize; transition: all .14s; }
+  .lwchip:hover { border-color: var(--border2); }
+  .lwchip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .lrctr { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; text-align: right; }
   .lrctr .muted { font-size: 9px; }
   .lrn { font-size: 11px; color: var(--muted); text-align: right; }
@@ -1941,7 +1945,8 @@ async function toggleAds(id, btn) {
 }
 
 /* ===== APRENDIZAJE ===== */
-const DIM_LBL = { sceneTag: '🌊 Escena', castTag: '🧑 Casting', angle: '🎬 Ángulo', wash: '👖 Wash', format: '🖼 Formato (single/carrusel/video)', fontTag: '🔤 Fuente/diseño', motionPreset: '🎞 Movimiento (video)' };
+const DIM_LBL = { sceneTag: '🌊 Escena', castTag: '🧑 Casting', angle: '🎬 Ángulo', wash: '👖 Wash', format: '🖼 Formato (single/carrusel/video)', fontTag: '🔤 Fuente/diseño', motionPreset: '🎞 Movimiento (video)', refLane: '◆ Lane (ref)', sneakers: '👟 Sneakers (ref)', graphic: '🎨 Gráfico del top (ref)' };
+let learnData = null, learnWash = '';
 let learnPoll = null;
 // Abre el tab: sincroniza una vez y queda auto-actualizándose (sin tocar nada).
 async function openLearning() {
@@ -1964,8 +1969,22 @@ async function loadLearning() {
     grid.innerHTML = ''; return;
   }
   hint.innerHTML = `CTR real por dimensión del ADN (fotos + carruseles + <b>videos</b>). Solo se corona (verde) un valor con data confiable (≥${d.minImpr || 80} impr); el resto figura como <b>juntando data</b>. El sistema <b>explota</b> el ganador y <b>explora</b> variantes nuevas (movimiento, refs) para seguir descubriendo — no se queda solo con lo conocido.`;
-  const others = Object.entries(d.report).filter(([dim, rows]) => dim !== 'format' && rows.length).map(([dim, rows]) => renderDimCard(dim, rows)).join('');
-  grid.innerHTML = `<div class="lhero">${renderFormatHero(d.report.format || [])}</div>${others ? `<div class="ldimgrid">${others}</div>` : ''}`;
+  learnData = d; renderLearningView();
+}
+function setLearnWash(w) { learnWash = w; renderLearningView(); }
+function renderLearningView() {
+  const d = learnData; if (!d) return;
+  const grid = document.getElementById('learnGrid');
+  const washes = d.washes || [];
+  const filter = washes.length ? `<div class="lwfilter"><span class="lwchip ${learnWash === '' ? 'on' : ''}" onclick="setLearnWash('')">🌐 Todo</span>${washes.map((w) => `<span class="lwchip ${learnWash === w ? 'on' : ''}" onclick="setLearnWash('${w}')">${esc(w)}</span>`).join('')}</div>` : '';
+  if (learnWash && d.byWash && d.byWash[learnWash]) {
+    const rep = d.byWash[learnWash];
+    const cards = Object.entries(rep).map(([dim, rows]) => renderDimCard(dim, rows)).join('');
+    grid.innerHTML = `${filter}<div class="muted" style="font-size:12.5px;margin:0 0 16px">Qué ADN rinde para <b style="text-transform:capitalize">${esc(learnWash)}</b>:</div>${cards ? `<div class="ldimgrid">${cards}</div>` : '<div class="vempty">Sin data para este wash todavía.</div>'}`;
+  } else {
+    const others = Object.entries(d.report).filter(([dim, rows]) => dim !== 'format').map(([dim, rows]) => renderDimCard(dim, rows)).join('');
+    grid.innerHTML = `${filter}<div class="lhero">${renderFormatHero(d.report.format || [])}</div>${others ? `<div class="ldimgrid">${others}</div>` : ''}`;
+  }
 }
 // Hero: comparación de FORMATO (foto vs carrusel vs video) — la pregunta #1.
 function renderFormatHero(rows) {

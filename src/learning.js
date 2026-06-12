@@ -54,7 +54,7 @@ export async function syncCreativeMetrics() {
 // APRENDIZAJE: agrupa los creativos QUE YA CORRIERON por cada dimensión de su ADN
 // (escena, casting, ángulo, wash, formato) y calcula el CTR/CPA promedio ponderado ->
 // leaderboard de qué atributo gana.
-const DIMS = ['format', 'sceneTag', 'castTag', 'angle', 'wash', 'fontTag', 'motionPreset'];
+const DIMS = ['format', 'sceneTag', 'castTag', 'angle', 'wash', 'refLane', 'sneakers', 'graphic', 'fontTag', 'motionPreset'];
 // Umbral mínimo de impresiones para que un valor sea "confiable" (no coronar ruido).
 // 80 es un piso bajo para filtrar samples de 3-20 impr; lo ideal son cientos/miles.
 const MIN_IMPR = 80;
@@ -74,13 +74,26 @@ export async function learningReport() {
         angle: adn.angle || (a.format === 'carousel' ? 'carrusel' : (a.format === 'video' ? 'video' : null)),
         castTag: adn.castTag, sceneTag: adn.sceneTag,
         wash: adn.wash || washFromProduct,
+        refLane: adn.refLane, sneakers: adn.sneakers, graphic: adn.graphic,
         fontTag: adn.fontTag, motionPreset: adn.motionPreset,
         metrics: m,
       });
     }
   }
+  const report = groupByDims(items, DIMS);
+  // POR PRODUCTO: qué ADN rinde para CADA wash (no solo global).
+  const washes = [...new Set(items.map((i) => i.wash).filter(Boolean))];
+  const byWash = {};
+  for (const w of washes) {
+    byWash[w] = groupByDims(items.filter((i) => i.wash === w), DIMS.filter((d) => d !== 'wash' && d !== 'format'));
+  }
+  return { totalCreatives: items.length, minImpr: MIN_IMPR, report, washes, byWash };
+}
+
+// Agrupa items por cada dimensión -> CTR/CPA por valor (corona el ganador confiable).
+function groupByDims(items, dims) {
   const report = {};
-  for (const dim of DIMS) {
+  for (const dim of dims) {
     const groups = {};
     for (const it of items) {
       const v = it[dim]; if (!v) continue;
@@ -88,14 +101,15 @@ export async function learningReport() {
       const m = it.metrics || {};
       g.n++; g.impressions += m.impressions || 0; g.clicks += m.clicks || 0; g.spend += m.spend || 0; g.purchases += m.purchases || 0;
     }
-    report[dim] = Object.values(groups).map((g) => ({
+    const rows = Object.values(groups).map((g) => ({
       value: g.value, n: g.n, impressions: g.impressions, spend: +g.spend.toFixed(0), purchases: g.purchases,
       ctr: g.impressions ? +(g.clicks / g.impressions * 100).toFixed(2) : 0,
       cpa: g.purchases ? +(g.spend / g.purchases).toFixed(2) : null,
-      low: g.impressions < MIN_IMPR, // poca data: no es confiable todavía, no coronar
-    })).sort((a, b) => (a.low - b.low) || (b.ctr - a.ctr)); // primero los confiables, luego por CTR
+      low: g.impressions < MIN_IMPR,
+    })).sort((a, b) => (a.low - b.low) || (b.ctr - a.ctr));
+    if (rows.length) report[dim] = rows;
   }
-  return { totalCreatives: items.length, minImpr: MIN_IMPR, report };
+  return report;
 }
 
 // CIERRA EL LOOP: el preset de movimiento con mejor CTR (con data suficiente). null si no hay

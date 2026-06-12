@@ -26,6 +26,7 @@ const metaCampaignSchema = new Schema(
         adn: {
           castTag: String, sceneTag: String, angle: String, wash: String,
           fontTag: String, motionPreset: String,
+          refLane: String, sneakers: String, graphic: String, // ADN del ref (lane/zapas/gráfico)
         },
         // métricas reales de Meta por ad (la fuente del aprendizaje).
         metrics: {
