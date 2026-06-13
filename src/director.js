@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from './config.js';
 
-// Director creativo: Claude (claude-fable-5) inventa la DIRECCION CREATIVA de cada
+// Director creativo: Claude (claude-opus-4-8) inventa la DIRECCION CREATIVA de cada
 // fitpic — escena, pose, mood, styling, luz, encuadre — para que cada creative
 // explore algo distinto (mas diversidad = mas para aprender en Meta). Las imagenes
 // las genera gpt-image; el jean (garment lock) y el look anti-IA siguen siendo

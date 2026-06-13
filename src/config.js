@@ -23,7 +23,7 @@ export const config = {
   // Director creativo (Anthropic): genera los prompts de imagen dinamicamente.
   // Las imagenes las sigue haciendo gpt-image. Opcional: sin key, cae al prompt fijo.
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
-  directorModel: process.env.DIRECTOR_MODEL || 'claude-fable-5',
+  directorModel: process.env.DIRECTOR_MODEL || 'claude-opus-4-8',
   fidelityPass: Number(process.env.FIDELITY_PASS || 85), // umbral de aprobado (diseño)
   fitPass: Number(process.env.FIT_PASS || 75), // umbral de aprobado (silueta/fit)
   // receta mixta por producto: por cada angulo, 1 variante SIN referencia (jean
